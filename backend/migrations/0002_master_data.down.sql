@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS registration_requests;
+DROP TABLE IF EXISTS teacher_subjects;
+DROP TABLE IF EXISTS students;
+DROP TABLE IF EXISTS teachers;
+DROP TABLE IF EXISTS subjects;
+DROP TABLE IF EXISTS groups;
+DROP TABLE IF EXISTS levels;
+DROP TABLE IF EXISTS programs;
+

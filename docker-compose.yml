@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: mycbt
+      POSTGRES_USER: mycbt
+      POSTGRES_PASSWORD: mycbt
+    ports:
+      - "5433:5432"
+    volumes:
+      - mycbt_pgdata:/var/lib/postgresql/data
+
+volumes:
+  mycbt_pgdata:

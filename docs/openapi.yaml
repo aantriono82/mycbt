@@ -1,0 +1,616 @@
+openapi: 3.1.0
+info:
+  title: MYCBT API
+  version: 0.1.0
+  description: |
+    Baseline OpenAPI spec untuk endpoint inti MYCBT.
+    Catatan: ini tahap awal dan akan diperluas bertahap mengikuti modul blueprint.
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: Health
+  - name: Auth
+  - name: Exams
+  - name: Student
+  - name: Settings
+paths:
+  /healthz:
+    get:
+      tags: [Health]
+      summary: Health check
+      operationId: healthz
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  time: { type: string, format: date-time }
+  /api/v1/ping:
+    get:
+      tags: [Health]
+      summary: Ping endpoint
+      operationId: ping
+      responses:
+        "200":
+          description: Pong
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: pong }
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with username/password
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string, format: password }
+      responses:
+        "200":
+          description: Login success
+          headers:
+            X-Request-ID:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      access_token: { type: string }
+                      token_type: { type: string, example: Bearer }
+                      expires_at: { type: string, format: date-time }
+                      user:
+                        $ref: "#/components/schemas/UserMe"
+        "401":
+          $ref: "#/components/responses/ErrorUnauthorized"
+        "429":
+          $ref: "#/components/responses/ErrorRateLimited"
+  /api/v1/me:
+    get:
+      tags: [Auth]
+      summary: Get current user profile
+      operationId: me
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          headers:
+            X-Request-ID:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/UserMe"
+        "401":
+          $ref: "#/components/responses/ErrorUnauthorized"
+  /api/v1/exams:
+    get:
+      tags: [Exams]
+      summary: List exams (admin/teacher)
+      operationId: listExams
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string, enum: [draft, published, archived] }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Exams list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Exam"
+                  meta:
+                    type: object
+                    properties:
+                      total: { type: integer }
+                      limit: { type: integer }
+                      offset: { type: integer }
+        "401":
+          $ref: "#/components/responses/ErrorUnauthorized"
+        "403":
+          $ref: "#/components/responses/ErrorForbidden"
+  /api/v1/exams/{id}/results:
+    get:
+      tags: [Exams]
+      summary: Exam result recap
+      operationId: examResults
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ExamID"
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Result recap
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ExamResultRow"
+                  meta:
+                    type: object
+                    properties:
+                      exam: { $ref: "#/components/schemas/Exam" }
+                      total: { type: integer }
+  /api/v1/exams/{id}/item-analysis:
+    get:
+      tags: [Exams]
+      summary: Item analysis
+      operationId: examItemAnalysis
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ExamID"
+      responses:
+        "200":
+          description: Item analysis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ItemAnalysisRow"
+                  meta:
+                    type: object
+                    properties:
+                      total_items: { type: integer }
+                      total_sessions: { type: integer }
+  /api/v1/exams/{id}/score-distribution:
+    get:
+      tags: [Exams]
+      summary: Score distribution
+      operationId: examScoreDistribution
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ExamID"
+      responses:
+        "200":
+          description: Score distribution
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ScoreDistribution"
+  /api/v1/exams/{id}/export:
+    get:
+      tags: [Exams]
+      summary: Export multi-sheet exam report (xlsx)
+      operationId: examExportXlsx
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ExamID"
+      responses:
+        "200":
+          description: XLSX file
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+  /api/v1/student/exams:
+    get:
+      tags: [Student]
+      summary: List available exams for student
+      operationId: studentListExams
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Student exams
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/StudentExam"
+                  meta:
+                    type: object
+                    properties:
+                      total: { type: integer }
+  /api/v1/student/exams/{id}/join:
+    post:
+      tags: [Student]
+      summary: Join exam using token
+      operationId: studentJoinExam
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ExamID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        "200":
+          description: Session created/reused
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      session:
+                        $ref: "#/components/schemas/ExamSession"
+        "400":
+          $ref: "#/components/responses/ErrorBadRequest"
+        "409":
+          $ref: "#/components/responses/ErrorConflict"
+        "429":
+          $ref: "#/components/responses/ErrorRateLimited"
+  /api/v1/settings/school-identity:
+    get:
+      tags: [Settings]
+      summary: Get school identity
+      operationId: getSchoolIdentity
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: School identity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/SchoolIdentity"
+    put:
+      tags: [Settings]
+      summary: Update school identity
+      operationId: putSchoolIdentity
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SchoolIdentity"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/SchoolIdentity"
+  /api/v1/settings/school-identity/logo:
+    post:
+      tags: [Settings]
+      summary: Upload school logo image
+      operationId: uploadSchoolLogo
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      logo_url: { type: string, example: /uploads/logos/school_logo_123.png }
+        "400":
+          $ref: "#/components/responses/ErrorBadRequest"
+  /api/v1/settings/system:
+    get:
+      tags: [Settings]
+      summary: Get system settings
+      operationId: getSystemSettings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: System settings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/SystemSettings"
+    put:
+      tags: [Settings]
+      summary: Update system settings
+      operationId: putSystemSettings
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SystemSettings"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/SystemSettings"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ExamID:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    ErrorBadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    ErrorUnauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    ErrorForbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    ErrorConflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    ErrorRateLimited:
+      description: Too many requests
+      headers:
+        Retry-After:
+          schema: { type: string }
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+  schemas:
+    ErrorEnvelope:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+    UserMe:
+      type: object
+      properties:
+        id: { type: string }
+        username: { type: string }
+        role: { type: string, enum: [admin, teacher, student] }
+        name: { type: string }
+        email: { type: string }
+        is_active: { type: boolean }
+    Exam:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        subject_id: { type: string, format: uuid }
+        teacher_id: { type: string, format: uuid }
+        title: { type: string }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        duration_minutes: { type: integer, nullable: true }
+        shuffle_questions: { type: boolean }
+        shuffle_options: { type: boolean }
+        status: { type: string }
+    ExamSession:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        exam_id: { type: string, format: uuid }
+        student_id: { type: string, format: uuid }
+        status: { type: string }
+        started_at: { type: string, format: date-time }
+        finished_at: { type: string, format: date-time, nullable: true }
+    ExamResultRow:
+      type: object
+      properties:
+        session_id: { type: string, format: uuid }
+        student_name: { type: string }
+        student_username: { type: string }
+        student_nis: { type: string }
+        status: { type: string }
+        started_at: { type: string, format: date-time }
+        finished_at: { type: string, format: date-time, nullable: true }
+        total_questions: { type: integer }
+        answered_questions: { type: integer }
+        auto_scorable_questions: { type: integer }
+        correct_count: { type: integer }
+        score: { type: integer }
+    ItemOptionStat:
+      type: object
+      properties:
+        option_id: { type: string, format: uuid }
+        label: { type: string }
+        content: { type: string }
+        is_correct: { type: boolean }
+        selected_count: { type: integer }
+        selected_percent: { type: number }
+    ItemAnalysisRow:
+      type: object
+      properties:
+        question_id: { type: string, format: uuid }
+        order_no: { type: integer }
+        question_type: { type: string }
+        stem: { type: string }
+        participants: { type: integer }
+        answered_count: { type: integer }
+        correct_count: { type: integer }
+        p_value_percent: { type: number }
+        difficulty_label: { type: string }
+        discrimination_index: { type: number }
+        discrimination_label: { type: string }
+        upper_group_size: { type: integer }
+        lower_group_size: { type: integer }
+        upper_correct_count: { type: integer }
+        lower_correct_count: { type: integer }
+        option_stats:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemOptionStat"
+    ScoreDistributionBin:
+      type: object
+      properties:
+        min: { type: integer }
+        max: { type: integer }
+        label: { type: string }
+        count: { type: integer }
+        percent: { type: number }
+    ScoreDistribution:
+      type: object
+      properties:
+        total_sessions: { type: integer }
+        submitted_count: { type: integer }
+        expired_count: { type: integer }
+        min_score: { type: integer }
+        max_score: { type: integer }
+        average_score: { type: number }
+        median_score: { type: number }
+        distribution_bins:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScoreDistributionBin"
+    StudentExam:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        subject_id: { type: string, format: uuid }
+        subject_name: { type: string }
+        teacher_id: { type: string, format: uuid }
+        teacher_name: { type: string }
+        title: { type: string }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        duration_minutes: { type: integer, nullable: true }
+        status: { type: string }
+        can_join: { type: boolean }
+        session_id: { type: string, format: uuid, nullable: true }
+        session_status: { type: string, nullable: true }
+    SchoolIdentity:
+      type: object
+      properties:
+        school_name: { type: string }
+        address: { type: string }
+        phone: { type: string }
+        email: { type: string }
+        website: { type: string }
+        principal_name: { type: string }
+        logo_url: { type: string }
+    SystemSettings:
+      type: object
+      properties:
+        timezone: { type: string, example: Asia/Jakarta }
+        token_required: { type: boolean }
+        allow_reset_login: { type: boolean }
+        max_active_sessions: { type: integer, minimum: 1, maximum: 5 }
+        attendance_require_ip: { type: boolean }
+
