@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS teacher_levels;
+ALTER TABLE teachers DROP COLUMN IF EXISTS jenjang;

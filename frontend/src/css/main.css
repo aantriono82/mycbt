@@ -1,0 +1,91 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+
+@source inline('style-{basic,white}');
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --transition-position: right, left, top, bottom, margin, padding;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Inter', sans-serif;
+}
+
+@import './_checkbox-radio-switch.css';
+@import './_keyframes.css';
+@import './_progress.css';
+@import './_scrollbars.css';
+@import './_table.css';
+
+@import './styles/_basic.css';
+@import './styles/_white.css';
+
+@layer base {
+
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-slate-100, currentColor);
+  }
+
+  html {
+    @apply antialiased scroll-smooth;
+    font-family: var(--font-sans);
+  }
+
+  body {
+    @apply bg-slate-50/50 text-slate-700 dark:bg-slate-950 dark:text-slate-300 transition-colors duration-300;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+    @apply font-bold text-slate-900 dark:text-white tracking-tight;
+  }
+
+  p {
+    @apply leading-relaxed;
+  }
+
+  /* Clarity Enhancements */
+  .dark {
+    --color-slate-800: #1e293b;
+    --color-slate-900: #0f172a;
+  }
+}
+
+@layer components {
+  .section-title {
+    @apply text-2xl font-black mb-6 flex items-center gap-3 tracking-tighter;
+    font-family: var(--font-heading);
+  }
+
+  .card-premium {
+    @apply border-slate-100 dark:border-slate-800/60 shadow-sm hover:shadow-md transition-all duration-300 rounded-3xl bg-white dark:bg-slate-900/80 backdrop-blur-sm;
+  }
+
+  .input-premium {
+    @apply rounded-xl border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-950 px-4 py-2.5 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all duration-200;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Force 24-hour time format for all datetime-local inputs.
+   This hides the AM/PM (day-period) column that Chromium shows
+   when the OS locale defaults to 12-hour format.
+   ────────────────────────────────────────────────────────────── */
+input[type="datetime-local"]::-webkit-datetime-edit-ampm-field {
+  display: none !important;
+}
+
+/* Ensure consistent styling when in 24h mode */
+input[type="datetime-local"]::-webkit-datetime-edit-hour-field,
+input[type="datetime-local"]::-webkit-datetime-edit-minute-field {
+  letter-spacing: 0;
+}

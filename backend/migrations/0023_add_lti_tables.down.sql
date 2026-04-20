@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS lti_nonces;
+DROP TABLE IF EXISTS lti_users;
+DROP TABLE IF EXISTS lti_platforms;
