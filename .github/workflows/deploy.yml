@@ -1,0 +1,32 @@
+name: Build and Push to GHCR
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build Backend
+        run: docker build -t ghcr.io/${{ github.repository }}/backend:latest -f docker/backend.Dockerfile .
+
+      - name: Build Frontend
+        run: docker build -t ghcr.io/${{ github.repository }}/frontend:latest -f docker/frontend.Dockerfile .
+
+      - name: Push Backend
+        run: docker push ghcr.io/${{ github.repository }}/backend:latest
+
+      - name: Push Frontend
+        run: docker push ghcr.io/${{ github.repository }}/frontend:latest
