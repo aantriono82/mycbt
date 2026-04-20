@@ -1,4 +1,4 @@
-module mycbt/backend
+module github.com/aantriono82/mycbt/backend
 
 go 1.25.0
 
