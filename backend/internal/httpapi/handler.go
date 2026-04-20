@@ -44,6 +44,13 @@ func NewHandler(deps Deps) http.Handler {
 	r.Use(gin.Recovery())
 	r.Use(middleware.RequestID())
 	r.Use(middleware.StructuredLogger())
+	r.GET("/", func(c *gin.Context) {
+    c.JSON(200, gin.H{
+        "name":   "MyCBT API",
+        "status": "running",
+        "env":    cfg.Env,
+    })
+})
 	if deps.Pool != nil {
 		r.Use(middleware.AuditLogger(auditrepo.New(deps.Pool)))
 	}
