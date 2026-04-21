@@ -8,8 +8,14 @@ Scaffold aplikasi CBT (Computer Based Test) dengan:
 Dokumen implementasi lengkap: lihat [docs/BLUEPRINT.md](/home/aantriono/dev/mycbt/docs/BLUEPRINT.md).
 Kontrak API awal (OpenAPI): [docs/openapi.yaml](/home/aantriono/dev/mycbt/docs/openapi.yaml).
 
-## Status Implementasi (2026-04-20)
+## Status Implementasi (2026-04-22)
 
+- **Stabilisasi Sigma/LaTeX di Editor Bank Soal**: Tombol Sigma pada editor `/admin/bank-soal/new` kini merender formula lewat KaTeX ke MathML dan dipertahankan oleh schema TinyMCE (`custom_elements` + `extended_valid_elements`) agar tidak berubah menjadi teks literal (contoh `\sqrt{98}`). Warning Vue `Property "vSlot" was accessed during render...` pada sidebar juga sudah diperbaiki di komponen menu.
+- **Resolved Student Registration Approval**: Mengatasi error "nis required" saat admin menyetujui pendaftaran siswa. Implementasi *Triple Fallback Logic* (NIS → NISN → Username) pada backend; logika lookup nama Kelas/Rombel diperbarui agar toleran terhadap ketidakcocokan nama, sehingga approval tidak terblokir. Formulir `GoogleRegistrationForm.vue` juga diperbarui untuk menangkap kolom NIS secara eksplisit.
+- **Admin UI Color Theme Consistency**: Pembaruan estetika menyeluruh pada halaman-halaman panel admin. Halaman Verifikasi Pendaftaran kini memiliki kolom aksi bertema ungu (purple). Halaman Log Aktivitas dan Audit Log memiliki skema warna tombol yang konsisten: Refresh & Apply (biru), Reset (hijau solid), Hapus >30 Hari (ungu), Export CSV (hijau solid), dan Hapus Semua (merah).
+- **Admin Panel Backend Smoke Audit**: Menambahkan skrip `scripts/audit_admin.sh` untuk smoke-test endpoint yang dipakai panel admin (login, settings, analytics, LMS, master data CRUD, bank soal, ujian, token) secara end-to-end (create dummy data + cleanup).
+- **Fix Analytics & LMS Endpoints**: Memperbaiki endpoint yang 500 karena query mengacu ke kolom yang tidak ada (mis. `es.score`, `e.start_at`). Analytics dan export hasil LMS kini menghitung skor lewat scoring engine dan memakai schema yang benar (`starts_at/ends_at`, join `exam_sessions -> students -> users`).
+- **Template Import DOCX (LaTeX-ready)**: Editor Bank Soal punya tombol **Template** dan kartu template (background purple) untuk download file template import DOCX. Template mendukung penulisan LaTeX sebagai teks dengan delimiter `$...$` dan `$$...$$`. Panduan: `docs/template-soal-docx.md`.
 - **Timezone-Aware Session Management**: Validasi jendela waktu pengerjaan (Sesi 1, 2, dsb) kini sepenuhnya akurat mengikuti zona waktu lokal (WIB/WITA/WIT), mencegah akses di luar jam yang ditentukan.
 - **Modernized Exam Administration UI**: Interface pengelola ujian diperbarui dengan skema warna status yang premium (Warning untuk Draft, Contrast untuk Archive) dan fitur penghapusan jadwal yang terintegrasi.
 - **Robust Workspace Navigation**: Perbaikan error navigasi (router) dan reaktivitas pada lembar pengerjaan siswa, menjamin perpindahan antar soal yang mulus dan stabil.
@@ -94,6 +100,16 @@ cd frontend
 # optional: cp .env.example .env lalu set VITE_API_BASE_URL
 npm run dev
 ```
+
+## Audit Panel Admin (Backend)
+
+Untuk memastikan endpoint admin tetap konsisten dengan UI (regresi cepat ketahuan), jalankan smoke audit berikut (pastikan API sudah running):
+
+```bash
+BASE_URL=http://127.0.0.1:8080 ADMIN_USERNAME=admin ADMIN_PASSWORD=admin12345 bash scripts/audit_admin.sh
+```
+
+Indikator sukses: output berakhir dengan `ALL OK`.
 
 
 Default URL:
