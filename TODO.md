@@ -27,6 +27,10 @@ AtigaCBT is a premium computer-based testing platform designed for stability, ri
 - [x] **Backup & Restore** - Sistem ekspor/impor database SQL via panel admin.
 - [x] **Integrasi LMS & Data Portability** - Ekspor Roster Siswa & Hasil Ujian ke CSV / JSON kompatibel LMS (Google Classroom, Moodle, Dapodik). Panel Admin `/admin/lms` dengan panduan integrasi per platform.
 - [x] **Advanced Analytics Dashboard** - Visualisasi tren performa (Chart.js), analisis per mata pelajaran, dan perbandingan antar rombel/group. Insight berbasis data untuk evaluasi kurikulum. `/admin/analytics`.
+- [x] **Admin Panel Smoke Audit Script** - Skrip `scripts/audit_admin.sh` untuk smoke-test endpoint yang dipakai panel admin (login, settings, analytics, LMS, master data CRUD, bank soal, jadwal ujian, token) dengan create data dummy + cleanup.
+- [x] **Fix Analytics & LMS Queries (Postgres)** - Memperbaiki query yang mengacu ke kolom yang tidak ada (mis. `es.score`, `e.start_at`) dengan menghitung score via scoring engine dan memakai kolom schema yang benar (`starts_at/ends_at`, join `exam_sessions -> students -> users`).
+- [x] **Template Import DOCX + LaTeX** - Template import DOCX bisa di-download dari editor Bank Soal (kartu template warna ungu/purple), mendukung penulisan LaTeX sebagai teks (`$...$` dan `$$...$$`).
+- [x] **Stabilisasi Sigma/LaTeX di Editor Bank Soal** - Fitur Sigma di `RichEditor` kini menyisipkan formula sebagai MathML (bukan teks literal), konfigurasi TinyMCE di-whitelist untuk elemen MathML agar tidak tersanitasi, dan warning sidebar `vSlot` sudah diperbaiki pada komponen menu.
 - [x] **Notifikasi Email/WA (M8)** - Blast pengumuman & hasil nilai via email / WhatsApp API. Sistem konfigurasi SMTP & WA di Dashboard Admin.
 - [x] **LTI 1.3 Deep Integration** - Full LTI provider (OIDC & Launch) dengan otomatisasi provisioning student, LTI Deep Linking resource picker untuk guru, dan admin management UI. `/admin/lti`.
 - [x] **QR Code Absensi** - Sistem absensi berbasis QR code dengan geo-fencing (Lat/Lon/Radius). `/admin/ujian/absensi/qr`.
@@ -39,6 +43,8 @@ AtigaCBT is a premium computer-based testing platform designed for stability, ri
 - [x] **Timezone-Aware Session Windows** - Implementasi validasi jendela waktu sesi (Pagi, Siang, dll) yang akurat berdasarkan zona waktu sistem (Asia/Jakarta) pada saat Join ujian.
 - [x] **Modern Exam Management UI** - Pembaruan antarmuka pengelola ujian dengan pewarnaan status yang intuitif (Draft, Archive) dan fitur hapus jadwal ujian langsung dari dashboard.
 - [x] **Final Polish & Documentation** - Membersihkan kode, dokumentasi API, dan panduan penggunaan.
+- [x] **Perbaikan Approval Pendaftaran Siswa** - Mengatasi error "nis required" saat admin approve pendaftaran dengan implementasi *Triple Fallback Logic* (NIS → NISN → Username) pada handler `ApproveRegistration` dan `PatchRegistration`; logika lookup (level/group/program) dibuat toleran agar tidak memblokir approval saat nama tidak persis cocok; form `GoogleRegistrationForm.vue` diperbarui dengan kolom NIS eksplisit.
+- [x] **UI Tema Warna Konsisten (Admin)** - Pembaruan estetika pada halaman-halaman admin: Verifikasi Pendaftaran (kolom aksi ungu/purple), Log Aktivitas Login (Refresh & Apply biru, Reset hijau, Hapus >30 Hari ungu), Audit Log (Export CSV hijau solid, Hapus >30 Hari ungu, Reset hijau solid, Refresh & Apply biru).
 
 
 ### 📊 Future Roadmap
