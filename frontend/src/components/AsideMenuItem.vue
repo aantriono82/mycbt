@@ -46,14 +46,38 @@ const menuClick = (event) => {
 
 <template>
   <li>
-    <component
-      :is="item.to ? RouterLink : 'a'"
-      v-slot="vSlot"
-      :to="item.to ?? null"
+    <RouterLink v-if="item.to" :to="item.to" custom v-slot="{ href, navigate, isExactActive }">
+      <a
+        :href="href"
+        class="flex w-full cursor-pointer transition-colors"
+        :class="[componentClass, activeClass(isExactActive)]"
+        @click="(e) => { navigate(e); menuClick(e) }"
+      >
+        <BaseIcon
+          v-if="item.icon"
+          :path="item.icon"
+          class="flex-none"
+          w="w-16"
+          :size="18"
+        />
+        <span class="line-clamp-1 grow text-ellipsis" :class="[{ 'pr-6': !hasDropdown }]">
+          {{ item.label }}
+        </span>
+        <BaseIcon
+          v-if="hasDropdown"
+          :path="isDropdownActive ? mdiMinus : mdiPlus"
+          class="flex-none"
+          w="w-12"
+        />
+      </a>
+    </RouterLink>
+
+    <a
+      v-else
       :href="item.href ?? null"
       :target="item.target ?? null"
       class="flex cursor-pointer transition-colors"
-      :class="[componentClass, activeClass(vSlot && vSlot.isExactActive)]"
+      :class="componentClass"
       @click="menuClick"
     >
       <BaseIcon
@@ -74,7 +98,7 @@ const menuClick = (event) => {
         class="flex-none"
         w="w-12"
       />
-    </component>
+    </a>
     <AsideMenuList
       v-if="hasDropdown"
       :menu="item.menu"
