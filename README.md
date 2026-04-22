@@ -10,6 +10,7 @@ Kontrak API awal (OpenAPI): [docs/openapi.yaml](/home/aantriono/dev/mycbt/docs/o
 
 ## Status Implementasi (2026-04-22)
 
+- **Bulk Approve Verifikasi Pendaftaran**: Halaman `/admin/master-data/verifikasi-pendaftaran` kini memiliki aksi `Approve Semua Sesuai Filter` untuk memproses pendaftaran `pending` secara massal (filter `role` + `q`). Backend mengeksekusi approval per-item dengan alur role-aware (`student`/`teacher`) dan mengembalikan ringkasan hasil (approved, failed, remaining + failure details terbatas).
 - **Paritas Panel Admin/Guru untuk Bank Soal & Ujian**: Route admin dan guru kini sengaja memakai view operasional yang sama untuk `Bank Soal`, `Impor Soal`, `Pratinjau`, `Jadwal Ujian`, `Token`, `Monitor`, dan `Evaluasi`. Perbedaannya ada di RBAC dan scope data: guru hanya melihat/mengelola miliknya sendiri, sedangkan admin punya kontrol lintas guru.
 - **Refinement Import Soal & LaTeX Short Answer**: Tombol template soal kini dipusatkan hanya di submenu `Impor Soal`, editor `/bank-soal/new?id=...` otomatis membuka soal nomor 1 saat bank soal sudah memiliki isi, dan alur LaTeX untuk `short_answer` diperbaiki agar formula tidak kembali ke teks mentah setelah insert/edit Sigma. Kunci jawaban isian singkat di pratinjau juga kini dirender sebagai rumus.
 - **Stabilisasi Sigma/LaTeX di Editor Bank Soal**: Tombol Sigma pada editor `/admin/bank-soal/new` kini merender formula lewat KaTeX ke MathML dan dipertahankan oleh schema TinyMCE (`custom_elements` + `extended_valid_elements`) agar tidak berubah menjadi teks literal (contoh `\sqrt{98}`). Warning Vue `Property "vSlot" was accessed during render...` pada sidebar juga sudah diperbaiki di komponen menu.
@@ -167,6 +168,7 @@ Registrasi & Verifikasi (Pilihan B: Manual -> Approve -> Google Link):
 - **Alur Pendaftaran**: Calon pengguna mengisi form manual 3-langkah (tanpa login Google di awal).
 - **Public API**: `POST /api/v1/auth/google/register` (tanpa mewajibkan `google_id`).
 - **Verifikasi Admin**: Admin meninjau data lengkap (NISN, No HP, Sekolah) di panel `/admin/master-data/verifikasi-pendaftaran`.
+- **Bulk Approve**: Admin bisa approve massal dengan filter aktif via `POST /api/v1/admin/registrations/approve-bulk` (opsional payload: `role`, `q`, `limit`, `note`).
 - **Auto-Linking**: Setelah disetujui, pendaftar login menggunakan tombol Google. Sistem akan mencocokkan akun via **Email**, menautkan `google_id` secara otomatis, dan memberikan akses masuk.
 - **Set Pending**: Fitur baru bagi admin untuk mengembalikan status `approved/rejected` menjadi `pending` demi fleksibilitas data.
 

@@ -47,6 +47,7 @@ AtigaCBT is a premium computer-based testing platform designed for stability, ri
 - [x] **UI Tema Warna Konsisten (Admin)** - Pembaruan estetika pada halaman-halaman admin: Verifikasi Pendaftaran (kolom aksi ungu/purple), Log Aktivitas Login (Refresh & Apply biru, Reset hijau, Hapus >30 Hari ungu), Audit Log (Export CSV hijau solid, Hapus >30 Hari ungu, Reset hijau solid, Refresh & Apply biru).
 - [x] **Paritas Panel Admin/Guru untuk Bank Soal & Ujian** - Panel admin dan guru kini memakai view operasional yang sama untuk Bank Soal, Import Soal, Pratinjau, Jadwal Ujian, Token, Monitor, dan Evaluasi; perbedaannya dipertahankan di level role/scope: guru hanya mengelola data miliknya sendiri, admin bisa memilih guru saat membuat ujian dan menyalin bank soal ke guru lain.
 - [x] **Refinement Import Soal & LaTeX Short Answer** - Tombol template soal dipusatkan hanya di submenu Impor Soal, editor bank soal otomatis membuka soal nomor 1 saat set sudah ada, dan alur LaTeX untuk isian singkat diperbaiki agar formula tetap stabil di editor serta kunci jawaban dirender dengan benar di halaman pratinjau.
+- [x] **Bulk Approve Verifikasi Pendaftaran** - Admin kini dapat menyetujui pendaftaran `pending` secara massal berdasarkan filter aktif (role dan pencarian), dengan ringkasan hasil (approved/gagal/sisa) agar penanganan pendaftar campuran siswa-guru lebih cepat.
 
 
 ### 📊 Future Roadmap
