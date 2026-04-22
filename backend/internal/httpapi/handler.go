@@ -38,6 +38,7 @@ func NewHandler(deps Deps) http.Handler {
 	const (
 		maxImportExcelBody = 8 << 20  // 8 MB
 		maxImportDocxBody  = 24 << 20 // 24 MB
+		maxUploadImageBody = 8 << 20  // 8 MB
 	)
 
 	r := gin.New()
@@ -136,6 +137,7 @@ func NewHandler(deps Deps) http.Handler {
 		qb := questionbankrepo.New(deps.Pool)
 		teacherSubs := masterrepo.NewTeacherSubjects(deps.Pool)
 		h := handlers.NewQuestionBankHandler(qb, teacherSubs)
+		up := handlers.NewUploadsHandler()
 
 		qg := v1.Group("")
 		qg.Use(middleware.RequireAuth(deps.Auth), middleware.RequireRole("admin", "teacher"))
@@ -153,6 +155,9 @@ func NewHandler(deps Deps) http.Handler {
 		qg.GET("/questions/:id", h.GetQuestion)
 		qg.DELETE("/questions/:id", h.DeleteQuestion)
 		qg.PATCH("/questions/:id", h.PatchQuestion)
+
+		// Upload assets for editor content (RichEditor images, etc.)
+		qg.POST("/uploads/images", middleware.LimitBodyBytes(maxUploadImageBody), up.UploadImage)
 	}
 
 	// Exams (admin/teacher)
@@ -186,7 +191,10 @@ func NewHandler(deps Deps) http.Handler {
 
 		eg.GET("/exams/:id/tokens", h.ListTokens)
 		eg.POST("/exams/:id/tokens", h.CreateToken)
+		eg.POST("/exams/:id/tokens/deactivate-all", h.DeactivateAllTokens)
+		eg.POST("/exams/:id/tokens/rotate", h.RotateToken)
 		eg.PATCH("/tokens/:id", h.PatchToken)
+		eg.DELETE("/tokens/:id", h.DeleteToken)
 
 		eg.GET("/exams/:id/results", res.List)
 		eg.POST("/exams/:id/results/blast", res.BlastResults)
@@ -227,6 +235,7 @@ func NewHandler(deps Deps) http.Handler {
 		sg.GET("/exams/:id/session", h.GetActiveSessionByExam)
 		sg.POST("/exams/:id/join", middleware.RateLimit("student_join_exam", 20, time.Minute), h.Join)
 		sg.GET("/sessions/:id", h.GetSession)
+		sg.POST("/sessions/:id/verify-token", h.VerifyToken)
 		sg.GET("/sessions/:id/questions", h.GetQuestions)
 		sg.GET("/sessions/:id/answers", h.GetAnswers)
 		sg.POST("/sessions/:id/answers", h.SaveAnswer)
@@ -252,17 +261,25 @@ func NewHandler(deps Deps) http.Handler {
 			masterrepo.NewGroups(deps.Pool),
 			masterrepo.NewStudents(deps.Pool),
 			masterrepo.NewTeachers(deps.Pool),
+			masterrepo.NewPrograms(deps.Pool),
 		)
-		lg := v1.Group("/lookups")
-		lg.Use(middleware.RequireAuth(deps.Auth), middleware.RequireRole("admin", "teacher"))
+		// Lookups
+		lup := v1.Group("/lookups")
+		{
+			// Public registration lookups
+			lup.GET("/programs", h.ListPrograms)
+			lup.GET("/levels", h.ListLevels)
+			lup.GET("/groups", h.ListGroups)
 
-		lg.GET("/subjects", h.ListSubjects)
-		lg.GET("/sessions", h.ListSessions)
-		lg.GET("/levels", h.ListLevels)
-		lg.GET("/groups", h.ListGroups)
-		lg.GET("/students", h.ListStudents)
-		lg.GET("/teachers", h.ListTeachers)
-		lg.GET("/my-assignments", h.ListMyAssignments)
+			// Authenticated shared lookups
+			authLup := lup.Group("")
+			authLup.Use(middleware.RequireAuth(deps.Auth), middleware.RequireRole("admin", "teacher"))
+			authLup.GET("/subjects", h.ListSubjects)
+			authLup.GET("/sessions", h.ListSessions)
+			authLup.GET("/students", h.ListStudents)
+			authLup.GET("/teachers", h.ListTeachers)
+			authLup.GET("/my-assignments", h.ListMyAssignments)
+		}
 	}
 
 	// Settings (admin)
@@ -296,7 +313,7 @@ func NewHandler(deps Deps) http.Handler {
 
 	// LMS / Data Portability (admin/teacher)
 	if deps.Auth != nil && deps.Pool != nil {
-		lmsH := handlers.NewLMSExportHandler(deps.Pool)
+		lmsH := handlers.NewLMSExportHandler(deps.Pool, studentexamrepo.New(deps.Pool))
 		lg := v1.Group("/lms")
 		lg.Use(middleware.RequireAuth(deps.Auth), middleware.RequireRole("admin", "teacher"))
 		lg.GET("/summary", lmsH.Summary)
@@ -307,7 +324,7 @@ func NewHandler(deps Deps) http.Handler {
 
 	// Analytics (admin/teacher)
 	if deps.Auth != nil && deps.Pool != nil {
-		h := handlers.NewAnalyticsHandler(deps.Pool)
+		h := handlers.NewAnalyticsHandler(deps.Pool, studentexamrepo.New(deps.Pool))
 		ag := v1.Group("/analytics")
 		ag.Use(middleware.RequireAuth(deps.Auth), middleware.RequireRole("admin", "teacher"))
 		ag.GET("/dashboard", h.Dashboard)
@@ -443,6 +460,7 @@ func NewHandler(deps Deps) http.Handler {
 
 		admin.GET("/registrations/pending", h.ListPendingRegistrations)
 		admin.GET("/registrations", h.ListRegistrations)
+		admin.POST("/registrations/approve-bulk", h.BulkApproveRegistrations)
 		admin.GET("/registrations/:id", h.GetRegistration)
 		admin.PATCH("/registrations/:id", h.PatchRegistration)
 		admin.POST("/registrations/:id/approve", h.ApproveRegistration)

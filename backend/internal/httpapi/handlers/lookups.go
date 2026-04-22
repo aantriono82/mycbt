@@ -16,10 +16,11 @@ type LookupsHandler struct {
 	groups   *masterrepo.GroupsRepo
 	students *masterrepo.StudentsRepo
 	teachers *masterrepo.TeachersRepo
+	programs *masterrepo.ProgramsRepo
 }
 
-func NewLookupsHandler(subjects *masterrepo.SubjectsRepo, sessions *masterrepo.SessionsRepo, levels *masterrepo.LevelsRepo, groups *masterrepo.GroupsRepo, students *masterrepo.StudentsRepo, teachers *masterrepo.TeachersRepo) *LookupsHandler {
-	return &LookupsHandler{subjects: subjects, sessions: sessions, levels: levels, groups: groups, students: students, teachers: teachers}
+func NewLookupsHandler(subjects *masterrepo.SubjectsRepo, sessions *masterrepo.SessionsRepo, levels *masterrepo.LevelsRepo, groups *masterrepo.GroupsRepo, students *masterrepo.StudentsRepo, teachers *masterrepo.TeachersRepo, programs *masterrepo.ProgramsRepo) *LookupsHandler {
+	return &LookupsHandler{subjects: subjects, sessions: sessions, levels: levels, groups: groups, students: students, teachers: teachers, programs: programs}
 }
 
 func (h *LookupsHandler) ListSubjects(c *gin.Context) {
@@ -59,8 +60,16 @@ func (h *LookupsHandler) ListSessions(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": items})
 }
 
-func (h *LookupsHandler) ListLevels(c *gin.Context) {
+func (h *LookupsHandler) ListPrograms(c *gin.Context) {
+	items, err := h.programs.List(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": items})
+}
 
+func (h *LookupsHandler) ListLevels(c *gin.Context) {
 
 	var (
 		items []masterrepo.Level
@@ -76,7 +85,6 @@ func (h *LookupsHandler) ListLevels(c *gin.Context) {
 
 func (h *LookupsHandler) ListGroups(c *gin.Context) {
 
-
 	var (
 		items []masterrepo.Group
 		err   error
@@ -90,7 +98,6 @@ func (h *LookupsHandler) ListGroups(c *gin.Context) {
 }
 
 func (h *LookupsHandler) ListStudents(c *gin.Context) {
-
 
 	var (
 		items []masterrepo.Student
@@ -138,4 +145,3 @@ func (h *LookupsHandler) ListMyAssignments(c *gin.Context) {
 		"subjects": subjects,
 	}})
 }
-

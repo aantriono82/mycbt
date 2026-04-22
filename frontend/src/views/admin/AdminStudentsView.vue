@@ -282,7 +282,7 @@ onMounted(async () => {
     <SectionMain>
       <SectionTitleLineWithButton :icon="mdiAccountSchool" title="Siswa" main>
         <div class="flex items-center gap-2">
-          <BaseButton :icon="mdiDownload" color="whiteDark" label="Template" @click="downloadTemplate" small outline />
+          <BaseButton :icon="mdiDownload" color="purple" label="Template" @click="downloadTemplate" small />
           <label class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-emerald-600 bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 transition-colors">
             <BaseIcon :path="mdiUpload" size="16" class="mr-1" />
             Impor Excel

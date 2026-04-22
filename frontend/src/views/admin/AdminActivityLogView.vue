@@ -149,7 +149,7 @@ onMounted(load)
       <SectionTitleLineWithButton :icon="mdiHistory" title="Log Aktivitas Login" main>
         <div class="flex items-center gap-2">
           <BaseButton :icon="mdiRefresh" color="info" label="Refresh" @click="load" />
-          <BaseButton :icon="mdiCalendarClockOutline" color="warning" label="Hapus >30 Hari" @click="pruneOlderThan(30)" />
+          <BaseButton :icon="mdiCalendarClockOutline" color="purple" label="Hapus >30 Hari" @click="pruneOlderThan(30)" />
           <BaseButton :icon="mdiDeleteSweepOutline" color="danger" label="Hapus Semua" @click="clearAll" />
         </div>
       </SectionTitleLineWithButton>
@@ -201,7 +201,7 @@ onMounted(load)
           <div class="md:col-span-12 flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-2">
               <BaseButton color="info" label="Apply" @click="applyFilters" />
-              <BaseButton outline color="whiteDark" label="Reset" @click="resetFilters" />
+              <BaseButton color="success" label="Reset" @click="resetFilters" />
             </div>
             <div class="flex items-center gap-3">
               <FormField label="Limit">

@@ -18,6 +18,7 @@ type rateLimitEntry struct {
 type inMemoryRateLimiter struct {
 	mu    sync.Mutex
 	store map[string]rateLimitEntry
+	once  sync.Once
 }
 
 var globalRateLimiter = &inMemoryRateLimiter{
@@ -36,13 +37,12 @@ func RateLimit(scope string, maxRequests int, window time.Duration) gin.HandlerF
 	}
 
 	return func(c *gin.Context) {
+		userID := strings.TrimSpace(GetUserID(c))
 		ip := strings.TrimSpace(c.ClientIP())
-		if ip == "" {
-			ip = "unknown"
-		}
-		key := fmt.Sprintf("%s:%s", scope, ip)
+		key := fmt.Sprintf("%s:%s", scope, rateLimitIdentity(userID, ip))
 		now := time.Now()
 
+		globalRateLimiter.ensureJanitor()
 		allowed, retryAfterSec := globalRateLimiter.allow(key, maxRequests, window, now)
 		if !allowed {
 			c.Header("Retry-After", fmt.Sprintf("%d", retryAfterSec))
@@ -59,16 +59,32 @@ func RateLimit(scope string, maxRequests int, window time.Duration) gin.HandlerF
 	}
 }
 
+func rateLimitIdentity(userID, ip string) string {
+	if strings.TrimSpace(userID) != "" {
+		return "u:" + strings.TrimSpace(userID)
+	}
+	ip = strings.TrimSpace(ip)
+	if ip == "" {
+		ip = "unknown"
+	}
+	return "ip:" + ip
+}
+
+func (l *inMemoryRateLimiter) ensureJanitor() {
+	l.once.Do(func() {
+		go func() {
+			t := time.NewTicker(60 * time.Second)
+			defer t.Stop()
+			for now := range t.C {
+				l.cleanupExpired(now)
+			}
+		}()
+	})
+}
+
 func (l *inMemoryRateLimiter) allow(key string, maxRequests int, window time.Duration, now time.Time) (allowed bool, retryAfterSec int) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-
-	// Lazy cleanup to keep map bounded.
-	for k, v := range l.store {
-		if now.After(v.ResetAt) {
-			delete(l.store, k)
-		}
-	}
 
 	entry, ok := l.store[key]
 	if !ok || now.After(entry.ResetAt) {
@@ -90,4 +106,14 @@ func (l *inMemoryRateLimiter) allow(key string, maxRequests int, window time.Dur
 	entry.Count++
 	l.store[key] = entry
 	return true, 0
+}
+
+func (l *inMemoryRateLimiter) cleanupExpired(now time.Time) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	for k, v := range l.store {
+		if now.After(v.ResetAt) {
+			delete(l.store, k)
+		}
+	}
 }

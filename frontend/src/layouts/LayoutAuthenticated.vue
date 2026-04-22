@@ -11,6 +11,7 @@ import NavBar from '@/components/NavBar.vue'
 import NavBarItemPlain from '@/components/NavBarItemPlain.vue'
 import AsideMenu from '@/components/AsideMenu.vue'
 import FooterBar from '@/components/FooterBar.vue'
+import BackendHealthBanner from '@/components/BackendHealthBanner.vue'
 import { api } from '@/services/api.js'
 
 const layoutAsidePadding = 'xl:pl-60'
@@ -110,9 +111,11 @@ const menuClick = (event, item) => {
           <span v-if="authStore.user?.username" class="opacity-60"> (@{{ authStore.user.username }})</span>
         </span>
         <span class="mx-3 text-slate-300 dark:text-slate-700">|</span>
-        <button class="font-extrabold text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline transition-all" @click="router.push(homeRouteForRole(authStore.role))">
-          DASHBOARD UTAMA
+        <button class="font-extrabold text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline transition-all uppercase" @click="router.push(homeRouteForRole(authStore.role))">
+          Dashboard Utama
         </button>
+        <span class="mx-3 text-slate-300 dark:text-slate-700">|</span>
+        <BackendHealthBanner />
       </div>
       <slot />
       <FooterBar>

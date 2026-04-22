@@ -1470,8 +1470,14 @@ func (h *AdminMasterHandler) PatchRegistration(c *gin.Context) {
 		return
 	}
 	if it.Role == "student" && it.NIS == "" {
-		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "nis required for student"}})
-		return
+		if it.NISN != "" {
+			it.NIS = it.NISN
+		} else if it.Username != "" {
+			it.NIS = it.Username
+		} else {
+			c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "nis required for student"}})
+			return
+		}
 	}
 
 	// If username changed, validate it doesn't collide with existing users.
@@ -1504,6 +1510,27 @@ func (h *AdminMasterHandler) PatchRegistration(c *gin.Context) {
 
 type decideReq struct {
 	Note string `json:"note"`
+}
+
+type actionError struct {
+	status  int
+	code    string
+	message string
+}
+
+func (e *actionError) Error() string { return e.message }
+
+func newActionError(status int, code string, message string) error {
+	return &actionError{status: status, code: code, message: message}
+}
+
+func writeActionError(c *gin.Context, err error) {
+	var ae *actionError
+	if errors.As(err, &ae) {
+		c.JSON(ae.status, gin.H{"error": gin.H{"code": ae.code, "message": ae.message}})
+		return
+	}
+	c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
 }
 
 func findExistingTeacherTx(ctx context.Context, tx pgx.Tx, username string, nip string) (teacherID string, userID string, ok bool, err error) {
@@ -1540,44 +1567,35 @@ LIMIT 1`
 	return studentID, userID, true, nil
 }
 
-func (h *AdminMasterHandler) ApproveRegistration(c *gin.Context) {
-	var req decideReq
-	_ = c.ShouldBindJSON(&req)
-
-	ctx := c.Request.Context()
-	id := c.Param("id")
+func (h *AdminMasterHandler) approveRegistration(ctx context.Context, id string, note string) error {
+	note = strings.TrimSpace(note)
 
 	tx, err := h.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
-		return
+		return fmt.Errorf("begin approval transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	const sel = `
 SELECT role, username, name, COALESCE(email,''), COALESCE(phone,''), COALESCE(password_hash,''),
        COALESCE(nis,''), COALESCE(nip,''), COALESCE(program_code,''), COALESCE(level_name,''), COALESCE(group_name,''), COALESCE(mapel_codes,''),
-       COALESCE(google_id,'')
+       COALESCE(google_id,''), COALESCE(nisn,'')
 FROM registration_requests
 WHERE id = $1 AND status = 'pending'
 FOR UPDATE`
-	var role, username, name, email, phone, passwordHash, nis, nip, programCode, levelName, groupName, mapelCodes, googleID string
-	if err := tx.QueryRow(ctx, sel, id).Scan(&role, &username, &name, &email, &phone, &passwordHash, &nis, &nip, &programCode, &levelName, &groupName, &mapelCodes, &googleID); err != nil {
+	var role, username, name, email, phone, passwordHash, nis, nip, programCode, levelName, groupName, mapelCodes, googleID, nisn string
+	if err := tx.QueryRow(ctx, sel, id).Scan(&role, &username, &name, &email, &phone, &passwordHash, &nis, &nip, &programCode, &levelName, &groupName, &mapelCodes, &googleID, &nisn); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Distinguish between missing id and non-pending status.
 			if it, ok, gerr := h.registrations.Get(ctx, id); gerr == nil && ok {
 				if it.Status != "pending" {
-					c.JSON(409, gin.H{"error": gin.H{"code": "conflict", "message": "registration is not pending"}})
-				} else {
-					c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "not found"}})
+					return newActionError(409, "conflict", "registration is not pending")
 				}
-				return
+				return newActionError(404, "not_found", "not found")
 			}
-			c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "not found"}})
-			return
+			return newActionError(404, "not_found", "not found")
 		}
-		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
-		return
+		return fmt.Errorf("load pending registration: %w", err)
 	}
 
 	// If no password_hash and no google_id (manual form registration), auto-generate
@@ -1585,8 +1603,7 @@ FOR UPDATE`
 	if strings.TrimSpace(passwordHash) == "" && strings.TrimSpace(googleID) == "" {
 		hashed, err := bcrypt.GenerateFromPassword([]byte(username), bcrypt.DefaultCost)
 		if err != nil {
-			c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "failed to generate password"}})
-			return
+			return fmt.Errorf("generate fallback password: %w", err)
 		}
 		passwordHash = string(hashed)
 	}
@@ -1598,18 +1615,15 @@ FOR UPDATE`
 		if len(codes) > 0 {
 			sids, missing, err := h.lookups.SubjectIDsByCodesStrict(ctx, codes)
 			if err != nil {
-				c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
-				return
+				return fmt.Errorf("lookup teacher subjects: %w", err)
 			}
 			if len(missing) > 0 {
-				c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "unknown mapel_codes: " + strings.Join(missing, ",")}})
-				return
+				return newActionError(400, "bad_request", "unknown mapel_codes: "+strings.Join(missing, ","))
 			}
 			subjectIDs = sids
 		}
 		if _, spErr := tx.Exec(ctx, `SAVEPOINT sp_create_user`); spErr != nil {
-			c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
-			return
+			return fmt.Errorf("create savepoint teacher approval: %w", spErr)
 		}
 		if teacherID, userID, err := h.teachers.CreateTeacherTx(ctx, tx, username, passwordHash, name, email, phone, nip, "", googleID, subjectIDs, nil, nil); err != nil {
 			if pgerr.Code(err) == pgerr.CodeUniqueViolation {
@@ -1620,12 +1634,10 @@ FOR UPDATE`
 				// mark the registration as approved instead of failing with "duplicate".
 				existingTeacherID, existingUserID, ok, ferr := findExistingTeacherTx(ctx, tx, username, nip)
 				if ferr != nil {
-					c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
-					return
+					return fmt.Errorf("find existing teacher after duplicate: %w", ferr)
 				}
 				if !ok {
-					c.JSON(409, gin.H{"error": gin.H{"code": "conflict", "message": "duplicate"}})
-					return
+					return newActionError(409, "conflict", "duplicate")
 				}
 
 				// Best-effort: link google_id if provided and user doesn't have one yet.
@@ -1635,11 +1647,9 @@ UPDATE users
 SET google_id = NULLIF($1,''), updated_at = now()
 WHERE id = $2 AND (google_id IS NULL OR google_id = '')`, googleID, existingUserID); uerr != nil {
 						if pgerr.Code(uerr) == pgerr.CodeUniqueViolation {
-							c.JSON(409, gin.H{"error": gin.H{"code": "conflict", "message": "google_id already linked"}})
-							return
+							return newActionError(409, "conflict", "google_id already linked")
 						}
-						c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
-						return
+						return fmt.Errorf("link teacher google_id: %w", uerr)
 					}
 				}
 				// Ensure the account is active.
@@ -1650,14 +1660,12 @@ WHERE id = $2 AND (google_id IS NULL OR google_id = '')`, googleID, existingUser
 					const insMap = `INSERT INTO teacher_subjects (teacher_id, subject_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`
 					for _, sid := range subjectIDs {
 						if _, mapErr := tx.Exec(ctx, insMap, existingTeacherID, sid); mapErr != nil {
-							c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
-							return
+							return fmt.Errorf("ensure teacher subject mapping: %w", mapErr)
 						}
 					}
 				}
 			} else {
-				c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
-				return
+				return fmt.Errorf("create teacher account from registration: %w", err)
 			}
 		} else {
 			_ = teacherID
@@ -1665,52 +1673,55 @@ WHERE id = $2 AND (google_id IS NULL OR google_id = '')`, googleID, existingUser
 			_, _ = tx.Exec(ctx, `RELEASE SAVEPOINT sp_create_user`)
 		}
 	case "student":
+		// Fallback: if NIS is empty, try NISN, then fallback to Username.
 		if strings.TrimSpace(nis) == "" {
-			c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "nis required"}})
-			return
+			if strings.TrimSpace(nisn) != "" {
+				nis = nisn
+			} else if strings.TrimSpace(username) != "" {
+				nis = username
+			} else {
+				return newActionError(400, "bad_request", "nis required")
+			}
 		}
 
 		var programID, levelID, groupID string
 		if strings.TrimSpace(programCode) != "" {
 			id, ok, err := h.lookups.ProgramIDByCode(ctx, programCode)
 			if err != nil {
-				c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
-				return
+				return fmt.Errorf("lookup program by code: %w", err)
 			}
 			if !ok {
-				c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "unknown program_code"}})
-				return
+				// Log or ignore if lookup fails; don't block approval
+				programID = ""
+			} else {
+				programID = id
 			}
-			programID = id
 		}
 		if strings.TrimSpace(levelName) != "" {
 			id, ok, err := h.lookups.LevelIDByName(ctx, levelName)
 			if err != nil {
-				c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
-				return
+				return fmt.Errorf("lookup level by name: %w", err)
 			}
 			if !ok {
-				c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "unknown level_name"}})
-				return
+				levelID = ""
+			} else {
+				levelID = id
 			}
-			levelID = id
 		}
 		if strings.TrimSpace(groupName) != "" {
 			id, ok, err := h.lookups.GroupIDByName(ctx, groupName)
 			if err != nil {
-				c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
-				return
+				return fmt.Errorf("lookup group by name: %w", err)
 			}
 			if !ok {
-				c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "unknown group_name"}})
-				return
+				groupID = ""
+			} else {
+				groupID = id
 			}
-			groupID = id
 		}
 
 		if _, spErr := tx.Exec(ctx, `SAVEPOINT sp_create_user`); spErr != nil {
-			c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
-			return
+			return fmt.Errorf("create savepoint student approval: %w", spErr)
 		}
 		if studentID, userID, err := h.students.CreateStudentTx(ctx, tx, username, passwordHash, name, email, phone, nis, "", programID, levelID, groupID, googleID); err != nil {
 			if pgerr.Code(err) == pgerr.CodeUniqueViolation {
@@ -1718,12 +1729,10 @@ WHERE id = $2 AND (google_id IS NULL OR google_id = '')`, googleID, existingUser
 
 				existingStudentID, existingUserID, ok, ferr := findExistingStudentTx(ctx, tx, username, nis)
 				if ferr != nil {
-					c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
-					return
+					return fmt.Errorf("find existing student after duplicate: %w", ferr)
 				}
 				if !ok {
-					c.JSON(409, gin.H{"error": gin.H{"code": "conflict", "message": "duplicate"}})
-					return
+					return newActionError(409, "conflict", "duplicate")
 				}
 
 				if strings.TrimSpace(googleID) != "" {
@@ -1732,21 +1741,17 @@ UPDATE users
 SET google_id = NULLIF($1,''), updated_at = now()
 WHERE id = $2 AND (google_id IS NULL OR google_id = '')`, googleID, existingUserID); uerr != nil {
 						if pgerr.Code(uerr) == pgerr.CodeUniqueViolation {
-							c.JSON(409, gin.H{"error": gin.H{"code": "conflict", "message": "google_id already linked"}})
-							return
+							return newActionError(409, "conflict", "google_id already linked")
 						}
-						c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
-						return
+						return fmt.Errorf("link student google_id: %w", uerr)
 					}
 				}
 				_, _ = tx.Exec(ctx, `UPDATE users SET is_active = true, updated_at = now() WHERE id = $1`, existingUserID)
 				_ = existingStudentID
 			} else if pgerr.Code(err) == pgerr.CodeForeignKeyViolation {
-				c.JSON(409, gin.H{"error": gin.H{"code": "conflict", "message": "invalid reference"}})
-				return
+				return newActionError(409, "conflict", "invalid reference")
 			} else {
-				c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
-				return
+				return fmt.Errorf("create student account from registration: %w", err)
 			}
 		} else {
 			_ = studentID
@@ -1754,25 +1759,113 @@ WHERE id = $2 AND (google_id IS NULL OR google_id = '')`, googleID, existingUser
 			_, _ = tx.Exec(ctx, `RELEASE SAVEPOINT sp_create_user`)
 		}
 	default:
-		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "invalid role"}})
-		return
+		return newActionError(400, "bad_request", "invalid role")
 	}
 
 	const upd = `
 UPDATE registration_requests
 SET status = 'approved', note = NULLIF($2,''), decided_at = now()
 WHERE id = $1`
-	if _, err := tx.Exec(ctx, upd, id, strings.TrimSpace(req.Note)); err != nil {
-		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
-		return
+	if _, err := tx.Exec(ctx, upd, id, note); err != nil {
+		return fmt.Errorf("mark registration approved: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return fmt.Errorf("commit registration approval: %w", err)
+	}
+
+	return nil
+}
+
+func (h *AdminMasterHandler) ApproveRegistration(c *gin.Context) {
+	var req decideReq
+	_ = c.ShouldBindJSON(&req)
+
+	if err := h.approveRegistration(c.Request.Context(), c.Param("id"), req.Note); err != nil {
+		writeActionError(c, err)
 		return
 	}
 
 	c.JSON(200, gin.H{"data": gin.H{"ok": true}})
+}
+
+type bulkApproveRegistrationsReq struct {
+	Role  string `json:"role"`
+	Q     string `json:"q"`
+	Note  string `json:"note"`
+	Limit *int   `json:"limit"`
+}
+
+func (h *AdminMasterHandler) BulkApproveRegistrations(c *gin.Context) {
+	var req bulkApproveRegistrationsReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "invalid json"}})
+		return
+	}
+
+	role := strings.TrimSpace(req.Role)
+	if role != "" && role != "student" && role != "teacher" {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "role must be student or teacher"}})
+		return
+	}
+
+	limit := 200
+	if req.Limit != nil {
+		limit = *req.Limit
+	}
+	if limit < 1 || limit > 500 {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "limit must be between 1 and 500"}})
+		return
+	}
+
+	items, total, err := h.registrations.List(c.Request.Context(), "pending", role, strings.TrimSpace(req.Q), limit, 0)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+
+	failures := make([]gin.H, 0)
+	approved := 0
+	failed := 0
+	const maxFailureDetails = 25
+
+	for _, item := range items {
+		if err := h.approveRegistration(c.Request.Context(), item.ID, req.Note); err != nil {
+			failed++
+			message := "internal error"
+			var ae *actionError
+			if errors.As(err, &ae) {
+				message = ae.message
+			}
+			if len(failures) < maxFailureDetails {
+				failures = append(failures, gin.H{
+					"id":       item.ID,
+					"role":     item.Role,
+					"username": item.Username,
+					"name":     item.Name,
+					"message":  message,
+				})
+			}
+			continue
+		}
+		approved++
+	}
+
+	processed := len(items)
+	remaining := total - processed
+	if remaining < 0 {
+		remaining = 0
+	}
+
+	c.JSON(200, gin.H{"data": gin.H{
+		"matched_total":    total,
+		"processed":        processed,
+		"approved":         approved,
+		"failed":           failed,
+		"remaining":        remaining,
+		"failure_details":  failures,
+		"failure_truncated": failed > len(failures),
+	}})
 }
 
 func (h *AdminMasterHandler) RejectRegistration(c *gin.Context) {

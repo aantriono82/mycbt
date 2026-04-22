@@ -232,9 +232,8 @@ onBeforeUnmount(() => {
                       @click="forceSubmitSession(row)"
                     />
                     <BaseButton
-                      color="info"
+                      color="success"
                       small
-                      outline
                       label="Reset"
                       :disabled="!row.session_id || row.session_status === 'submitted' || row.session_status === 'forced' || actionSessionId === row.session_id"
                       @click="resetSession(row)"

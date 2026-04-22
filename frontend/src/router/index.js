@@ -14,6 +14,7 @@ import {
   mdiAccountGroupOutline,
   mdiBookEducationOutline,
   mdiBookOpenVariant,
+  mdiFileDocumentOutline,
   mdiClipboardTextOutline,
   mdiCalendarClockOutline,
   mdiKeyVariant,
@@ -27,7 +28,6 @@ import {
   mdiDatabaseExportOutline,
   mdiChartLine,
   mdiLinkVariant,
-  mdiQrcodeScan,
   mdiHistory,
   mdiClipboardTextSearchOutline,
 } from '@mdi/js'
@@ -257,6 +257,15 @@ const routes = [
     component: () => import('@/views/QuestionBankNewView.vue'),
   },
   {
+    meta: {
+      title: 'Impor Soal',
+      icon: mdiFileDocumentOutline,
+    },
+    path: '/admin/bank-soal/import',
+    name: 'admin-bank-soal-import',
+    component: () => import('@/views/QuestionBankImportView.vue'),
+  },
+  {
     meta: { title: 'Pratinjau Bank Soal' },
     path: '/admin/bank-soal/preview/:id',
     name: 'admin-bank-soal-preview',
@@ -397,6 +406,12 @@ const routes = [
     component: () => import('@/views/QuestionBankNewView.vue'),
   },
   {
+    meta: { title: 'Impor Soal', icon: mdiFileDocumentOutline },
+    path: '/teacher/bank-soal/import',
+    name: 'teacher-bank-soal-import',
+    component: () => import('@/views/QuestionBankImportView.vue'),
+  },
+  {
     meta: { title: 'Pratinjau Bank Soal' },
     path: '/teacher/bank-soal/preview/:id',
     name: 'teacher-bank-soal-preview',
@@ -505,12 +520,6 @@ const routes = [
     path: '/student/profil',
     name: 'student-profil',
     component: () => import('@/views/ProfileView.vue'),
-  },
-  {
-    meta: { title: 'Scan Absensi', icon: mdiQrcodeScan },
-    path: '/student/absensi/scan',
-    name: 'student-absensi-scan',
-    component: () => import('@/views/student/AttendanceScanView.vue'),
   },
 
   // Keep template pages (not in menu) for now

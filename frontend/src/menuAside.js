@@ -7,6 +7,7 @@ import {
   mdiBullhornOutline,
   mdiBookEducationOutline,
   mdiBookOpenVariant,
+  mdiFileDocumentOutline,
   mdiClipboardTextOutline,
   mdiCalendarClockOutline,
   mdiKeyVariant,
@@ -23,7 +24,6 @@ import {
   mdiDatabaseExportOutline,
   mdiLinkVariant,
   mdiChartLine,
-  mdiQrcodeScan,
   mdiHistory,
   mdiClipboardTextSearchOutline,
 } from '@mdi/js'
@@ -49,6 +49,7 @@ export const getMenuAsideMain = (role) => {
         menu: [
           { to: '/teacher/bank-soal', label: 'Bank Soal', icon: mdiBookOpenVariant },
           { to: '/teacher/bank-soal/new', label: 'Buat Soal', icon: mdiPlus },
+          { to: '/teacher/bank-soal/import', label: 'Impor Soal', icon: mdiFileDocumentOutline },
         ],
       },
       {
@@ -84,7 +85,6 @@ export const getMenuAsideMain = (role) => {
       { to: '/student/dashboard', icon: mdiHomeOutline, label: 'Dashboard' },
       { to: '/student/ujian', icon: mdiClipboardTextOutline, label: 'Daftar Ujian' },
       { to: '/student/hasil', icon: mdiChartBoxOutline, label: 'Hasil Ujian' },
-      { to: '/student/absensi/scan', icon: mdiQrcodeScan, label: 'Scan Absensi' },
       { to: '/student/pengumuman', icon: mdiBullhornOutline, label: 'Pengumuman' },
     ]
   }
@@ -117,6 +117,7 @@ export const getMenuAsideMain = (role) => {
       menu: [
         { to: '/admin/bank-soal', label: 'Bank Soal', icon: mdiBookOpenVariant },
         { to: '/admin/bank-soal/new', label: 'Buat Soal', icon: mdiPlus },
+        { to: '/admin/bank-soal/import', label: 'Impor Soal', icon: mdiFileDocumentOutline },
       ]
     },
     {

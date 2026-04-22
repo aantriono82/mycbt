@@ -11,15 +11,18 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"mycbt/backend/internal/repo/studentexamrepo"
 )
 
 // LMSExportHandler handles data portability exports for LMS interoperability.
 type LMSExportHandler struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	student *studentexamrepo.Repo
 }
 
-func NewLMSExportHandler(pool *pgxpool.Pool) *LMSExportHandler {
-	return &LMSExportHandler{pool: pool}
+func NewLMSExportHandler(pool *pgxpool.Pool, student *studentexamrepo.Repo) *LMSExportHandler {
+	return &LMSExportHandler{pool: pool, student: student}
 }
 
 // ─── Shared structs ────────────────────────────────────────────────────────────
@@ -87,10 +90,10 @@ func (h *LMSExportHandler) ListExams(c *gin.Context) {
 	ctx := c.Request.Context()
 	rows, err := h.pool.Query(ctx, `
 		SELECT e.id::text, e.title, COALESCE(s.name,'') AS subject,
-		       e.start_at, e.end_at
+		       e.starts_at, e.ends_at
 		FROM exams e
 		LEFT JOIN subjects s ON s.id = e.subject_id
-		ORDER BY e.start_at DESC
+		ORDER BY e.starts_at DESC
 		LIMIT 200
 	`)
 	if err != nil {
@@ -222,25 +225,22 @@ func (h *LMSExportHandler) ExportResults(c *gin.Context) {
 
 func (h *LMSExportHandler) fetchResults(ctx context.Context, examID string) ([]lmsExamResultRow, error) {
 	query := `
-		SELECT e.id::text,
+		SELECT es.id::text AS session_id,
+		       e.id::text,
 		       e.title,
-		       to_char(e.start_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS exam_date,
+		       to_char(e.starts_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS exam_date,
 		       COALESCE(subj.name,'') AS subject,
-		       u.id::text AS student_id,
+		       st.id::text AS student_id,
 		       u.name AS student_name,
 		       u.username,
 		       COALESCE(st.nis,'') AS nis,
 		       es.status,
-		       COALESCE(es.score, 0) AS score,
-		       100.0 AS max_score,
-		       COALESCE(es.correct_count,0) AS correct_count,
-		       COALESCE(es.total_questions,0) AS total_items,
-		       COALESCE(to_char(es.started_at,'YYYY-MM-DD HH24:MI'),'') AS started_at,
-		       COALESCE(to_char(es.finished_at,'YYYY-MM-DD HH24:MI'),'') AS finished_at
+		       es.started_at,
+		       es.finished_at
 		FROM exam_sessions es
 		JOIN exams e ON e.id = es.exam_id
-		JOIN users u ON u.id = es.student_id
-		JOIN students st ON st.user_id = u.id
+		JOIN students st ON st.id = es.student_id
+		JOIN users u ON u.id = st.user_id
 		LEFT JOIN subjects subj ON subj.id = e.subject_id
 	`
 	args := []any{}
@@ -248,7 +248,7 @@ func (h *LMSExportHandler) fetchResults(ctx context.Context, examID string) ([]l
 		query += ` WHERE e.id = $1`
 		args = append(args, examID)
 	}
-	query += ` ORDER BY e.start_at DESC, u.name`
+	query += ` ORDER BY e.starts_at DESC, u.name`
 
 	rows, err := h.pool.Query(ctx, query, args...)
 	if err != nil {
@@ -259,14 +259,34 @@ func (h *LMSExportHandler) fetchResults(ctx context.Context, examID string) ([]l
 	var out []lmsExamResultRow
 	for rows.Next() {
 		var r lmsExamResultRow
+		var sessionID string
+		var startedAt time.Time
+		var finishedAt *time.Time
 		if err := rows.Scan(
+			&sessionID,
 			&r.ExamID, &r.ExamTitle, &r.ExamDate, &r.Subject,
 			&r.StudentID, &r.StudentName, &r.Username, &r.NIS,
-			&r.Status, &r.Score, &r.MaxScore, &r.CorrectCount, &r.TotalItems,
-			&r.StartedAt, &r.FinishedAt,
+			&r.Status,
+			&startedAt, &finishedAt,
 		); err != nil {
 			continue
 		}
+
+		// Score is computed using the same engine as the results endpoints.
+		sum, err := h.student.ComputeAutoScoreAny(ctx, sessionID, time.Now().UTC())
+		if err == nil {
+			r.Score = float64(sum.Score)
+			r.CorrectCount = sum.CorrectCount
+			r.TotalItems = sum.TotalQuestions
+		}
+		r.MaxScore = 100.0
+		r.StartedAt = startedAt.UTC().Format("2006-01-02 15:04")
+		if finishedAt != nil {
+			r.FinishedAt = finishedAt.UTC().Format("2006-01-02 15:04")
+		} else {
+			r.FinishedAt = ""
+		}
+
 		out = append(out, r)
 	}
 	return out, nil

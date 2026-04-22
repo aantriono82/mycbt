@@ -218,8 +218,8 @@ onMounted(load)
       <SectionTitleLineWithButton :icon="mdiClipboardTextSearchOutline" title="Audit Log" main>
         <div class="flex items-center gap-2">
           <BaseButton :icon="mdiRefresh" color="info" label="Refresh" @click="load" />
-          <BaseButton :icon="mdiDownload" color="info" outline label="Export CSV" @click="exportCSV" />
-          <BaseButton :icon="mdiCalendarClockOutline" color="warning" label="Hapus >30 Hari" @click="pruneOlderThan(30)" />
+          <BaseButton :icon="mdiDownload" color="success" label="Export CSV" @click="exportCSV" />
+          <BaseButton :icon="mdiCalendarClockOutline" color="purple" label="Hapus >30 Hari" @click="pruneOlderThan(30)" />
           <BaseButton :icon="mdiDeleteSweepOutline" color="danger" label="Hapus Semua" @click="clearAll" />
         </div>
       </SectionTitleLineWithButton>
@@ -325,7 +325,7 @@ onMounted(load)
           <div class="md:col-span-9 flex flex-wrap items-end justify-between gap-3">
             <div class="flex items-center gap-2">
               <BaseButton color="info" label="Apply" @click="applyFilters" />
-              <BaseButton outline color="whiteDark" label="Reset" @click="resetFilters" />
+              <BaseButton color="success" label="Reset" @click="resetFilters" />
             </div>
             <div class="flex items-center gap-3">
               <FormField label="Limit">

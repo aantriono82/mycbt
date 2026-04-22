@@ -1,0 +1,62 @@
+TEMPLATE SOAL UNTUK IMPORT DOCX (MYCBT)
+
+Cara pakai:
+1) Copy isi file ini ke Microsoft Word / LibreOffice Writer.
+2) Ubah/isi teks soal sesuai kebutuhan.
+3) Save As .docx
+4) Import melalui menu Bank Soal -> Import DOCX
+
+Aturan penting:
+- Awal soal harus berupa nomor: "1." atau "1)".
+- Tipe soal disarankan ditulis dengan tag: [mc_single] [mc_multiple] [true_false] [short_answer] [matching] [essay]
+- Opsi pilihan ganda harus pakai label A-F: "A. ..." "B. ..." dst.
+- Kunci jawaban pakai "Answer:" atau "Kunci:".
+- Matching (menjodohkan) pakai format: kiri => kanan (1 baris = 1 pasangan).
+- Short answer pakai pemisah "|" untuk beberapa jawaban yang dianggap benar.
+
+Catatan:
+- Jika tidak menulis tag tipe:
+  - Jika ada opsi A./B./... maka otomatis dianggap mc_single
+  - Jika tidak ada opsi maka otomatis dianggap essay
+- Import DOCX membaca teks saja. Gambar di DOCX tidak ikut terimport.
+- LaTeX (opsional):
+  - Inline: $x^2 + y^2$
+  - Blok: $$\\frac{a}{b}$$
+  - Tulis sebagai teks biasa di Word; delimiter $...$ dan $$...$$ akan ikut tersimpan.
+
+
+1) Ibu kota Indonesia adalah? [mc_single]
+A. Jakarta
+B. Bandung
+C. Surabaya
+Answer: A
+
+
+2) Pilih semua bilangan prima berikut. [mc_multiple]
+A. 2
+B. 3
+C. 4
+D. 5
+Answer: A,B,D
+
+
+3) Pernyataan berikut ini benar atau salah. [true_false]
+Answer: benar
+
+
+4) Sebutkan contoh hewan mamalia. [short_answer]
+Answer: kucing | sapi | kambing
+
+
+5) Pasangkan angka dengan ejaannya. [matching]
+1 => satu
+2 => dua
+3 => tiga
+
+
+6) Hitung nilai $$\\frac{1}{2} + \\frac{1}{4}$$. [short_answer]
+Answer: 3/4 | 0.75
+
+
+7) Jelaskan proses fotosintesis dan sertakan rumus sederhana $6CO_2 + 6H_2O \\to C_6H_{12}O_6 + 6O_2$. [essay]
+(Tidak perlu Answer: untuk essay)

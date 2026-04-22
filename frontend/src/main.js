@@ -6,6 +6,7 @@ import router from './router'
 import { useAuthStore } from '@/stores/auth.js'
 
 import './css/main.css'
+import 'katex/dist/katex.min.css'
 
 // Init Pinia
 const pinia = createPinia()

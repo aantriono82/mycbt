@@ -45,10 +45,13 @@ AtigaCBT is a premium computer-based testing platform designed for stability, ri
 - [x] **Final Polish & Documentation** - Membersihkan kode, dokumentasi API, dan panduan penggunaan.
 - [x] **Perbaikan Approval Pendaftaran Siswa** - Mengatasi error "nis required" saat admin approve pendaftaran dengan implementasi *Triple Fallback Logic* (NIS → NISN → Username) pada handler `ApproveRegistration` dan `PatchRegistration`; logika lookup (level/group/program) dibuat toleran agar tidak memblokir approval saat nama tidak persis cocok; form `GoogleRegistrationForm.vue` diperbarui dengan kolom NIS eksplisit.
 - [x] **UI Tema Warna Konsisten (Admin)** - Pembaruan estetika pada halaman-halaman admin: Verifikasi Pendaftaran (kolom aksi ungu/purple), Log Aktivitas Login (Refresh & Apply biru, Reset hijau, Hapus >30 Hari ungu), Audit Log (Export CSV hijau solid, Hapus >30 Hari ungu, Reset hijau solid, Refresh & Apply biru).
+- [x] **Paritas Panel Admin/Guru untuk Bank Soal & Ujian** - Panel admin dan guru kini memakai view operasional yang sama untuk Bank Soal, Import Soal, Pratinjau, Jadwal Ujian, Token, Monitor, dan Evaluasi; perbedaannya dipertahankan di level role/scope: guru hanya mengelola data miliknya sendiri, admin bisa memilih guru saat membuat ujian dan menyalin bank soal ke guru lain.
+- [x] **Refinement Import Soal & LaTeX Short Answer** - Tombol template soal dipusatkan hanya di submenu Impor Soal, editor bank soal otomatis membuka soal nomor 1 saat set sudah ada, dan alur LaTeX untuk isian singkat diperbaiki agar formula tetap stabil di editor serta kunci jawaban dirender dengan benar di halaman pratinjau.
 
 
 ### 📊 Future Roadmap
 - [ ] **LTI Advantage Services** - LTI Assignment & Grades Service (AGS) support.
+- [ ] **Role Capability Matrix** - Dokumentasi matriks hak akses Admin vs Guru vs Siswa per menu agar perubahan scope fitur tidak membingungkan saat UI tetap memakai view yang sama.
 
 ---
 **Current Focus:** Ready for Production.
