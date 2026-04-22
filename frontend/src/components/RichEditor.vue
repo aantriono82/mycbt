@@ -27,6 +27,7 @@ const emit = defineEmits(['update:modelValue'])
 const editorRef = ref(null)
 const editorInstance = ref(null)
 const uid = ref(`tiny-${Math.random().toString(36).slice(2, 9)}`)
+const isApplyingExternalContent = ref(false)
 const mathMlElements = [
   'math', 'semantics', 'annotation', 'annotation-xml',
   'mrow', 'mi', 'mn', 'mo',
@@ -79,6 +80,48 @@ const buildMathHtml = (latex, displayMode) => {
   return `<span class="math-tex" data-latex="${escapeAttr(clean)}" data-display="0" contenteditable="false">${rendered}</span>&nbsp;`
 }
 
+const looksLikeLatex = (value) => {
+  const text = String(value || '').trim()
+  if (!text) return false
+  return /\\[a-zA-Z]+|[_^{}]|\\frac|\\sqrt|\\times|\\cdot|\\left|\\right|\\sum|\\int|\\pi|\\alpha|\\beta|\\theta/.test(text)
+}
+
+const normalizeMathContent = (value) => {
+  const raw = String(value || '')
+  if (!raw.trim()) return ''
+
+  try {
+    const doc = new DOMParser().parseFromString(raw, 'text/html')
+    const mathNodes = Array.from(doc.body.querySelectorAll('.math-tex[data-latex]'))
+    if (mathNodes.length) {
+      for (const node of mathNodes) {
+        const latex = String(node.getAttribute('data-latex') || '').trim()
+        const display = node.getAttribute('data-display') === '1'
+        if (!latex) continue
+        node.outerHTML = buildMathHtml(latex, display)
+      }
+      return doc.body.innerHTML
+    }
+  } catch {
+    // Fall through to plain-text handling.
+  }
+
+  // If external content is a plain LaTeX string, rehydrate it into a math widget.
+  if (!/<[a-z][\s\S]*>/i.test(raw) && looksLikeLatex(raw)) {
+    return buildMathHtml(raw, false)
+  }
+
+  return raw
+}
+
+const syncModelValue = (editor) => {
+  if (!editor) return
+  const content = editor.getContent()
+  if (content !== props.modelValue) {
+    emit('update:modelValue', content)
+  }
+}
+
 const openMathDialog = (editor, initialLatex = '', initialDisplay = false, targetEl = null) => {
   editor.windowManager.open({
     title: targetEl ? 'Edit LaTeX' : 'Insert LaTeX',
@@ -108,11 +151,15 @@ const openMathDialog = (editor, initialLatex = '', initialDisplay = false, targe
 
       try {
         const mathHtml = buildMathHtml(latex, display)
-        if (targetEl) {
-          targetEl.outerHTML = mathHtml
-        } else {
-          editor.insertContent(mathHtml)
-        }
+        editor.undoManager.transact(() => {
+          if (targetEl) {
+            editor.dom.setOuterHTML(targetEl, mathHtml)
+          } else {
+            editor.insertContent(mathHtml)
+          }
+        })
+        editor.nodeChanged()
+        syncModelValue(editor)
         apiDialog.close()
       } catch (err) {
         console.error('KaTeX render error:', err)
@@ -208,8 +255,18 @@ const initEditor = async () => {
         openMathDialog(editor, latex, display, mathEl)
       })
 
-      editor.on('change input undo redo', () => {
-        emit('update:modelValue', editor.getContent())
+      editor.on('init', () => {
+        const initialContent = normalizeMathContent(props.modelValue)
+        if (initialContent && editor.getContent() !== initialContent) {
+          isApplyingExternalContent.value = true
+          editor.setContent(initialContent)
+          isApplyingExternalContent.value = false
+        }
+      })
+
+      editor.on('change input undo redo SetContent ExecCommand', () => {
+        if (isApplyingExternalContent.value) return
+        syncModelValue(editor)
       })
     },
     skin: 'oxide',
@@ -223,8 +280,11 @@ const initEditor = async () => {
 }
 
 watch(() => props.modelValue, (newValue) => {
-  if (editorInstance.value && newValue !== editorInstance.value.getContent()) {
-    editorInstance.value.setContent(newValue)
+  const normalizedValue = normalizeMathContent(newValue)
+  if (editorInstance.value && normalizedValue !== editorInstance.value.getContent()) {
+    isApplyingExternalContent.value = true
+    editorInstance.value.setContent(normalizedValue)
+    isApplyingExternalContent.value = false
   }
 })
 

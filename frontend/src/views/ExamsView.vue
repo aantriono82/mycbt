@@ -79,6 +79,43 @@ const form = reactive({
   shuffle_options: true,
 })
 
+const scheduleForm = reactive({
+  starts_date: '',
+  starts_hour: '',
+  starts_minute: '',
+  ends_date: '',
+  ends_hour: '',
+  ends_minute: '',
+})
+
+const hourOptions = Array.from({ length: 24 }, (_, i) => {
+  const value = String(i).padStart(2, '0')
+  return { value, label: value }
+})
+
+const minuteOptions = Array.from({ length: 60 }, (_, i) => {
+  const value = String(i).padStart(2, '0')
+  return { value, label: value }
+})
+
+const buildDateTimeLocalValue = (dateValue, hourValue, minuteValue) => {
+  if (!dateValue || hourValue === '' || minuteValue === '') return ''
+  return `${dateValue}T${String(hourValue).padStart(2, '0')}:${String(minuteValue).padStart(2, '0')}`
+}
+
+const syncScheduleDateTimes = () => {
+  form.starts_at = buildDateTimeLocalValue(
+    scheduleForm.starts_date,
+    scheduleForm.starts_hour,
+    scheduleForm.starts_minute,
+  )
+  form.ends_at = buildDateTimeLocalValue(
+    scheduleForm.ends_date,
+    scheduleForm.ends_hour,
+    scheduleForm.ends_minute,
+  )
+}
+
 const attachForm = reactive({
   question_set_id: '',
   num_questions: '',
@@ -173,6 +210,7 @@ const clearTargetErrors = () => {
 
 const validateCreateExamForm = () => {
   clearExamFormErrors()
+  syncScheduleDateTimes()
   if (!isTeacherArea.value && !String(form.teacher_id || '').trim()) {
     formErrors.teacher_id = 'Guru wajib dipilih'
   }
@@ -389,6 +427,7 @@ const updateExamSession = async () => {
 const createExam = async () => {
   successMessage.value = ''
   errorMessage.value = ''
+  syncScheduleDateTimes()
   const isValid = validateCreateExamForm()
   if (!isValid) {
     errorMessage.value = 'Periksa kembali form jadwal ujian'
@@ -416,6 +455,12 @@ const createExam = async () => {
     form.title = ''
     form.starts_at = ''
     form.ends_at = ''
+    scheduleForm.starts_date = ''
+    scheduleForm.starts_hour = ''
+    scheduleForm.starts_minute = ''
+    scheduleForm.ends_date = ''
+    scheduleForm.ends_hour = ''
+    scheduleForm.ends_minute = ''
     form.duration_minutes = 60
     await loadExams()
     selectedExamId.value = data?.data?.id || selectedExamId.value
@@ -543,11 +588,31 @@ onMounted(async () => {
             <FormField label="Judul Ujian" :error="formErrors.title">
               <FormControl v-model="form.title" placeholder="Ujian Harian 1" />
             </FormField>
-            <FormField label="Mulai" :error="formErrors.starts_at" help="Waktu akan ditampilkan dalam WIB/WITA/WIT sesuai zona waktu Anda">
-              <FormControl v-model="form.starts_at" type="datetime-local" />
+            <FormField label="Mulai" :error="formErrors.starts_at" help="Gunakan format 24 jam. Waktu akan ditampilkan dalam WIB/WITA/WIT sesuai zona waktu Anda">
+              <div class="grid grid-cols-3 gap-2">
+                <FormControl v-model="scheduleForm.starts_date" type="date" />
+                <FormControl
+                  v-model="scheduleForm.starts_hour"
+                  :options="[{ value: '', label: 'Jam' }, ...hourOptions]"
+                />
+                <FormControl
+                  v-model="scheduleForm.starts_minute"
+                  :options="[{ value: '', label: 'Menit' }, ...minuteOptions]"
+                />
+              </div>
             </FormField>
-            <FormField label="Selesai" :error="formErrors.ends_at" help="Waktu akan ditampilkan dalam WIB/WITA/WIT sesuai zona waktu Anda">
-              <FormControl v-model="form.ends_at" type="datetime-local" />
+            <FormField label="Selesai" :error="formErrors.ends_at" help="Gunakan format 24 jam. Waktu akan ditampilkan dalam WIB/WITA/WIT sesuai zona waktu Anda">
+              <div class="grid grid-cols-3 gap-2">
+                <FormControl v-model="scheduleForm.ends_date" type="date" />
+                <FormControl
+                  v-model="scheduleForm.ends_hour"
+                  :options="[{ value: '', label: 'Jam' }, ...hourOptions]"
+                />
+                <FormControl
+                  v-model="scheduleForm.ends_minute"
+                  :options="[{ value: '', label: 'Menit' }, ...minuteOptions]"
+                />
+              </div>
             </FormField>
             <FormField label="Durasi (menit)" :error="formErrors.duration_minutes">
               <FormControl v-model="form.duration_minutes" inputmode="numeric" />

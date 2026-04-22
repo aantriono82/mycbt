@@ -34,13 +34,14 @@ func AuditLogger(audit *auditrepo.Repo) gin.HandlerFunc {
 		}
 
 		payload := map[string]any{}
-		if c.Request != nil && c.Request.Body != nil {
+		skipBody := shouldSkipAuditBody(c.Request.URL.Path)
+		if !skipBody && c.Request != nil && c.Request.Body != nil {
 			if shouldCaptureRequestBody(c.Request.Header.Get("Content-Type")) {
 				raw, err := io.ReadAll(c.Request.Body)
 				if err == nil {
 					c.Request.Body = io.NopCloser(bytes.NewBuffer(raw))
 					if len(raw) > 0 {
-						text := string(raw)
+						text := redactBody(c.Request.Header.Get("Content-Type"), raw)
 						if len(text) > 8192 {
 							text = text[:8192] + "...(truncated)"
 						}
@@ -49,8 +50,8 @@ func AuditLogger(audit *auditrepo.Repo) gin.HandlerFunc {
 				}
 			}
 		}
-		if q := c.Request.URL.RawQuery; strings.TrimSpace(q) != "" {
-			payload["query"] = q
+		if q := strings.TrimSpace(c.Request.URL.RawQuery); q != "" {
+			payload["query"] = redactQueryString(q)
 		}
 
 		c.Next()
@@ -73,6 +74,31 @@ func AuditLogger(audit *auditrepo.Repo) gin.HandlerFunc {
 			Payload:    payload,
 		})
 	}
+}
+
+func shouldSkipAuditBody(path string) bool {
+	p := strings.TrimSpace(path)
+	if p == "" {
+		return false
+	}
+	// Settings endpoints contain secrets (SMTP password, WhatsApp API key).
+	if strings.HasPrefix(p, "/api/v1/settings/smtp") {
+		return true
+	}
+	if strings.HasPrefix(p, "/api/v1/settings/whatsapp") {
+		return true
+	}
+	// Student token entry endpoints.
+	if strings.HasSuffix(p, "/student/exams/") {
+		// no-op; guard for weird paths
+	}
+	if strings.HasSuffix(p, "/join") && strings.Contains(p, "/api/v1/student/exams/") {
+		return true
+	}
+	if strings.HasSuffix(p, "/verify-token") && strings.Contains(p, "/api/v1/student/sessions/") {
+		return true
+	}
+	return false
 }
 
 func shouldCaptureRequestBody(contentType string) bool {

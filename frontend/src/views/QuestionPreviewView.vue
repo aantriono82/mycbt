@@ -239,7 +239,7 @@
                       <div class="space-y-2">
                          <div v-for="ans in currentQuestion.answers" :key="ans.id" class="flex items-center gap-3">
                             <BaseIcon :path="mdiCheckCircleOutline" size="18" class="text-emerald-500" />
-                            <span class="text-xl font-black text-emerald-800">{{ ans.answer_text }}</span>
+                            <span class="text-xl font-black text-emerald-800" v-html="renderAcceptedAnswerHtml(ans.answer_text)"></span>
                          </div>
                       </div>
                    </div>
@@ -447,6 +447,19 @@ const currentQuestion = computed(() => questions.value[currentIndex.value] || nu
 const cardScrollEl = ref(null)
 
 const stripHtml = (html) => String(html || '').replace(/<[^>]*>/g, '').trim()
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+
+const looksLikeLatex = (value) => {
+  const text = String(value || '').trim()
+  if (!text) return false
+  return /\\[a-zA-Z]+|[_^{}]|\\frac|\\sqrt|\\times|\\cdot|\\left|\\right|\\sum|\\int|\\pi|\\alpha|\\beta|\\theta/.test(text)
+}
 
 const renderHtml = (html) => {
   const raw = String(html || '')
@@ -473,6 +486,13 @@ const renderHtml = (html) => {
   } catch {
     return raw
   }
+}
+
+const renderAcceptedAnswerHtml = (value) => {
+  const text = String(value || '').trim()
+  if (!text) return '<span class="italic text-slate-400">(Kunci kosong)</span>'
+  if (looksLikeLatex(text)) return `\\(${escapeHtml(fixCommonLatexCommands(text))}\\)`
+  return escapeHtml(text)
 }
 
 const matchingRightOptions = computed(() => {
@@ -565,15 +585,26 @@ const loadPreviewData = async () => {
 }
 
 let mathRaf = 0
+const fixCommonLatexCommands = (input) => {
+  const s = String(input || '')
+  // Auto-fix common TeX commands when author forgot leading backslash, e.g. "frac{1}{2}".
+  return s.replace(
+    /(^|[^\\a-zA-Z])(frac|sqrt|times|cdot|pm|mp|div|leq|geq|neq|approx|sum|prod|int|lim|infty|pi|alpha|beta|gamma|theta|lambda|mu|sigma|omega|sin|cos|tan|log|ln)\b/g,
+    '$1\\\\$2',
+  )
+}
 const renderMath = (rootEl) => {
   if (!rootEl) return
   if (window.renderMathInElement) {
     window.renderMathInElement(rootEl, {
       delimiters: [
         { left: '$$', right: '$$', display: true },
-        { left: '$', right: '$', display: false }
+        { left: '$', right: '$', display: false },
+        { left: '\\(', right: '\\)', display: false },
+        { left: '\\[', right: '\\]', display: true },
       ],
-      throwOnError: false
+      throwOnError: false,
+      preProcess: fixCommonLatexCommands,
     })
   }
 }
@@ -604,6 +635,10 @@ watch(currentIndex, () => {
       el.scrollIntoView({ block: 'nearest', inline: 'nearest' })
     }
   }, 50)
+}, { flush: 'post' })
+
+watch(showCorrect, () => {
+  scheduleRenderMath()
 }, { flush: 'post' })
 
 onMounted(() => {

@@ -14,6 +14,7 @@ import {
   mdiCalendar, mdiSchool, mdiOfficeBuilding, mdiChevronRight, mdiChevronLeft,
   mdiCheckCircle, mdiPencil, mdiInformationOutline, mdiArrowRight
 } from '@mdi/js'
+import { api } from '@/services/api.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -77,8 +78,7 @@ const submit = async () => {
   errorMessage.value = ''
   
   try {
-    const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    const response = await axios.post(`${apiUrl}/api/v1/auth/google/register`, {
+    const response = await api.post('/api/v1/auth/google/register', {
       ...form,
       birth_date: form.birth_date ? new Date(form.birth_date).toISOString() : null
     })
@@ -92,11 +92,10 @@ const submit = async () => {
 
 onMounted(async () => {
   try {
-    const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
     const [p, l, g] = await Promise.all([
-      axios.get(`${apiUrl}/api/v1/lookups/programs`),
-      axios.get(`${apiUrl}/api/v1/lookups/levels`),
-      axios.get(`${apiUrl}/api/v1/lookups/groups`)
+      api.get('/api/v1/lookups/programs'),
+      api.get('/api/v1/lookups/levels'),
+      api.get('/api/v1/lookups/groups')
     ])
     programs.value = p.data?.data || []
     levels.value = l.data?.data || []
@@ -104,6 +103,37 @@ onMounted(async () => {
   } catch (err) {
     console.error('Failed to load lookups', err)
   }
+})
+
+// Pemetaan jenjang -> rentang kelas
+const JENJANG_KELAS = {
+  SD:  [1, 2, 3, 4, 5, 6],
+  SMP: [7, 8, 9],
+  SMA: [10, 11, 12],
+}
+
+const filteredLevels = computed(() => {
+  // Hardcoded defaults as fallback
+  const defaults = {
+    SD:  ['Kelas 1', 'Kelas 2', 'Kelas 3', 'Kelas 4', 'Kelas 5', 'Kelas 6'],
+    SMP: ['Kelas 7', 'Kelas 8', 'Kelas 9'],
+    SMA: ['Kelas 10', 'Kelas 11', 'Kelas 12']
+  }
+
+  if (levels.value.length === 0) {
+    return (defaults[form.jenjang] || []).map(name => ({ id: name, name: name, kelas: parseInt(name.split(' ')[1]) }))
+  }
+
+  if (!form.jenjang) return levels.value
+  const allowed = JENJANG_KELAS[form.jenjang] || []
+  const matched = levels.value.filter((l) => allowed.includes(l.kelas))
+  return matched.length > 0 ? matched : levels.value
+})
+
+const filteredGroups = computed(() => {
+  if (groups.value.length > 0) return groups.value
+  // Hardcoded defaults as fallback
+  return ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map(name => ({ id: name, name: name }))
 })
 
 const genderOptions = [
@@ -202,10 +232,16 @@ const groupOptions = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
                     <input v-model="form.email" type="email" placeholder="contoh@gmail.com" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 transition-all text-slate-800 outline-none" />
                   </div>
  
-                   <div v-if="form.role === 'student'">
-                     <label class="block text-sm font-medium text-slate-700 mb-1.5">NISN <span class="text-rose-500">*</span></label>
-                    <input v-model="form.nisn" type="text" placeholder="Masukkan 10 digit NISN" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 outline-none" />
-                  </div>
+                   <div v-if="form.role === 'student'" class="grid grid-cols-2 gap-4">
+                     <div>
+                       <label class="block text-sm font-medium text-slate-700 mb-1.5">NIS <span class="text-rose-500">*</span></label>
+                       <input v-model="form.nis" type="text" placeholder="NIS Sekolah" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 outline-none" />
+                     </div>
+                     <div>
+                       <label class="block text-sm font-medium text-slate-700 mb-1.5">NISN <span class="text-rose-500">*</span></label>
+                       <input v-model="form.nisn" type="text" placeholder="NIS Nasional" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 outline-none" />
+                     </div>
+                   </div>
                    <div v-if="form.role === 'teacher'">
                      <label class="block text-sm font-medium text-slate-700 mb-1.5">NIP <span class="text-rose-500">*</span></label>
                     <input v-model="form.nip" type="text" placeholder="Masukkan NIP (atau - jika belum ada)" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 outline-none" />
@@ -265,9 +301,9 @@ const groupOptions = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
                     </div>
                     <div>
                       <label class="block text-sm font-medium text-slate-700 mb-1.5">Kelas <span class="text-rose-500">*</span></label>
-                      <select v-model="form.level_name" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none">
+                      <select v-model="form.level_name" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none appearance-none">
                         <option value="">Pilih...</option>
-                        <option v-for="l in levels" :key="l.id" :value="l.name">{{ l.name }}</option>
+                        <option v-for="l in filteredLevels" :key="l.id" :value="l.name">{{ l.name }}</option>
                       </select>
                     </div>
                   </div>
@@ -275,9 +311,9 @@ const groupOptions = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
                   <div class="grid grid-cols-2 gap-4">
                      <div>
                       <label class="block text-sm font-medium text-slate-700 mb-1.5">Rombel/Group <span class="text-rose-500">*</span></label>
-                      <select v-model="form.group_name" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none">
+                      <select v-model="form.group_name" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none appearance-none">
                         <option value="">Pilih...</option>
-                        <option v-for="g in groups" :key="g.id" :value="g.name">{{ g.name }}</option>
+                        <option v-for="g in filteredGroups" :key="g.id" :value="g.name">{{ g.name }}</option>
                       </select>
                     </div>
                     <div>
@@ -322,8 +358,8 @@ const groupOptions = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
                       <span class="font-medium text-slate-800 font-mono">{{ form.email }}</span>
                     </div>
                     <div v-if="form.role === 'student'" class="flex justify-between text-sm">
-                      <span class="text-slate-500 text-xs">NISN</span>
-                      <span class="font-medium text-slate-800">{{ form.nisn }}</span>
+                      <span class="text-slate-500 text-xs">NIS / NISN</span>
+                      <span class="font-medium text-slate-800">{{ form.nis || '-' }} / {{ form.nisn || '-' }}</span>
                     </div>
                     <div v-if="form.role === 'teacher'" class="flex justify-between text-sm">
                       <span class="text-slate-500 text-xs">NIP</span>

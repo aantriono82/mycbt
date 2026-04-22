@@ -45,6 +45,7 @@ const isLoading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const isEditingMetadata = ref(false)
+const initializedSetId = ref('')
 
 const getNextOrderNo = () => {
   const maxOrder = (questions.value || []).reduce((m, q) => {
@@ -74,6 +75,10 @@ const questionForm = reactive({
   correct: true,
   rubric_text: '',
   max_score: 100,
+})
+
+const activeEditorScopeKey = computed(() => {
+  return editingQuestionId.value || `new-${questionForm.type}-${questionForm.order_no}`
 })
 
 const questionTypeOptions = reactive([
@@ -211,6 +216,93 @@ function stripHtml(html) {
   return div.textContent || div.innerText || ''
 }
 
+const extractAcceptedAnswerText = (html) => {
+  const raw = String(html || '')
+  if (!raw.trim()) return ''
+
+  try {
+    const doc = new DOMParser().parseFromString(raw, 'text/html')
+    doc.querySelectorAll('.math-tex').forEach((node) => {
+      const latex = String(node.getAttribute('data-latex') || '').trim()
+      const fallback = String(node.textContent || '').trim()
+      node.replaceWith(doc.createTextNode(latex || fallback))
+    })
+    return String(doc.body.textContent || '').replace(/\s+/g, ' ').trim()
+  } catch {
+    return String(stripHtml(raw) || '').replace(/\s+/g, ' ').trim()
+  }
+}
+
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+
+const summarizeText = (value, maxLen = 120) => {
+  const text = String(stripHtml(value || '') || '').replace(/\s+/g, ' ').trim()
+  if (!text) return ''
+  if (text.length <= maxLen) return text
+  return `${text.slice(0, maxLen - 1)}…`
+}
+
+const buildQuestionCardAnswerPreviewHtml = (item) => {
+  if (!item || typeof item !== 'object') return ''
+  const type = String(item.type || '').trim()
+  const lines = []
+
+  if (type === 'mc_single' || type === 'mc_multiple') {
+    const options = Array.isArray(item.options) ? item.options : []
+    for (const opt of options) {
+      const label = String(opt?.label || '').trim()
+      const content = summarizeText(opt?.content, 80)
+      if (!label && !content) continue
+      const keyTag = opt?.is_correct ? ' (kunci)' : ''
+      lines.push(`${label ? `${label}. ` : ''}${content}${keyTag}`)
+    }
+  } else if (type === 'short_answer') {
+    const answers = Array.isArray(item.answers) ? item.answers : []
+    for (const ans of answers) {
+      const text = summarizeText(ans?.answer_text, 90)
+      if (!text) continue
+      lines.push(text)
+    }
+  } else if (type === 'matching') {
+    const pairs = Array.isArray(item.pairs) ? item.pairs : []
+    for (const pair of pairs) {
+      const left = summarizeText(pair?.left_content, 36)
+      const right = summarizeText(pair?.right_content, 36)
+      if (!left && !right) continue
+      lines.push(`${left} → ${right}`)
+    }
+  } else if (type === 'true_false') {
+    const statements = Array.isArray(item.statements) ? item.statements : []
+    if (statements.length) {
+      statements.forEach((st, idx) => {
+        const content = summarizeText(st?.content, 70)
+        const truth = st?.correct ? 'Benar' : 'Salah'
+        if (!content) return
+        lines.push(`${idx + 1}. ${content} (${truth})`)
+      })
+    } else if (item.true_false && typeof item.true_false.correct === 'boolean') {
+      lines.push(`Kunci: ${item.true_false.correct ? 'Benar' : 'Salah'}`)
+    }
+  } else if (type === 'essay') {
+    const rubric = summarizeText(item?.essay?.rubric_text, 90)
+    const maxScore = item?.essay?.max_score
+    if (rubric) lines.push(`Rubrik: ${rubric}`)
+    if (maxScore !== null && maxScore !== undefined && String(maxScore) !== '') {
+      lines.push(`Skor maksimal: ${maxScore}`)
+    }
+  }
+
+  const compact = lines.filter(Boolean).slice(0, 4)
+  if (!compact.length) return ''
+  return `<ul class="space-y-1">${compact.map((line) => `<li class="line-clamp-1">${escapeHtml(line)}</li>`).join('')}</ul>`
+}
+
 
 const docxFile = ref(null)
 const isImporting = ref(false)
@@ -261,6 +353,18 @@ const loadQuestions = async () => {
   } catch {
     errorMessage.value = 'Gagal memuat pertanyaan'
   }
+}
+
+const initEditorFromFirstQuestion = () => {
+  if (!currentSetId.value) return
+  if (initializedSetId.value === currentSetId.value) return
+  initializedSetId.value = currentSetId.value
+
+  if (questions.value.length > 0) {
+    populateQuestionForm(questions.value[0])
+    return
+  }
+  resetQuestionForm(false)
 }
 
 const createAndContinue = async () => {
@@ -476,8 +580,8 @@ const buildQuestionPayload = () => {
 
   if (questionForm.type === 'short_answer') {
      payload.answers = shortAnswers
-       .filter(a => stripHtml(a.text).trim())
-       .map((a, i) => ({ answer_text: stripHtml(a.text).trim(), order_no: i + 1 }))
+       .map((a, i) => ({ answer_text: extractAcceptedAnswerText(a.text), order_no: i + 1 }))
+       .filter(a => a.answer_text)
   }
   if (questionForm.type === 'matching') {
      payload.pairs = matchingPairs
@@ -615,21 +719,24 @@ const goToPreview = () => {
   router.push(`/${role}/bank-soal/preview/${currentSetId.value}`)
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadSubjects()
   loadLevels()
   if (currentSetId.value) {
-    loadSetDetail()
-    loadQuestions()
+    await loadSetDetail()
+    await loadQuestions()
+    initEditorFromFirstQuestion()
   }
 })
 
 // Watch for query changes (if user clicks "Buat Soal" again)
-watch(() => route.query.id, (newId) => {
+watch(() => route.query.id, async (newId) => {
   currentSetId.value = newId || ''
+  initializedSetId.value = ''
   if (newId) {
-    loadSetDetail()
-    loadQuestions()
+    await loadSetDetail()
+    await loadQuestions()
+    initEditorFromFirstQuestion()
   } else {
     currentSet.value = null
     questions.value = []
@@ -641,6 +748,7 @@ watch(() => route.query.id, (newId) => {
 const stemToolbar = 'undo redo | bold italic underline | fontfamily fontsize forecolor | alignleft aligncenter alignright | bullist numlist | table image media | math charmap code | fullscreen'
 // Jawaban: compact 1-line toolbar
 const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist numlist | image math | charmap code'
+
 </script>
 
 
@@ -850,7 +958,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
               <!-- Left: Question Stem -->
               <div class="space-y-4">
                 <label class="block font-black text-[11px] uppercase tracking-[0.2em] text-slate-400">Soal</label>
-                <RichEditor v-model="questionForm.stem" :height="500" :toolbar="stemToolbar" placeholder="Tulis soal disini..." />
+                <RichEditor :key="`${activeEditorScopeKey}-stem`" v-model="questionForm.stem" :height="500" :toolbar="stemToolbar" placeholder="Tulis soal disini..." />
               </div>
 
 
@@ -858,7 +966,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
               <div class="space-y-4">
                 <div
                   v-for="(opt, idx) in mcOptions"
-                  :key="opt.label"
+                  :key="`${activeEditorScopeKey}-mc-single-${opt.label}`"
                   class="rounded-xl border overflow-hidden shadow-sm bg-white dark:bg-slate-900 transition-all"
                   :class="opt.is_correct ? 'border-indigo-400 ring-2 ring-indigo-400/40' : 'border-slate-200 dark:border-slate-800'"
                 >
@@ -896,6 +1004,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                   <!-- Card Editor -->
                   <div class="p-3">
                     <RichEditor
+                      :key="`${activeEditorScopeKey}-mc-single-editor-${opt.label}`"
                       v-model="opt.content"
                       :height="160"
                       :toolbar="optionToolbar"
@@ -931,6 +1040,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                     </div>
                   </div>
                   <div class="text-xs text-slate-600 dark:text-slate-300 line-clamp-3" v-html="item.stem"></div>
+                  <div v-if="buildQuestionCardAnswerPreviewHtml(item)" class="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300" v-html="buildQuestionCardAnswerPreviewHtml(item)"></div>
                </div>
              </div>
           </div>
@@ -984,7 +1094,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                 <label class="font-black text-[11px] uppercase tracking-[0.18em] text-slate-400">Soal</label>
               </div>
               <div class="p-4">
-                <RichEditor v-model="questionForm.stem" :height="480" :toolbar="stemToolbar" placeholder="Tulis soal disini..." />
+                <RichEditor :key="`${activeEditorScopeKey}-stem`" v-model="questionForm.stem" :height="480" :toolbar="stemToolbar" placeholder="Tulis soal disini..." />
               </div>
             </div>
 
@@ -992,7 +1102,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
             <div class="space-y-4">
               <div
                 v-for="(opt, idx) in mcMultipleOptions"
-                :key="idx"
+                :key="`${activeEditorScopeKey}-mc-multiple-${opt.label || idx}`"
                 class="rounded-xl border overflow-hidden shadow-sm bg-white dark:bg-slate-900 transition-all"
                 :class="opt.is_correct ? 'border-blue-400 ring-2 ring-blue-400/40' : 'border-slate-200 dark:border-slate-800'"
               >
@@ -1028,6 +1138,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                 <!-- Card Editor -->
                 <div class="p-3">
                   <RichEditor
+                    :key="`${activeEditorScopeKey}-mc-multiple-editor-${opt.label || idx}`"
                     v-model="opt.content"
                     :height="130"
                     :toolbar="optionToolbar"
@@ -1062,6 +1173,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                   </div>
                   <span class="inline-block mb-1 px-2 py-0.5 rounded text-[9px] font-black uppercase bg-slate-100 dark:bg-slate-800 text-slate-500">{{ item.type.replace('_', ' ') }}</span>
                   <div class="text-xs text-slate-600 dark:text-slate-300 line-clamp-3" v-html="item.stem"></div>
+                  <div v-if="buildQuestionCardAnswerPreviewHtml(item)" class="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300" v-html="buildQuestionCardAnswerPreviewHtml(item)"></div>
                </div>
              </div>
           </div>
@@ -1120,7 +1232,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
               </div>
               <!-- Card Body -->
               <div class="p-4">
-                <RichEditor v-model="questionForm.stem" :height="480" :toolbar="stemToolbar" placeholder="Tulis soal isian singkat disini..." />
+                <RichEditor :key="`${activeEditorScopeKey}-stem`" v-model="questionForm.stem" :height="480" :toolbar="stemToolbar" placeholder="Tulis soal isian singkat disini..." />
               </div>
             </div>
 
@@ -1129,7 +1241,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
               <!-- Answer Card -->
               <div
                 v-for="(ans, idx) in shortAnswers"
-                :key="idx"
+                :key="`${activeEditorScopeKey}-short-answer-${idx}`"
                 class="rounded-2xl border border-teal-300 dark:border-teal-700 overflow-hidden shadow-sm bg-white dark:bg-slate-900 ring-2 ring-teal-300/40 dark:ring-teal-700/40 transition-all"
               >
                 <!-- Card Header -->
@@ -1158,6 +1270,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                 <!-- Card Body: RichEditor -->
                 <div class="p-3">
                   <RichEditor
+                    :key="`${activeEditorScopeKey}-short-answer-editor-${idx}`"
                     v-model="ans.text"
                     :height="160"
                     :toolbar="optionToolbar"
@@ -1198,6 +1311,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                   </div>
                   <span class="inline-block mb-1 px-2 py-0.5 rounded text-[9px] font-black uppercase bg-teal-100 dark:bg-teal-900/40 text-teal-600">{{ item.type.replace('_', ' ') }}</span>
                   <div class="text-xs text-slate-600 dark:text-slate-300 line-clamp-3" v-html="item.stem"></div>
+                  <div v-if="buildQuestionCardAnswerPreviewHtml(item)" class="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300" v-html="buildQuestionCardAnswerPreviewHtml(item)"></div>
                </div>
              </div>
           </div>
@@ -1256,7 +1370,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
               </div>
               <!-- Card Body -->
               <div class="p-4">
-                <RichEditor v-model="questionForm.stem" :height="480" :toolbar="stemToolbar" placeholder="Tulis soal uraian disini..." />
+                <RichEditor :key="`${activeEditorScopeKey}-stem`" v-model="questionForm.stem" :height="480" :toolbar="stemToolbar" placeholder="Tulis soal uraian disini..." />
               </div>
             </div>
 
@@ -1279,6 +1393,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                 <!-- Card Body: RichEditor for rubric -->
                 <div class="p-4">
                   <RichEditor
+                    :key="`${activeEditorScopeKey}-essay-rubric`"
                     v-model="questionForm.rubric_text"
                     :height="300"
                     :toolbar="optionToolbar"
@@ -1335,6 +1450,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                   </div>
                   <span class="inline-block mb-1 px-2 py-0.5 rounded text-[9px] font-black uppercase bg-violet-100 dark:bg-violet-900/40 text-violet-600">{{ item.type.replace('_', ' ') }}</span>
                   <div class="text-xs text-slate-600 dark:text-slate-300 line-clamp-3" v-html="item.stem"></div>
+                  <div v-if="buildQuestionCardAnswerPreviewHtml(item)" class="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300" v-html="buildQuestionCardAnswerPreviewHtml(item)"></div>
                </div>
              </div>
           </div>
@@ -1386,7 +1502,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                   </div>
                   <label class="font-black text-[11px] uppercase tracking-[0.2em] text-slate-400">Stimulus / Soal Utama</label>
                 </div>
-                <RichEditor v-model="questionForm.stem" :height="450" :toolbar="stemToolbar" placeholder="Tulis stimulus soal disini..." />
+                <RichEditor :key="`${activeEditorScopeKey}-stem`" v-model="questionForm.stem" :height="450" :toolbar="stemToolbar" placeholder="Tulis stimulus soal disini..." />
               </div>
 
               <!-- Right: Statements Management -->
@@ -1465,6 +1581,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                      <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter" :class="item.type === 'mc_single' ? 'bg-indigo-100 text-indigo-600' : 'bg-emerald-100 text-emerald-600'">{{ item.type.replace('_', ' ') }}</span>
                   </div>
                   <div class="text-xs text-slate-600 dark:text-slate-300 font-medium line-clamp-2 leading-relaxed" v-html="item.stem"></div>
+                  <div v-if="buildQuestionCardAnswerPreviewHtml(item)" class="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300" v-html="buildQuestionCardAnswerPreviewHtml(item)"></div>
                </div>
              </div>
           </div>
@@ -1516,7 +1633,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                   </div>
                   <label class="font-black text-[11px] uppercase tracking-[0.2em] text-slate-400">Stimulus / Soal Utama</label>
                 </div>
-                <RichEditor v-model="questionForm.stem" :height="450" :toolbar="stemToolbar" placeholder="Tulis stimulus soal disini..." />
+                <RichEditor :key="`${activeEditorScopeKey}-stem`" v-model="questionForm.stem" :height="450" :toolbar="stemToolbar" placeholder="Tulis stimulus soal disini..." />
               </div>
 
               <!-- Right: Pairs Management -->
@@ -1530,7 +1647,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                  <div class="space-y-4">
                     <div 
                       v-for="(pair, idx) in matchingPairs" 
-                      :key="idx"
+                      :key="`${activeEditorScopeKey}-matching-${idx}`"
                       class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/30 overflow-hidden shadow-sm hover:shadow-md transition-all"
                     >
                        <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between">
@@ -1553,6 +1670,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                             <label class="text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest ml-1">Ruas Kiri (Akan Diacak)</label>
                             <div class="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
                               <RichEditor
+                                :key="`${activeEditorScopeKey}-matching-left-${idx}`"
                                 v-model="pair.left_content"
                                 :height="120"
                                 :toolbar="optionToolbar"
@@ -1573,6 +1691,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                             <label class="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Ruas Kanan (Jawaban Benar)</label>
                             <div class="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
                               <RichEditor
+                                :key="`${activeEditorScopeKey}-matching-right-${idx}`"
                                 v-model="pair.right_content"
                                 :height="120"
                                 :toolbar="optionToolbar"
@@ -1614,6 +1733,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                   </div>
                   <span class="inline-block mb-1 px-2 py-0.5 rounded text-[9px] font-black uppercase bg-amber-100 dark:bg-amber-900/40 text-amber-600">{{ item.type.replace('_', ' ') }}</span>
                   <div class="text-xs text-slate-600 dark:text-slate-300 line-clamp-3" v-html="item.stem"></div>
+                  <div v-if="buildQuestionCardAnswerPreviewHtml(item)" class="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300" v-html="buildQuestionCardAnswerPreviewHtml(item)"></div>
                </div>
              </div>
           </div>
@@ -1701,6 +1821,13 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                     <div class="flex gap-2">
                        <FormFilePicker v-model="docxFile" label="Pilih File" small class="flex-1" />
                        <BaseButton :icon="mdiFileDocumentOutline" color="info" label="Import" small :loading="isImporting" :disabled="!docxFile" @click="importDocx" />
+                    </div>
+                    <div class="mt-3 rounded-2xl border border-purple-200 bg-purple-50 p-4 text-purple-900 dark:border-purple-500/20 dark:bg-purple-500/10 dark:text-purple-100">
+                      <div class="flex items-center justify-between gap-3">
+                      <p class="text-xs leading-relaxed text-purple-800 dark:text-purple-100/80">
+                        Gunakan template dari submenu <span class="font-semibold">Impor Soal</span>, lalu simpan sebagai <span class="font-mono">.docx</span> sebelum import di sini.
+                      </p>
+                      </div>
                     </div>
                  </div>
                </div>

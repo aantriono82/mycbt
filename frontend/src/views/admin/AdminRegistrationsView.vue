@@ -22,8 +22,10 @@ const query = ref('')
 const status = ref('pending')
 const role = ref('')
 const actionLoadingId = ref('')
+const isBulkApproving = ref(false)
 
 const canLoad = computed(() => authStore.isAuthenticated)
+const canBulkApprove = computed(() => status.value === 'pending' && Number(meta.value?.total || registrations.value.length || 0) > 0)
 
 const loadRegistrations = async () => {
   if (!canLoad.value) return
@@ -76,6 +78,54 @@ const decide = async (id, nextStatus) => {
   }
 }
 
+const bulkApproveByFilter = async () => {
+  if (!canBulkApprove.value) return
+
+  const matchedTotal = Number(meta.value?.total || registrations.value.length || 0)
+  const processLimit = Math.min(matchedTotal, 500)
+  const roleLabel =
+    role.value === 'student' ? ' siswa' : role.value === 'teacher' ? ' guru' : ''
+
+  const ok = confirm(
+    `Approve ${processLimit} pendaftaran pending${roleLabel} sesuai filter aktif?\n\nJika total melebihi 500, sistem akan memproses 500 data per klik.`,
+  )
+  if (!ok) return
+
+  isBulkApproving.value = true
+  successMessage.value = ''
+  errorMessage.value = ''
+  try {
+    const { data } = await api.post('/api/v1/admin/registrations/approve-bulk', {
+      role: role.value,
+      q: query.value,
+      limit: processLimit,
+      note: 'Disetujui massal dari dashboard admin sesuai filter',
+    })
+
+    const result = data?.data || {}
+    const approved = Number(result.approved || 0)
+    const failed = Number(result.failed || 0)
+    const remaining = Number(result.remaining || 0)
+    let failureMessage = ''
+    successMessage.value = `Bulk approve selesai. Approved: ${approved}, gagal: ${failed}, sisa pending: ${remaining}.`
+
+    const failureDetails = Array.isArray(result.failure_details) ? result.failure_details : []
+    if (failed > 0 && failureDetails.length) {
+      failureMessage = `Sebagian data gagal diproses: ${failureDetails
+        .slice(0, 5)
+        .map((item) => `${item.username || item.name}: ${item.message}`)
+        .join(' | ')}`
+    }
+
+    await loadRegistrations()
+    errorMessage.value = failureMessage
+  } catch (error) {
+    errorMessage.value = error?.response?.data?.error?.message || 'Gagal memproses bulk approve'
+  } finally {
+    isBulkApproving.value = false
+  }
+}
+
 onMounted(loadRegistrations)
 </script>
 
@@ -87,7 +137,7 @@ onMounted(loadRegistrations)
         title="Verifikasi Pendaftaran"
         main
       >
-        <BaseButton :icon="mdiRefresh" color="info" label="Muat Ulang" @click="loadRegistrations" />
+        <BaseButton :icon="mdiRefresh" color="purple" label="Muat Ulang" @click="loadRegistrations" />
       </SectionTitleLineWithButton>
 
       <CardBox>
@@ -117,12 +167,23 @@ onMounted(loadRegistrations)
             />
           </FormField>
           <FormField label="&nbsp;" class="mb-0">
-            <BaseButton
-              color="info"
-              label="Terapkan Filter"
-              class="w-full h-12 justify-center"
-              @click="loadRegistrations"
-            />
+            <div class="flex flex-col gap-2">
+              <BaseButton
+                color="purple"
+                label="Terapkan Filter"
+                class="w-full h-12 justify-center"
+                @click="loadRegistrations"
+              />
+              <BaseButton
+                v-if="status === 'pending'"
+                :icon="mdiCheck"
+                color="success"
+                label="Approve Semua Sesuai Filter"
+                class="w-full justify-center"
+                :disabled="isBulkApproving || !canBulkApprove"
+                @click="bulkApproveByFilter"
+              />
+            </div>
           </FormField>
         </div>
 
@@ -147,6 +208,12 @@ onMounted(loadRegistrations)
 
         <div class="mb-4 text-sm text-slate-500 dark:text-slate-400">
           Total data: {{ meta.total || registrations.length }}
+        </div>
+        <div
+          v-if="status === 'pending'"
+          class="mb-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-700 dark:border-blue-900/40 dark:bg-blue-900/20 dark:text-blue-400"
+        >
+          Bulk approve mengikuti filter aktif saat ini. Gunakan filter `Role` untuk memproses hanya siswa, hanya guru, atau keduanya sekaligus.
         </div>
 
         <div v-if="isLoading" class="text-sm text-slate-500 italic dark:text-slate-400">
@@ -223,13 +290,14 @@ onMounted(loadRegistrations)
                   </span>
                 </td>
                 <td class="px-3 py-3 text-slate-500 dark:text-slate-400">{{ item.note || '-' }}</td>
-                <td class="px-3 py-3">
-                  <div class="flex flex-col gap-2">
+                <td class="px-3 py-3 w-48">
+                  <div class="flex flex-col gap-2 p-2 rounded-xl border border-purple-100 bg-purple-50/30 dark:border-purple-900/50 dark:bg-purple-900/20 shadow-sm">
                     <BaseButton
                       v-if="item.status === 'pending'"
                       :icon="mdiCheck"
                       color="success"
                       label="Approve"
+                      class="w-full"
                       :disabled="actionLoadingId === item.id"
                       @click="decide(item.id, 'approve')"
                     />
@@ -238,22 +306,24 @@ onMounted(loadRegistrations)
                       :icon="mdiClose"
                       color="danger"
                       label="Reject"
+                      class="w-full"
                       :disabled="actionLoadingId === item.id"
                       @click="decide(item.id, 'reject')"
                     />
                     <BaseButton
                       v-if="item.status !== 'pending'"
-                      color="warning"
+                      color="purple"
                       label="Set Pending"
+                      class="w-full"
                       :disabled="actionLoadingId === item.id"
                       @click="decide(item.id, 'pending')"
                     />
-                    <span
+                    <div
                       v-if="item.status === 'approved'"
-                      class="mt-1 text-[10px] text-slate-500 italic"
+                      class="mt-1 text-center text-[10px] text-purple-600 font-medium dark:text-purple-400 italic"
                     >
                       Akun sudah dibuat
-                    </span>
+                    </div>
                   </div>
                 </td>
               </tr>

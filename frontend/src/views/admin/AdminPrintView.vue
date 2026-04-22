@@ -488,7 +488,7 @@ watch(selectedTemplate, (value) => {
           />
           <BaseButton
             :icon="mdiPrinterOutline"
-            color="contrast"
+            color="purple"
             label="Cetak Laporan Nilai"
             :disabled="isLoading || !selectedExamId"
             @click="printResults"

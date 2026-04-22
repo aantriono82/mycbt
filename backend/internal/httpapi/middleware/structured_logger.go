@@ -38,7 +38,7 @@ func StructuredLogger() gin.HandlerFunc {
 			RequestID: GetRequestID(c),
 			Method:    c.Request.Method,
 			Path:      c.Request.URL.Path,
-			Query:     c.Request.URL.RawQuery,
+			Query:     redactQueryString(c.Request.URL.RawQuery),
 			Status:    c.Writer.Status(),
 			LatencyMS: time.Since(start).Milliseconds(),
 			ResponseB: c.Writer.Size(),

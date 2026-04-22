@@ -144,12 +144,24 @@ func (h *QuestionBankHandler) ImportDocx(c *gin.Context) {
 		return
 	}
 
+	existing, err := h.qb.ListQuestions(c.Request.Context(), setID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	maxOrderNo := 0
+	for _, item := range existing {
+		if item.OrderNo > maxOrderNo {
+			maxOrderNo = item.OrderNo
+		}
+	}
+
 	ins := make([]questionbankrepo.CreateQuestionInput, 0, len(qs))
-	for _, q := range qs {
+	for idx, q := range qs {
 		cReq := createQuestionReq{
 			Type:       q.Type,
 			Stem:       q.Stem,
-			OrderNo:    q.OrderNo,
+			OrderNo:    maxOrderNo + idx + 1,
 			Options:    q.Options,
 			Pairs:      q.MatchingPairs,
 			Answers:    q.ShortAnswers,

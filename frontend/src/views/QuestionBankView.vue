@@ -11,6 +11,7 @@ import {
   mdiEye,
   mdiContentCopy,
   mdiAccountArrowRightOutline,
+  mdiFileDocumentOutline,
 } from '@mdi/js'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
@@ -173,6 +174,12 @@ const goToPreview = (id) => {
   router.push(`/${role}/bank-soal/preview/${id}`)
 }
 
+const goToImport = (id = '') => {
+  const role = route.path.startsWith('/admin') ? 'admin' : 'teacher'
+  const suffix = id ? `?set_id=${id}` : ''
+  router.push(`/${role}/bank-soal/import${suffix}`)
+}
+
 onMounted(async () => {
   await loadSubjects()
   await loadLevels()
@@ -187,7 +194,10 @@ onMounted(async () => {
   <LayoutAuthenticated>
     <SectionMain>
       <SectionTitleLineWithButton :icon="mdiDatabaseOutline" title="Daftar Bank Soal" main>
-        <BaseButton :icon="mdiRefresh" color="info" label="Refresh" @click="loadQuestionSets" />
+        <div class="flex items-center gap-2">
+          <BaseButton :icon="mdiFileDocumentOutline" color="purple" label="Impor Soal" @click="goToImport()" />
+          <BaseButton :icon="mdiRefresh" color="info" label="Refresh" @click="loadQuestionSets" />
+        </div>
       </SectionTitleLineWithButton>
 
       <CardBoxModal
@@ -276,6 +286,7 @@ onMounted(async () => {
                   <td class="px-3 py-4" @click.stop>
                     <div class="flex items-center justify-end gap-4">
                       <BaseIcon v-if="isAdmin" :path="mdiAccountArrowRightOutline" size="18" class="text-emerald-500 hover:scale-125 transition-transform cursor-pointer" title="Salin ke Guru" @click="openCloneModal(item.id)" />
+                      <BaseIcon :path="mdiFileDocumentOutline" size="18" class="text-purple-500 hover:scale-125 transition-transform cursor-pointer" title="Impor soal ke bank soal ini" @click="goToImport(item.id)" />
                       <BaseIcon :path="mdiEye" size="18" class="text-indigo-500 hover:scale-125 transition-transform cursor-pointer" title="Pratinjau Soal" @click="goToPreview(item.id)" />
                       <BaseIcon :path="mdiPencil" size="18" class="text-blue-500 hover:scale-125 transition-transform cursor-pointer" title="Kelola Bank Soal (Edit Judul & Isi)" @click="goToEditor(item.id)" />
                       <BaseIcon :path="mdiDelete" size="18" class="text-red-500 hover:scale-125 transition-transform cursor-pointer" @click="deleteQuestionSet(item.id)" />

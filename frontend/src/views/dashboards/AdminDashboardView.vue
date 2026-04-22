@@ -23,7 +23,6 @@ import SectionMain from '@/components/SectionMain.vue'
 import DashboardCard from '@/components/DashboardCard.vue'
 import QuickMenuCard from '@/components/QuickMenuCard.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
-import BackendHealthBanner from '@/components/BackendHealthBanner.vue'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
 
@@ -93,7 +92,6 @@ onMounted(loadStats)
         </div>
       </div>
 
-      <BackendHealthBanner />
 
       <div v-if="!authStore.isAuthenticated" class="mb-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-700 border border-amber-100">
         Login terlebih dulu agar dashboard dapat menampilkan statistik backend.

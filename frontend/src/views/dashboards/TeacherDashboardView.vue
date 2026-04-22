@@ -12,7 +12,6 @@ import SectionMain from '@/components/SectionMain.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
 import CardBox from '@/components/CardBox.vue'
 import DashboardCard from '@/components/DashboardCard.vue'
-import BackendHealthBanner from '@/components/BackendHealthBanner.vue'
 import QuickMenuCard from '@/components/QuickMenuCard.vue'
 import { useAuthStore } from '@/stores/auth.js'
 import { api } from '@/services/api.js'
@@ -63,7 +62,6 @@ onMounted(() => {
   <LayoutAuthenticated>
     <SectionMain>
       <SectionTitleLineWithButton :icon="mdiHomeOutline" title="Dashboard Guru" main />
-      <BackendHealthBanner />
 
       <div class="mb-6 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 px-6 py-8 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
         <!-- Decoration -->

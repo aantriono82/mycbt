@@ -169,7 +169,15 @@ func (h *SettingsHandler) GetSMTP(c *gin.Context) {
 		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
 		return
 	}
-	c.JSON(200, gin.H{"data": data})
+	hasPassword := strings.TrimSpace(data.Password) != ""
+	// Never return secrets in API responses.
+	data.Password = ""
+	c.JSON(200, gin.H{
+		"data": data,
+		"meta": gin.H{
+			"has_password": hasPassword,
+		},
+	})
 }
 
 type putSMTPReq struct {
@@ -188,11 +196,22 @@ func (h *SettingsHandler) PutSMTP(c *gin.Context) {
 		return
 	}
 
+	// Preserve existing password if client submits empty password.
+	password := req.Password
+	if strings.TrimSpace(password) == "" {
+		cur, err := h.settings.GetSMTP(c.Request.Context())
+		if err != nil {
+			c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+			return
+		}
+		password = cur.Password
+	}
+
 	data, err := h.settings.UpsertSMTP(c.Request.Context(), masterrepo.SMTPConfig{
 		Host:     req.Host,
 		Port:     req.Port,
 		User:     req.User,
-		Password: req.Password,
+		Password: password,
 		From:     req.From,
 		UseTLS:   req.UseTLS,
 	})
@@ -200,7 +219,9 @@ func (h *SettingsHandler) PutSMTP(c *gin.Context) {
 		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
 		return
 	}
-	c.JSON(200, gin.H{"data": data})
+	hasPassword := strings.TrimSpace(data.Password) != ""
+	data.Password = ""
+	c.JSON(200, gin.H{"data": data, "meta": gin.H{"has_password": hasPassword}})
 }
 
 func (h *SettingsHandler) GetWhatsApp(c *gin.Context) {
@@ -209,7 +230,9 @@ func (h *SettingsHandler) GetWhatsApp(c *gin.Context) {
 		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
 		return
 	}
-	c.JSON(200, gin.H{"data": data})
+	hasKey := strings.TrimSpace(data.APIKey) != ""
+	data.APIKey = ""
+	c.JSON(200, gin.H{"data": data, "meta": gin.H{"has_api_key": hasKey}})
 }
 
 type putWhatsAppReq struct {
@@ -225,14 +248,26 @@ func (h *SettingsHandler) PutWhatsApp(c *gin.Context) {
 		return
 	}
 
+	apiKey := req.APIKey
+	if strings.TrimSpace(apiKey) == "" {
+		cur, err := h.settings.GetWhatsApp(c.Request.Context())
+		if err != nil {
+			c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+			return
+		}
+		apiKey = cur.APIKey
+	}
+
 	data, err := h.settings.UpsertWhatsApp(c.Request.Context(), masterrepo.WhatsAppConfig{
 		APIURL: req.APIURL,
-		APIKey: req.APIKey,
+		APIKey: apiKey,
 		Sender: req.Sender,
 	})
 	if err != nil {
 		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
 		return
 	}
-	c.JSON(200, gin.H{"data": data})
+	hasKey := strings.TrimSpace(data.APIKey) != ""
+	data.APIKey = ""
+	c.JSON(200, gin.H{"data": data, "meta": gin.H{"has_api_key": hasKey}})
 }

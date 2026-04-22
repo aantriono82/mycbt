@@ -349,6 +349,73 @@ type answerReq struct {
 	AnswerJSON json.RawMessage `json:"answer_json"`
 }
 
+type verifyTokenReq struct {
+	Token string `json:"token"`
+}
+
+func (h *StudentExamHandler) VerifyToken(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+	nowUTC := time.Now().UTC()
+
+	st, ok, err := h.repo.StudentByUserID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if !ok {
+		c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "student not registered"}})
+		return
+	}
+	if !st.IsActive {
+		c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "user inactive"}})
+		return
+	}
+
+	// Always require token entry for this endpoint (UI gate).
+	var req verifyTokenReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "invalid json"}})
+		return
+	}
+	req.Token = strings.TrimSpace(req.Token)
+	if req.Token == "" {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "token required"}})
+		return
+	}
+
+	state, ok, err := h.repo.GetSessionState(c.Request.Context(), c.Param("id"), st.StudentID, nowUTC)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if !ok {
+		c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "not found"}})
+		return
+	}
+	if state.Session.Status != "in_progress" {
+		c.JSON(409, gin.H{"error": gin.H{"code": "conflict", "message": "session not active"}})
+		return
+	}
+
+	if err := h.repo.VerifyExamToken(c.Request.Context(), state.Session.ExamID, req.Token, nowUTC); err != nil {
+		switch err {
+		case studentexamrepo.ErrTokenNotFound:
+			c.JSON(400, gin.H{"error": gin.H{"code": "invalid_token", "message": "invalid token"}})
+		case studentexamrepo.ErrTokenInactive:
+			c.JSON(403, gin.H{"error": gin.H{"code": "token_inactive", "message": "token inactive"}})
+		case studentexamrepo.ErrTokenNotStarted:
+			c.JSON(403, gin.H{"error": gin.H{"code": "token_not_started", "message": "token not started"}})
+		case studentexamrepo.ErrTokenExpired:
+			c.JSON(403, gin.H{"error": gin.H{"code": "token_expired", "message": "token expired"}})
+		default:
+			c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		}
+		return
+	}
+
+	c.JSON(200, gin.H{"data": gin.H{"ok": true}})
+}
+
 func (h *StudentExamHandler) SaveAnswer(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	nowUTC := time.Now().UTC()

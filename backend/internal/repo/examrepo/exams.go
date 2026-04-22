@@ -357,6 +357,93 @@ RETURNING id::text, exam_id::text, token,
 	return it, true, nil
 }
 
+func (r *Repo) DeleteToken(ctx context.Context, tokenID string) (bool, error) {
+	ct, err := r.pool.Exec(ctx, `DELETE FROM exam_tokens WHERE id = $1`, tokenID)
+	if err != nil {
+		return false, fmt.Errorf("delete token: %w", err)
+	}
+	return ct.RowsAffected() > 0, nil
+}
+
+func (r *Repo) DeactivateAllTokens(ctx context.Context, examID string) (int, error) {
+	ct, err := r.pool.Exec(ctx, `UPDATE exam_tokens SET is_active = false WHERE exam_id = $1 AND is_active = true`, examID)
+	if err != nil {
+		return 0, fmt.Errorf("deactivate all tokens: %w", err)
+	}
+	return int(ct.RowsAffected()), nil
+}
+
+type RotateTokenInput struct {
+	ExamID            string
+	ValidFrom         *time.Time
+	ValidTo           *time.Time
+	CreatedByUserID   string
+	Length            int
+	DeactivateOthers  bool
+}
+
+func (r *Repo) RotateToken(ctx context.Context, in RotateTokenInput) (ExamToken, error) {
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return ExamToken{}, fmt.Errorf("begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	if in.DeactivateOthers {
+		if _, err := tx.Exec(ctx, `UPDATE exam_tokens SET is_active = false WHERE exam_id = $1 AND is_active = true`, in.ExamID); err != nil {
+			return ExamToken{}, fmt.Errorf("deactivate others: %w", err)
+		}
+	}
+
+	// Generate new token (same constraints as CreateToken).
+	length := in.Length
+	if length <= 0 {
+		length = 6
+	}
+	if length < 4 {
+		length = 4
+	}
+	if length > 12 {
+		length = 12
+	}
+
+	var lastErr error
+	for i := 0; i < 10; i++ {
+		token, err := randToken(length)
+		if err != nil {
+			return ExamToken{}, err
+		}
+
+		var it ExamToken
+		var vf, vt string
+		err = tx.QueryRow(ctx, `
+INSERT INTO exam_tokens (exam_id, token, valid_from, valid_to, created_by_user_id)
+VALUES ($1::uuid,$2,$3,$4,$5::uuid)
+RETURNING id::text, exam_id::text, token,
+       COALESCE(to_char(valid_from at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),''),
+       COALESCE(to_char(valid_to at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),''),
+       is_active,
+       to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"')
+`, in.ExamID, token, in.ValidFrom, in.ValidTo, in.CreatedByUserID).Scan(&it.ID, &it.ExamID, &it.Token, &vf, &vt, &it.IsActive, &it.CreatedAt)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if vf != "" {
+			it.ValidFrom = vf
+		}
+		if vt != "" {
+			it.ValidTo = vt
+		}
+
+		if err := tx.Commit(ctx); err != nil {
+			return ExamToken{}, fmt.Errorf("commit: %w", err)
+		}
+		return it, nil
+	}
+	return ExamToken{}, fmt.Errorf("rotate token failed: %w", lastErr)
+}
+
 const tokenAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // avoid 0,O,1,I
 
 func randToken(n int) (string, error) {

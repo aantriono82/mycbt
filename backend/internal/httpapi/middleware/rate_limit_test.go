@@ -52,3 +52,14 @@ func TestInMemoryRateLimiterResetAfterWindow(t *testing.T) {
 	}
 }
 
+func TestRateLimitIdentity(t *testing.T) {
+	if got := rateLimitIdentity("u1", "1.2.3.4"); got != "u:u1" {
+		t.Fatalf("expected user identity, got %q", got)
+	}
+	if got := rateLimitIdentity("", "1.2.3.4"); got != "ip:1.2.3.4" {
+		t.Fatalf("expected ip identity, got %q", got)
+	}
+	if got := rateLimitIdentity("  ", ""); got != "ip:unknown" {
+		t.Fatalf("expected unknown ip identity, got %q", got)
+	}
+}

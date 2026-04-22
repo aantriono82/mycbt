@@ -559,6 +559,169 @@ LIMIT 1`
 	c.JSON(200, gin.H{"data": it, "meta": gin.H{"exam_id": examID}})
 }
 
+func (h *ExamsHandler) DeleteToken(c *gin.Context) {
+	role := middleware.GetUserRole(c)
+	userID := middleware.GetUserID(c)
+
+	// Authorize via exam ownership
+	const q = `
+SELECT et.exam_id::text, e.teacher_id::text
+FROM exam_tokens et
+JOIN exams e ON e.id = et.exam_id
+WHERE et.id = $1
+LIMIT 1`
+	var examID string
+	var teacherID string
+	if err := h.ex.Pool().QueryRow(c.Request.Context(), q, c.Param("id")).Scan(&examID, &teacherID); err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "not found"}})
+			return
+		}
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+
+	if role == "teacher" {
+		tid, ok, err := h.ex.TeacherIDByUserID(c.Request.Context(), userID)
+		if err != nil {
+			c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+			return
+		}
+		if !ok || teacherID != tid {
+			c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "forbidden"}})
+			return
+		}
+	}
+
+	ok, err := h.ex.DeleteToken(c.Request.Context(), c.Param("id"))
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if !ok {
+		c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "not found"}})
+		return
+	}
+
+	c.JSON(200, gin.H{"data": gin.H{"ok": true}, "meta": gin.H{"exam_id": examID}})
+}
+
+func (h *ExamsHandler) DeactivateAllTokens(c *gin.Context) {
+	role := middleware.GetUserRole(c)
+	userID := middleware.GetUserID(c)
+
+	examID := c.Param("id")
+	exam, ok, err := h.ex.Get(c.Request.Context(), examID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if !ok {
+		c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "not found"}})
+		return
+	}
+	if role == "teacher" {
+		tid, ok, err := h.ex.TeacherIDByUserID(c.Request.Context(), userID)
+		if err != nil {
+			c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+			return
+		}
+		if !ok || exam.TeacherID != tid {
+			c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "forbidden"}})
+			return
+		}
+	}
+
+	affected, err := h.ex.DeactivateAllTokens(c.Request.Context(), examID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	c.JSON(200, gin.H{"data": gin.H{"ok": true, "deactivated": affected}})
+}
+
+type rotateTokenReq struct {
+	ValidFrom        *string `json:"valid_from"` // RFC3339 (optional)
+	ValidTo          *string `json:"valid_to"`   // RFC3339 (optional)
+	Length           int     `json:"length"`     // optional (default 6)
+	DeactivateOthers *bool   `json:"deactivate_others"`
+}
+
+func (h *ExamsHandler) RotateToken(c *gin.Context) {
+	role := middleware.GetUserRole(c)
+	userID := middleware.GetUserID(c)
+
+	examID := c.Param("id")
+	exam, ok, err := h.ex.Get(c.Request.Context(), examID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if !ok {
+		c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "not found"}})
+		return
+	}
+	if role == "teacher" {
+		tid, ok, err := h.ex.TeacherIDByUserID(c.Request.Context(), userID)
+		if err != nil {
+			c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+			return
+		}
+		if !ok || exam.TeacherID != tid {
+			c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "forbidden"}})
+			return
+		}
+	}
+
+	var req rotateTokenReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "invalid json"}})
+		return
+	}
+
+	var vf *time.Time
+	var vt *time.Time
+	if req.ValidFrom != nil && strings.TrimSpace(*req.ValidFrom) != "" {
+		t, err := time.Parse(time.RFC3339, strings.TrimSpace(*req.ValidFrom))
+		if err != nil {
+			c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "invalid valid_from (RFC3339)"}})
+			return
+		}
+		vf = &t
+	}
+	if req.ValidTo != nil && strings.TrimSpace(*req.ValidTo) != "" {
+		t, err := time.Parse(time.RFC3339, strings.TrimSpace(*req.ValidTo))
+		if err != nil {
+			c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "invalid valid_to (RFC3339)"}})
+			return
+		}
+		vt = &t
+	}
+	if vf != nil && vt != nil && !vt.After(*vf) {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "valid_to must be after valid_from"}})
+		return
+	}
+
+	deactivate := true
+	if req.DeactivateOthers != nil {
+		deactivate = *req.DeactivateOthers
+	}
+
+	it, err := h.ex.RotateToken(c.Request.Context(), examrepo.RotateTokenInput{
+		ExamID:           examID,
+		ValidFrom:        vf,
+		ValidTo:          vt,
+		CreatedByUserID:  userID,
+		Length:           req.Length,
+		DeactivateOthers: deactivate,
+	})
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	c.JSON(201, gin.H{"data": it})
+}
+
 func (h *ExamsHandler) GetTargets(c *gin.Context) {
 	role := middleware.GetUserRole(c)
 	userID := middleware.GetUserID(c)

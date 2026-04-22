@@ -10,12 +10,14 @@ Kontrak API awal (OpenAPI): [docs/openapi.yaml](/home/aantriono/dev/mycbt/docs/o
 
 ## Status Implementasi (2026-04-22)
 
+- **Paritas Panel Admin/Guru untuk Bank Soal & Ujian**: Route admin dan guru kini sengaja memakai view operasional yang sama untuk `Bank Soal`, `Impor Soal`, `Pratinjau`, `Jadwal Ujian`, `Token`, `Monitor`, dan `Evaluasi`. Perbedaannya ada di RBAC dan scope data: guru hanya melihat/mengelola miliknya sendiri, sedangkan admin punya kontrol lintas guru.
+- **Refinement Import Soal & LaTeX Short Answer**: Tombol template soal kini dipusatkan hanya di submenu `Impor Soal`, editor `/bank-soal/new?id=...` otomatis membuka soal nomor 1 saat bank soal sudah memiliki isi, dan alur LaTeX untuk `short_answer` diperbaiki agar formula tidak kembali ke teks mentah setelah insert/edit Sigma. Kunci jawaban isian singkat di pratinjau juga kini dirender sebagai rumus.
 - **Stabilisasi Sigma/LaTeX di Editor Bank Soal**: Tombol Sigma pada editor `/admin/bank-soal/new` kini merender formula lewat KaTeX ke MathML dan dipertahankan oleh schema TinyMCE (`custom_elements` + `extended_valid_elements`) agar tidak berubah menjadi teks literal (contoh `\sqrt{98}`). Warning Vue `Property "vSlot" was accessed during render...` pada sidebar juga sudah diperbaiki di komponen menu.
 - **Resolved Student Registration Approval**: Mengatasi error "nis required" saat admin menyetujui pendaftaran siswa. Implementasi *Triple Fallback Logic* (NIS → NISN → Username) pada backend; logika lookup nama Kelas/Rombel diperbarui agar toleran terhadap ketidakcocokan nama, sehingga approval tidak terblokir. Formulir `GoogleRegistrationForm.vue` juga diperbarui untuk menangkap kolom NIS secara eksplisit.
 - **Admin UI Color Theme Consistency**: Pembaruan estetika menyeluruh pada halaman-halaman panel admin. Halaman Verifikasi Pendaftaran kini memiliki kolom aksi bertema ungu (purple). Halaman Log Aktivitas dan Audit Log memiliki skema warna tombol yang konsisten: Refresh & Apply (biru), Reset (hijau solid), Hapus >30 Hari (ungu), Export CSV (hijau solid), dan Hapus Semua (merah).
 - **Admin Panel Backend Smoke Audit**: Menambahkan skrip `scripts/audit_admin.sh` untuk smoke-test endpoint yang dipakai panel admin (login, settings, analytics, LMS, master data CRUD, bank soal, ujian, token) secara end-to-end (create dummy data + cleanup).
 - **Fix Analytics & LMS Endpoints**: Memperbaiki endpoint yang 500 karena query mengacu ke kolom yang tidak ada (mis. `es.score`, `e.start_at`). Analytics dan export hasil LMS kini menghitung skor lewat scoring engine dan memakai schema yang benar (`starts_at/ends_at`, join `exam_sessions -> students -> users`).
-- **Template Import DOCX (LaTeX-ready)**: Editor Bank Soal punya tombol **Template** dan kartu template (background purple) untuk download file template import DOCX. Template mendukung penulisan LaTeX sebagai teks dengan delimiter `$...$` dan `$$...$$`. Panduan: `docs/template-soal-docx.md`.
+- **Template Import DOCX (LaTeX-ready)**: Template import DOCX sekarang dipusatkan di submenu `/bank-soal/import` agar tidak duplikat di editor Bank Soal. Template tetap mendukung penulisan LaTeX sebagai teks dengan delimiter `$...$` dan `$$...$$`. Panduan: `docs/template-soal-docx.md`.
 - **Timezone-Aware Session Management**: Validasi jendela waktu pengerjaan (Sesi 1, 2, dsb) kini sepenuhnya akurat mengikuti zona waktu lokal (WIB/WITA/WIT), mencegah akses di luar jam yang ditentukan.
 - **Modernized Exam Administration UI**: Interface pengelola ujian diperbarui dengan skema warna status yang premium (Warning untuk Draft, Contrast untuk Archive) dan fitur penghapusan jadwal yang terintegrasi.
 - **Robust Workspace Navigation**: Perbaikan error navigasi (router) dan reaktivitas pada lembar pengerjaan siswa, menjamin perpindahan antar soal yang mulus dan stabil.
@@ -289,6 +291,11 @@ Guru:
   - plus Absensi Peserta
 - Evaluasi
 - Profil Guru
+
+Catatan akses Admin vs Guru:
+- Untuk `Bank Soal` dan `Ujian`, admin dan guru memakai layar/form yang sama agar alur operasional konsisten.
+- Admin dapat bekerja lintas guru, termasuk memilih `Guru` saat membuat ujian dan menyalin bank soal ke guru lain.
+- Guru tidak melihat field pemilihan guru dan hanya bisa mengakses bank soal, ujian, token, monitor, serta evaluasi yang terkait dengan kepemilikannya sendiri.
 
 Siswa:
 - Dashboard

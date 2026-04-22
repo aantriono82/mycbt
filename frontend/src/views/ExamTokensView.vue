@@ -1,6 +1,13 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { mdiKeyVariant, mdiPlus, mdiRefresh, mdiToggleSwitch, mdiToggleSwitchOffOutline } from '@mdi/js'
+import {
+  mdiDeleteOutline,
+  mdiKeyVariant,
+  mdiPlus,
+  mdiRefresh,
+  mdiToggleSwitch,
+  mdiToggleSwitchOffOutline,
+} from '@mdi/js'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
@@ -19,20 +26,7 @@ const selectedExamId = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
 const isLoading = ref(false)
-
-const formatToDateTimeLocal = (date) => {
-  if (!date) return ''
-  const d = new Date(date)
-  if (isNaN(d.getTime())) return ''
-  
-  const year = d.getFullYear()
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  const hours = String(d.getHours()).padStart(2, '0')
-  const minutes = String(d.getMinutes()).padStart(2, '0')
-  
-  return `${year}-${month}-${day}T${hours}:${minutes}`
-}
+const isMutating = ref(false)
 
 const form = reactive({
   valid_from_date: new Date().toISOString().split('T')[0],
@@ -76,7 +70,7 @@ const formatDisplayDate = (dateStr) => {
     else tz = offset >= 0 ? `GMT+${Math.floor(offset)}` : `GMT${Math.floor(offset)}`
 
     return `${formatted} ${tz}`
-  } catch (e) {
+  } catch {
     return dateStr
   }
 }
@@ -141,6 +135,60 @@ const createToken = async () => {
   }
 }
 
+const rotateToken = async () => {
+  if (!selectedExamId.value) return
+  successMessage.value = ''
+  errorMessage.value = ''
+
+  const ok = confirm(
+    'Rotate token untuk ujian ini?\n\nToken baru akan dibuat, dan token lain akan dinonaktifkan (default).',
+  )
+  if (!ok) return
+
+  isMutating.value = true
+  try {
+    const tzOffsetMap = { WIB: '+07:00', WITA: '+08:00', WIT: '+09:00' }
+    const offset = tzOffsetMap[form.timezone] || '+07:00'
+
+    const vfStr = `${form.valid_from_date}T${String(form.valid_from_hour).padStart(2, '0')}:${String(form.valid_from_minute).padStart(2, '0')}:00${offset}`
+    const vtStr = `${form.valid_to_date}T${String(form.valid_to_hour).padStart(2, '0')}:${String(form.valid_to_minute).padStart(2, '0')}:00${offset}`
+
+    await api.post(`/api/v1/exams/${selectedExamId.value}/tokens/rotate`, {
+      valid_from: new Date(vfStr).toISOString(),
+      valid_to: new Date(vtStr).toISOString(),
+      length: Number(form.length) || 6,
+      deactivate_others: true,
+    })
+    successMessage.value = 'Token berhasil di-rotate'
+    await loadTokens()
+  } catch (error) {
+    errorMessage.value = error?.response?.data?.error?.message || 'Gagal rotate token'
+  } finally {
+    isMutating.value = false
+  }
+}
+
+const deactivateAllTokens = async () => {
+  if (!selectedExamId.value) return
+  successMessage.value = ''
+  errorMessage.value = ''
+
+  const ok = confirm('Nonaktifkan semua token aktif untuk ujian ini?')
+  if (!ok) return
+
+  isMutating.value = true
+  try {
+    const { data } = await api.post(`/api/v1/exams/${selectedExamId.value}/tokens/deactivate-all`, {})
+    const n = data?.data?.deactivated ?? 0
+    successMessage.value = `Token aktif dinonaktifkan: ${n}`
+    await loadTokens()
+  } catch (error) {
+    errorMessage.value = error?.response?.data?.error?.message || 'Gagal menonaktifkan semua token'
+  } finally {
+    isMutating.value = false
+  }
+}
+
 const toggleToken = async (token) => {
   errorMessage.value = ''
   successMessage.value = ''
@@ -152,6 +200,26 @@ const toggleToken = async (token) => {
     await loadTokens()
   } catch (error) {
     errorMessage.value = error?.response?.data?.error?.message || 'Gagal mengubah status token'
+  }
+}
+
+const deleteToken = async (token) => {
+  if (!token?.id) return
+  errorMessage.value = ''
+  successMessage.value = ''
+
+  const ok = confirm(`Hapus token ${token.token}?\n\nTindakan ini tidak bisa dibatalkan.`)
+  if (!ok) return
+
+  isMutating.value = true
+  try {
+    await api.delete(`/api/v1/tokens/${token.id}`)
+    successMessage.value = 'Token berhasil dihapus'
+    await loadTokens()
+  } catch (error) {
+    errorMessage.value = error?.response?.data?.error?.message || 'Gagal menghapus token'
+  } finally {
+    isMutating.value = false
   }
 }
 
@@ -218,7 +286,17 @@ onMounted(async () => {
               </FormField>
             </div>
 
-            <BaseButton :icon="mdiPlus" color="info" label="Generate Token" @click="createToken" class="mt-2" />
+            <div class="mt-2 flex flex-wrap gap-2">
+              <BaseButton :icon="mdiPlus" color="info" label="Generate Token" :disabled="isMutating" @click="createToken" />
+              <BaseButton :icon="mdiRefresh" color="warning" label="Rotate Token" :disabled="isMutating" @click="rotateToken" />
+              <BaseButton
+                :icon="mdiToggleSwitchOffOutline"
+                color="danger"
+                label="Off Semua"
+                :disabled="isMutating || !tokens.length"
+                @click="deactivateAllTokens"
+              />
+            </div>
           </div>
         </CardBox>
 
@@ -261,13 +339,24 @@ onMounted(async () => {
                   <td class="px-3 py-3 text-xs text-slate-500 dark:text-slate-400 font-medium">{{ formatDisplayDate(token.valid_from) }}</td>
                   <td class="px-3 py-3 text-xs text-slate-500 dark:text-slate-400 font-medium">{{ formatDisplayDate(token.valid_to) }}</td>
                   <td class="px-3 py-3 text-center">
-                    <BaseButton
-                      :icon="token.is_active ? mdiToggleSwitchOffOutline : mdiToggleSwitch"
-                      color="info"
-                      small
-                      :label="token.is_active ? 'Off' : 'On'"
-                      @click="toggleToken(token)"
-                    />
+                    <div class="flex items-center justify-center gap-2">
+                      <BaseButton
+                        :icon="token.is_active ? mdiToggleSwitchOffOutline : mdiToggleSwitch"
+                        color="info"
+                        small
+                        :disabled="isMutating"
+                        :label="token.is_active ? 'Off' : 'On'"
+                        @click="toggleToken(token)"
+                      />
+                      <BaseButton
+                        :icon="mdiDeleteOutline"
+                        color="danger"
+                        small
+                        :disabled="isMutating"
+                        label="Hapus"
+                        @click="deleteToken(token)"
+                      />
+                    </div>
                   </td>
                 </tr>
                 <tr v-if="!tokens.length && !isLoading">
