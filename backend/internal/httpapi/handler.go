@@ -46,12 +46,12 @@ func NewHandler(deps Deps) http.Handler {
 	r.Use(middleware.RequestID())
 	r.Use(middleware.StructuredLogger())
 	r.GET("/", func(c *gin.Context) {
-    c.JSON(200, gin.H{
-        "name":   "MyCBT API",
-        "status": "running",
-        "env":    cfg.Env,
-    })
-})
+		c.JSON(200, gin.H{
+			"name":   "MyCBT API",
+			"status": "running",
+			"env":    cfg.Env,
+		})
+	})
 	if deps.Pool != nil {
 		r.Use(middleware.AuditLogger(auditrepo.New(deps.Pool)))
 	}
@@ -227,10 +227,12 @@ func NewHandler(deps Deps) http.Handler {
 	if deps.Auth != nil && deps.Pool != nil {
 		st := studentexamrepo.New(deps.Pool)
 		h := handlers.NewStudentExamHandler(st, masterrepo.NewSettings(deps.Pool))
+		nh := handlers.NewNotificationHandler(masterrepo.NewAnnouncements(deps.Pool), st)
 
 		sg := v1.Group("/student")
 		sg.Use(middleware.RequireAuth(deps.Auth), middleware.RequireRole("student"))
 
+		sg.GET("/notifications/stream", middleware.RequireAuthHeaderOrQueryToken(deps.Auth), nh.Stream)
 		sg.GET("/exams", h.ListExams)
 		sg.GET("/exams/:id/session", h.GetActiveSessionByExam)
 		sg.POST("/exams/:id/join", middleware.RateLimit("student_join_exam", 20, time.Minute), h.Join)

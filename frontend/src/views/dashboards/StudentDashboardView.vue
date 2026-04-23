@@ -13,16 +13,44 @@ import CardBox from '@/components/CardBox.vue'
 import DashboardCard from '@/components/DashboardCard.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
+import BaseSkeleton from '@/components/BaseSkeleton.vue'
 import { mdiContentCopy, mdiLockOutline } from '@mdi/js'
+import { useQuery } from '@tanstack/vue-query'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
 
 const authStore = useAuthStore()
 
-const isLoading = ref(false)
-const errorMessage = ref('')
-const exams = ref([])
-const results = ref([])
+const { 
+  data: examsData, 
+  isLoading: isExamsLoading, 
+  isError: isExamsError,
+  error: examsError
+} = useQuery({
+  queryKey: ['student', 'exams'],
+  queryFn: async () => {
+    const { data } = await api.get('/api/v1/student/exams', { params: { limit: 50, offset: 0 } })
+    return data?.data || []
+  },
+  staleTime: 1000 * 60 * 2, // 2 minutes
+})
+
+const { 
+  data: resultsData, 
+  isLoading: isResultsLoading 
+} = useQuery({
+  queryKey: ['student', 'results'],
+  queryFn: async () => {
+    const { data } = await api.get('/api/v1/student/results', { params: { limit: 50, offset: 0 } })
+    return data?.data || []
+  },
+  staleTime: 1000 * 60 * 5, // 5 minutes
+})
+
+const isLoading = computed(() => isExamsLoading.value || isResultsLoading.value)
+const exams = computed(() => examsData.value || [])
+const results = computed(() => resultsData.value || [])
+const errorMessage = computed(() => isExamsError.value ? (examsError.value?.response?.data?.error?.message || 'Gagal memuat dashboard') : '')
 
 const classifyStatus = (item) => {
   const endsAt = item?.ends_at ? new Date(item.ends_at) : null
@@ -68,31 +96,10 @@ const averageScore = computed(() => {
   return Math.round(total / results.value.length)
 })
 
-const loadDashboardData = async () => {
-  isLoading.value = true
-  errorMessage.value = ''
-  try {
-    const [examsResp, resultsResp] = await Promise.all([
-      api.get('/api/v1/student/exams', { params: { limit: 50, offset: 0 } }),
-      api.get('/api/v1/student/results', { params: { limit: 50, offset: 0 } }),
-    ])
-    exams.value = examsResp?.data?.data || []
-    results.value = resultsResp?.data?.data || []
-  } catch (error) {
-    exams.value = []
-    results.value = []
-    errorMessage.value = error?.response?.data?.error?.message || 'Gagal memuat dashboard siswa'
-  } finally {
-    isLoading.value = false
-  }
-}
-
 const copyToken = (token) => {
   navigator.clipboard.writeText(token)
   alert('Token berhasil disalin: ' + token)
 }
-
-onMounted(loadDashboardData)
 </script>
 
 <template>
@@ -120,24 +127,37 @@ onMounted(loadDashboardData)
       </div>
 
       <div class="mb-6 grid gap-6 md:grid-cols-3">
-        <DashboardCard
-          :icon="mdiClipboardTextClockOutline"
-          color="sky"
-          label="Ujian Mendatang"
-          :number="upcomingExams.length"
-        />
-        <DashboardCard
-          :icon="mdiSchoolOutline"
-          color="emerald"
-          label="Ujian Selesai"
-          :number="completedExamsCount"
-        />
-        <DashboardCard
-          :icon="mdiBellOutline"
-          color="amber"
-          label="Rata-rata Nilai"
-          :number="averageScore"
-        />
+        <template v-if="isLoading">
+          <CardBox v-for="i in 3" :key="i" class="h-32 flex flex-col justify-center">
+            <div class="flex items-center gap-4">
+              <BaseSkeleton width="w-12" height="h-12" rounded="rounded-2xl" />
+              <div class="space-y-2 flex-1">
+                <BaseSkeleton width="w-24" height="h-3" />
+                <BaseSkeleton width="w-12" height="h-8" />
+              </div>
+            </div>
+          </CardBox>
+        </template>
+        <template v-else>
+          <DashboardCard
+            :icon="mdiClipboardTextClockOutline"
+            color="sky"
+            label="Ujian Mendatang"
+            :number="upcomingExams.length"
+          />
+          <DashboardCard
+            :icon="mdiSchoolOutline"
+            color="emerald"
+            label="Ujian Selesai"
+            :number="completedExamsCount"
+          />
+          <DashboardCard
+            :icon="mdiBellOutline"
+            color="amber"
+            label="Rata-rata Nilai"
+            :number="averageScore"
+          />
+        </template>
       </div>
 
       <div class="grid gap-6 xl:grid-cols-2">
@@ -146,7 +166,19 @@ onMounted(loadDashboardData)
             <h3 class="text-lg font-bold dark:text-slate-100 uppercase tracking-tight">Jadwal Terdekat</h3>
             <BaseButton to="/student/ujian" color="info" label="Lihat Semua" small />
           </div>
-          <div v-if="isLoading" class="text-sm text-slate-500 dark:text-slate-400 italic">Memuat jadwal...</div>
+          <div v-if="isLoading" class="space-y-4">
+            <div v-for="i in 2" :key="i" class="rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+              <div class="flex justify-between mb-4">
+                <BaseSkeleton width="w-40" height="h-6" />
+                <BaseSkeleton width="w-20" height="h-5" rounded="rounded-full" />
+              </div>
+              <div class="space-y-2">
+                <BaseSkeleton width="w-full" height="h-3" />
+                <BaseSkeleton width="w-3/4" height="h-3" />
+                <BaseSkeleton width="w-1/2" height="h-3" />
+              </div>
+            </div>
+          </div>
           <div v-else-if="!upcomingExams.length" class="text-sm text-slate-500 dark:text-slate-400 italic">Belum ada ujian mendatang.</div>
           <div v-else class="space-y-4">
             <div

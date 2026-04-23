@@ -13,6 +13,7 @@ import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
 import CardBoxModal from '@/components/CardBoxModal.vue'
 import ItemAnalysisAI from '@/components/ItemAnalysisAI.vue'
+import BaseSkeleton from '@/components/BaseSkeleton.vue'
 import { mdiPencil, mdiClose } from '@mdi/js'
 
 const formatDateTime = (value) => {
@@ -371,8 +372,10 @@ onMounted(async () => {
             <BaseButton color="info" label="Terapkan" :disabled="isLoadingResults" @click="loadResults" />
           </div>
         </div>
-        <div class="mt-3 flex gap-3">
-          <div class="text-sm text-slate-500 dark:text-slate-400 italic" v-if="isLoadingExams || isLoadingResults">Memuat data...</div>
+        <div class="mt-3 flex gap-3 h-5 items-center">
+          <template v-if="isLoadingExams || isLoadingResults">
+            <BaseSkeleton width="w-48" height="h-4" />
+          </template>
           <div class="text-sm text-slate-500 dark:text-slate-400" v-else-if="meta?.exam">
             Hasil Ujian: <span class="font-bold dark:text-slate-100">{{ meta.exam.title }}</span>
           </div>
@@ -380,30 +383,23 @@ onMounted(async () => {
       </CardBox>
 
       <div class="mb-8 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <DashboardCard 
-          label="Total Peserta" 
-          :number="stats.total" 
-          :icon="mdiAccountGroup" 
-          color="blue" 
-        />
-        <DashboardCard 
-          label="Selesai (Submitted)" 
-          :number="stats.submitted" 
-          :icon="mdiCheckCircleOutline" 
-          color="emerald" 
-        />
-        <DashboardCard 
-          label="Terlambat (Expired)" 
-          :number="stats.expired" 
-          :icon="mdiClockAlertOutline" 
-          color="amber" 
-        />
-        <DashboardCard 
-          label="Rata-rata Nilai" 
-          :number="stats.avg" 
-          :icon="mdiChartLine" 
-          color="indigo" 
-        />
+        <template v-if="isLoadingResults">
+          <CardBox v-for="i in 4" :key="i" class="h-32 flex flex-col justify-center">
+            <div class="flex items-center gap-4">
+              <BaseSkeleton width="w-12" height="h-12" rounded="rounded-2xl" />
+              <div class="space-y-2 flex-1">
+                <BaseSkeleton width="w-24" height="h-3" />
+                <BaseSkeleton width="w-12" height="h-8" />
+              </div>
+            </div>
+          </CardBox>
+        </template>
+        <template v-else>
+          <DashboardCard label="Total Peserta" :number="stats.total" :icon="mdiAccountGroup" color="blue" />
+          <DashboardCard label="Selesai (Submitted)" :number="stats.submitted" :icon="mdiCheckCircleOutline" color="emerald" />
+          <DashboardCard label="Terlambat (Expired)" :number="stats.expired" :icon="mdiClockAlertOutline" color="amber" />
+          <DashboardCard label="Rata-rata Nilai" :number="stats.avg" :icon="mdiChartLine" color="indigo" />
+        </template>
       </div>
 
       <CardBox>
@@ -422,7 +418,14 @@ onMounted(async () => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in results" :key="row.session_id" class="border-b dark:border-slate-800 last:border-b-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+              <template v-if="isLoadingResults">
+                <tr v-for="i in 5" :key="i">
+                  <td v-for="j in 8" :key="j" class="px-3 py-4">
+                    <BaseSkeleton width="w-full" height="h-4" />
+                  </td>
+                </tr>
+              </template>
+              <tr v-else v-for="row in results" :key="row.session_id" class="border-b dark:border-slate-800 last:border-b-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                 <td class="px-3 py-3 font-medium dark:text-slate-100">{{ row.student_name }}</td>
                 <td class="px-3 py-3 text-slate-500 dark:text-slate-400">{{ row.student_username }}</td>
                 <td class="px-3 py-3 text-center text-slate-500 dark:text-slate-400">{{ row.student_nis }}</td>
@@ -578,7 +581,14 @@ onMounted(async () => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in itemAnalysis" :key="row.question_id" class="border-b dark:border-slate-800 last:border-b-0 hover:bg-slate-50/30 dark:hover:bg-slate-800/30 transition-colors">
+              <template v-if="isLoadingItems">
+                <tr v-for="i in 5" :key="i">
+                  <td v-for="j in 9" :key="j" class="px-3 py-4">
+                    <BaseSkeleton width="w-full" height="h-4" />
+                  </td>
+                </tr>
+              </template>
+              <tr v-else v-for="row in itemAnalysis" :key="row.question_id" class="border-b dark:border-slate-800 last:border-b-0 hover:bg-slate-50/30 dark:hover:bg-slate-800/30 transition-colors">
                 <td class="px-3 py-3 font-bold dark:text-slate-300">#{{ row.order_no }}</td>
                 <td class="px-3 py-3">
                   <span class="text-[10px] uppercase font-bold text-slate-400 tracking-tighter">{{ row.question_type }}</span>
