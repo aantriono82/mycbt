@@ -33,3 +33,39 @@ api.interceptors.request.use((config) => {
   }
   return config
 })
+
+import { useNotificationStore } from '@/stores/notification.js'
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const notificationStore = useNotificationStore()
+
+    if (!error.response) {
+      notificationStore.pushError('Koneksi internet terputus atau server tidak merespons.')
+      return Promise.reject(error)
+    }
+
+    const { status, data } = error.response
+    const message = data?.error?.message || data?.message || 'Terjadi kesalahan pada sistem.'
+
+    if (status === 401) {
+      notificationStore.pushWarning('Sesi Anda telah berakhir. Silakan login kembali.')
+      setStoredToken('')
+      // Delay redirect slightly so user sees the message
+      setTimeout(() => {
+        window.location.href = '/#/login'
+      }, 1500)
+    } else if (status === 403) {
+      notificationStore.pushError('Akses ditolak: Anda tidak memiliki izin untuk aksi ini.')
+    } else if (status >= 500) {
+      notificationStore.pushError(`Server Error: ${message}`)
+    } else if (status === 404) {
+      // notificationStore.pushWarning('Data tidak ditemukan.')
+    } else {
+      notificationStore.pushError(message)
+    }
+
+    return Promise.reject(error)
+  },
+)
