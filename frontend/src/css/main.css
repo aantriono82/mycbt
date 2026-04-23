@@ -67,7 +67,7 @@
   }
 
   .card-premium {
-    @apply border-slate-100 dark:border-indigo-500/10 shadow-sm hover:shadow-[0_20px_50px_rgba(8, _112, _184, _0.05)] transition-all duration-300 rounded-[2rem] bg-white dark:bg-slate-900/40 backdrop-blur-md;
+    @apply border-slate-100 dark:border-indigo-500/10 shadow-sm hover:shadow-[0_20px_50px_rgba(8, 112, 184, 0.05)] transition-all duration-300 rounded-[2rem] bg-white dark:bg-slate-900/40 backdrop-blur-md;
   }
 
   .input-premium {
