@@ -318,7 +318,7 @@ const printExamCards = async () => {
           <div class="signature-grid">
             <div class="signature">
               <div>Peserta,</div>
-              <div class="signature-line">(____________________)</div>
+              <div class="signature-line">${escapeHtml(participant.name || '-')}</div>
             </div>
             <div class="signature">
               <div>${escapeHtml(signatureTitle)},</div>

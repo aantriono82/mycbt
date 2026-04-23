@@ -7,8 +7,8 @@
 
 @theme {
   --transition-position: right, left, top, bottom, margin, padding;
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-heading: 'Inter', sans-serif;
+  --font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Outfit', sans-serif;
 }
 
 @import './_checkbox-radio-switch.css';
@@ -27,16 +27,16 @@
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: var(--color-slate-100, currentColor);
+    border-color: var(--color-slate-100, rgba(241, 245, 249, 0.5));
   }
 
   html {
-    @apply antialiased scroll-smooth;
+    @apply antialiased scroll-smooth text-[16px] lg:text-[17px];
     font-family: var(--font-sans);
   }
 
   body {
-    @apply bg-slate-50/50 text-slate-700 dark:bg-slate-950 dark:text-slate-300 transition-colors duration-300;
+    @apply bg-slate-50/50 text-slate-700 dark:bg-[#0b1120] dark:text-slate-300 transition-colors duration-300 font-medium;
   }
 
   h1,
@@ -46,7 +46,7 @@
   h5,
   h6 {
     font-family: var(--font-heading);
-    @apply font-bold text-slate-900 dark:text-white tracking-tight;
+    @apply font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight;
   }
 
   p {
@@ -67,7 +67,7 @@
   }
 
   .card-premium {
-    @apply border-slate-100 dark:border-slate-800/60 shadow-sm hover:shadow-md transition-all duration-300 rounded-3xl bg-white dark:bg-slate-900/80 backdrop-blur-sm;
+    @apply border-slate-100 dark:border-indigo-500/10 shadow-sm hover:shadow-[0_20px_50px_rgba(8, _112, _184, _0.05)] transition-all duration-300 rounded-[2rem] bg-white dark:bg-slate-900/40 backdrop-blur-md;
   }
 
   .input-premium {
@@ -88,4 +88,20 @@ input[type="datetime-local"]::-webkit-datetime-edit-ampm-field {
 input[type="datetime-local"]::-webkit-datetime-edit-hour-field,
 input[type="datetime-local"]::-webkit-datetime-edit-minute-field {
   letter-spacing: 0;
+}
+
+/* Page Transitions */
+.page-enter-active,
+.page-leave-active {
+  transition: all 0.3s ease-out;
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }

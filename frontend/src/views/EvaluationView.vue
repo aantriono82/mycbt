@@ -290,18 +290,60 @@ onMounted(async () => {
   <LayoutAuthenticated>
     <SectionMain>
       <SectionTitleLineWithButton :icon="mdiChartBoxOutline" title="Evaluasi / Hasil Nilai" main>
-        <BaseButton :icon="mdiRefresh" color="info" label="Refresh" @click="loadExams(); loadResults(); loadItemAnalysis(); loadScoreDistribution()" />
-        <BaseButton :icon="mdiCloudUploadOutline" color="success" label="Sync LMS" :disabled="isSyncingLTI || !selectedExamId" @click="syncLTIScores" />
-        <BaseButton :icon="mdiDownload" color="contrast" label="Export Excel" @click="exportResults" />
-        <BaseButton :icon="mdiDownload" color="whiteDark" outline label="Export Analisis" @click="exportItemAnalysis" />
-        <div class="flex items-center gap-2 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
-           <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight">
-             <input type="checkbox" v-model="blastChannels" value="email" /> Email
-           </label>
-           <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight">
-             <input type="checkbox" v-model="blastChannels" value="whatsapp" /> WA
-           </label>
-           <BaseButton :icon="mdiSend" color="emerald" smaller label="Blast Nilai" :disabled="isBlastingResults || !selectedExamId" @click="blastResults" />
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
+          <BaseButton 
+            :icon="mdiRefresh" 
+            color="info" 
+            small
+            label="Refresh" 
+            @click="loadExams(); loadResults(); loadItemAnalysis(); loadScoreDistribution()" 
+          />
+          <BaseButton 
+            :icon="mdiCloudUploadOutline" 
+            color="success" 
+            small
+            label="LMS" 
+            :disabled="isSyncingLTI || !selectedExamId" 
+            @click="syncLTIScores" 
+          />
+          <BaseButton 
+            :icon="mdiDownload" 
+            color="purple" 
+            small
+            label="Analisis" 
+            @click="exportItemAnalysis" 
+          />
+          
+          <div class="flex items-center gap-1.5 bg-slate-100/50 dark:bg-slate-800/20 p-1 rounded-xl border border-slate-100 dark:border-slate-700 shadow-inner">
+            <label 
+              class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter cursor-pointer transition-all shadow-sm border"
+              :class="blastChannels.includes('email') 
+                ? 'bg-blue-600 border-blue-600 text-white' 
+                : 'bg-white border-slate-200 text-slate-400 dark:bg-slate-900 dark:border-slate-800'"
+            >
+              <input type="checkbox" v-model="blastChannels" value="email" class="rounded-sm border-none bg-slate-100 text-blue-600 focus:ring-0 w-3 h-3" /> 
+              Email
+            </label>
+            
+            <label 
+              class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter cursor-pointer transition-all shadow-sm border"
+              :class="blastChannels.includes('whatsapp') 
+                ? 'bg-emerald-600 border-emerald-600 text-white' 
+                : 'bg-white border-slate-200 text-slate-400 dark:bg-slate-900 dark:border-slate-800'"
+            >
+              <input type="checkbox" v-model="blastChannels" value="whatsapp" class="rounded-sm border-none bg-slate-100 text-emerald-600 focus:ring-0 w-3 h-3" /> 
+              WA
+            </label>
+            
+            <BaseButton 
+              :icon="mdiSend" 
+              color="purple" 
+              small
+              label="Blast" 
+              :disabled="isBlastingResults || !selectedExamId" 
+              @click="blastResults" 
+            />
+          </div>
         </div>
       </SectionTitleLineWithButton>
 
@@ -464,12 +506,60 @@ onMounted(async () => {
       </CardBox>
 
       <CardBox class="mt-6">
-        <h3 class="mb-4 text-lg font-semibold dark:text-slate-100">Analisis Butir Soal</h3>
-        
-        <!-- AI Item Suggester -->
-        <ItemAnalysisAI v-if="selectedExamId" :exam-id="selectedExamId" />
+        <h3 class="mb-4 text-lg font-semibold dark:text-slate-100 flex items-center gap-2">
+          Analisis Butir Soal
+          <span class="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded-full uppercase tracking-widest font-black">Psikometri Standard</span>
+        </h3>
 
-        <div class="mb-3 text-xs uppercase font-bold tracking-widest text-slate-400 dark:text-slate-500" v-if="itemMeta?.total_sessions">
+        <!-- Legend / Guide for Teachers -->
+        <div class="mb-6 grid gap-4 md:grid-cols-3">
+          <div class="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/30">
+            <h4 class="text-xs font-black uppercase text-slate-400 mb-3 tracking-widest">Tingkat Kesulitan (P-Value)</h4>
+            <div class="space-y-2">
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-emerald-600 font-black">31% - 70% (Sedang)</span>
+                <span class="text-slate-400 font-medium">Ideal / Informatif</span>
+              </div>
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-rose-600 font-black">≤ 30% (Sukar)</span>
+                <span class="text-slate-400 font-medium whitespace-nowrap">Hanya dijawab sedikit siswa</span>
+              </div>
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-sky-600 font-black">> 70% (Mudah)</span>
+                <span class="text-slate-400 font-medium">Hampir semua benar</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/30">
+            <h4 class="text-xs font-black uppercase text-slate-400 mb-3 tracking-widest">Daya Pembeda (Akurasi)</h4>
+            <div class="space-y-2">
+              <div class="flex justify-between items-center text-xs">
+                <span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-lg font-black tracking-tight">≥ 40% (Sangat Baik)</span>
+                <BaseIcon :path="mdiCheckCircleOutline" size="16" class="text-emerald-500" />
+              </div>
+              <div class="flex justify-between items-center text-xs">
+                <span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-lg font-black tracking-tight">20% - 29% (Cukup)</span>
+                <span class="text-slate-400 font-medium">Perlu Revisi</span>
+              </div>
+              <div class="flex justify-between items-center text-xs">
+                <span class="bg-red-500 text-white px-2 py-0.5 rounded-lg font-black tracking-tight">Negatif / < 20%</span>
+                <span class="text-red-500 font-black italic">Wajib Buang!</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/30">
+            <h4 class="text-xs font-black uppercase text-slate-400 mb-3 tracking-widest">Istilah Data</h4>
+            <div class="space-y-2 text-xs text-slate-700 dark:text-slate-300">
+               <p><strong class="text-slate-900 dark:text-white">N:</strong> Total siswa yang ikut tes.</p>
+               <p><strong class="text-slate-900 dark:text-white">Benar:</strong> Jumlah real jawaban benar.</p>
+               <p><strong class="text-slate-900 dark:text-white">Distraktor:</strong> Sebaran pilihan (A,B,C,D).</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3 text-[10px] uppercase font-bold tracking-widest text-slate-400 dark:text-slate-500" v-if="itemMeta?.total_sessions">
           Sesi: {{ itemMeta.total_sessions }} · Soal: {{ itemMeta.total_items }}
         </div>
         <div class="overflow-x-auto">
@@ -498,26 +588,49 @@ onMounted(async () => {
                 </td>
                 <td class="px-3 py-3 text-center text-slate-500 dark:text-slate-400 font-mono">{{ row.answered_count }}</td>
                 <td class="px-3 py-3 text-center text-emerald-600 dark:text-emerald-400 font-bold font-mono">{{ row.correct_count }}</td>
-                <td class="px-3 py-3 text-center font-bold text-slate-700 dark:text-slate-100">{{ row.p_value_percent }}%</td>
                 <td class="px-3 py-3 text-center">
-                  <span
-                    class="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight"
+                  <div 
+                    class="font-black text-sm"
                     :class="
-                      row.difficulty_label === 'mudah'
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                        : row.difficulty_label === 'sedang'
-                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                          : row.difficulty_label === 'sulit'
-                            ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                      row.p_value_percent <= 30 
+                        ? 'text-rose-600 dark:text-rose-400' 
+                        : row.p_value_percent <= 70 
+                          ? 'text-emerald-600 dark:text-emerald-400' 
+                          : 'text-sky-600 dark:text-sky-400'
                     "
                   >
+                    {{ row.p_value_percent }}%
+                  </div>
+                  <div class="text-[9px] uppercase font-bold text-slate-400 tracking-tighter">
                     {{ row.difficulty_label }}
-                  </span>
+                  </div>
                 </td>
                 <td class="px-3 py-3">
-                  <div class="text-[10px] font-bold uppercase text-slate-400 tracking-tighter">Idx: {{ row.discrimination_index }}%</div>
-                  <div class="text-[10px] text-slate-500 dark:text-slate-500 italic">
+                  <div class="flex items-center gap-1.5">
+                    <div 
+                      class="text-xs font-black px-1.5 py-0.5 rounded"
+                      :class="
+                        row.discrimination_index < 0
+                          ? 'bg-red-500 text-white animate-pulse'
+                          : row.discrimination_index < 20
+                            ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                            : row.discrimination_index < 30
+                              ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                              : row.discrimination_index < 40
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                      "
+                    >
+                      D: {{ row.discrimination_index }}%
+                    </div>
+                    <BaseIcon 
+                      v-if="row.discrimination_index < 20" 
+                      :path="mdiClockAlertOutline" 
+                      size="14" 
+                      class="text-red-500"
+                    />
+                  </div>
+                  <div class="text-[10px] text-slate-500 dark:text-slate-500 italic leading-tight mt-0.5">
                     {{ row.discrimination_label }}
                   </div>
                 </td>

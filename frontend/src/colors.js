@@ -10,8 +10,8 @@ export const colorsBgLight = {
   success: 'bg-emerald-600 border-emerald-600 text-white dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20',
   danger: 'bg-red-600 border-red-600 text-white dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20',
   warning: 'bg-amber-500 border-amber-500 text-white dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20',
-  info: 'bg-blue-600 border-blue-600 text-white dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20',
-  purple: 'bg-purple-600 border-purple-600 text-white dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20',
+  info: 'bg-blue-600 border-blue-600 text-white dark:bg-cyan-500/10 dark:text-cyan-400 dark:border-cyan-500/20',
+  purple: 'bg-purple-600 border-purple-600 text-white dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-500/20',
 }
 
 export const colorsText = {

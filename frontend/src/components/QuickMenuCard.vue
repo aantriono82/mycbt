@@ -25,7 +25,7 @@ const colorMap = {
 <template>
   <router-link
     :to="to"
-    class="flex items-center p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-200 dark:hover:border-blue-800 transition-all group overflow-hidden relative"
+    class="flex items-center p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm hover:shadow-2xl hover:-translate-y-1 hover:border-blue-200 dark:hover:border-blue-800 transition-all duration-300 group overflow-hidden relative"
   >
     <!-- Background highlight on hover -->
     <div class="absolute -right-4 -top-4 w-12 h-12 rounded-full bg-blue-500/0 group-hover:bg-blue-500/5 transition-all duration-500 scale-0 group-hover:scale-[4]"></div>

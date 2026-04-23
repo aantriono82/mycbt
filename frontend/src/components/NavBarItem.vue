@@ -154,7 +154,7 @@ const darkModeStore = useDarkModeStore()
       />
       <span
         v-if="!item.isToggleLightDark"
-        class="px-2"
+        class="px-2 text-[16px] lg:text-[17px]"
         :class="{
           'lg:hidden': item.isDesktopNoLabel && item.icon,
           'transition-colors': !darkModeStore.isInProgress,

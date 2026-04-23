@@ -9,27 +9,35 @@
     .aside {
       @apply bg-white;
     }
+
     .aside-scrollbar {
       @apply scrollbar-styled-light;
     }
+
     .aside-menu-item {
       @apply text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-colors;
     }
+
     .aside-menu-item-active {
-      @apply text-white bg-blue-500 font-bold;
+      @apply text-white bg-gradient-to-r from-blue-600 to-indigo-600 font-bold shadow-lg shadow-blue-500/30;
     }
+
     .aside-menu-dropdown {
       @apply bg-gray-100/75;
     }
+
     .navbar-item-label {
       @apply text-blue-600;
     }
+
     .navbar-item-label-hover {
       @apply hover:text-black;
     }
+
     .navbar-item-label-active {
       @apply text-black;
     }
+
     .overlay {
       @apply from-white via-gray-100 to-white;
     }

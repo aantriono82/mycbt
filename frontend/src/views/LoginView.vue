@@ -67,7 +67,7 @@ onMounted(async () => {
     <SectionFullScreen v-slot="{ cardClass }" bg="white">
       <div class="w-full max-w-md mx-auto">
         <form 
-          class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl p-6 md:p-10 relative overflow-hidden"
+          class="bg-white/90 dark:bg-slate-900/80 backdrop-blur-2xl rounded-[3rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.1)] p-6 md:p-10 relative overflow-hidden border border-white/60 dark:border-white/5"
           @submit.prevent="submit"
         >
           <!-- Logo Section -->
@@ -121,10 +121,10 @@ onMounted(async () => {
                 />
                 <button 
                   type="button"
-                  class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-300 hover:text-slate-500"
+                  class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-blue-600 transition-colors"
                   @click="form.showPassword = !form.showPassword"
                 >
-                  <base-icon :path="form.showPassword ? mdiEyeOff : mdiEye" size="18" />
+                  <base-icon :path="form.showPassword ? mdiEyeOff : mdiEye" size="20" />
                 </button>
               </div>
             </div>

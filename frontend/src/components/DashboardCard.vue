@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import BaseIcon from '@/components/BaseIcon.vue'
+import BaseSkeleton from '@/components/BaseSkeleton.vue'
 
 const props = defineProps({
   label: String,
@@ -11,6 +12,10 @@ const props = defineProps({
     default: 'blue'
   },
   small: {
+    type: Boolean,
+    default: false
+  },
+  loading: {
     type: Boolean,
     default: false
   }
@@ -93,11 +98,15 @@ const colorClasses = computed(() => {
       {{ label }}
     </div>
     <div class="flex items-end justify-between relative z-10">
-      <div :class="[small ? 'text-3xl' : 'text-5xl', 'font-black tracking-tighter', colorClasses.text]">
+      <div v-if="loading">
+        <BaseSkeleton :width="small ? 'w-16' : 'w-24'" :height="small ? 'h-8' : 'h-12'" />
+      </div>
+      <div v-else :class="[small ? 'text-3xl' : 'text-5xl', 'font-black tracking-tighter', colorClasses.text]">
         {{ number }}
       </div>
       <div :class="['rounded-2xl shadow-sm transition-transform group-hover:scale-110', small ? 'p-2' : 'p-3', colorClasses.bg]">
-        <BaseIcon :path="icon" :size="small ? 24 : 32" :class="colorClasses.icon" />
+        <BaseSkeleton v-if="loading" :width="small ? 'w-6' : 'w-8'" :height="small ? 'w-6' : 'w-8'" rounded="rounded-lg" />
+        <BaseIcon v-else :path="icon" :size="small ? 24 : 32" :class="colorClasses.icon" />
       </div>
     </div>
   </div>

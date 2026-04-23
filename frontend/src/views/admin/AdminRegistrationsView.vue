@@ -141,11 +141,16 @@ onMounted(loadRegistrations)
       </SectionTitleLineWithButton>
 
       <CardBox>
-        <div class="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <FormField label="Cari" class="mb-0">
-            <FormControl v-model="query" placeholder="Nama, username, email, nis, nip" />
-          </FormField>
-          <FormField label="Status" class="mb-0">
+        <div class="mb-6 flex flex-wrap items-end gap-4 overflow-x-auto pb-2">
+          <!-- 1: Cari -->
+          <div class="w-full md:w-64 flex flex-col gap-1.5">
+            <label class="text-sm font-bold text-slate-700 dark:text-slate-300 px-1">Cari</label>
+            <FormControl v-model="query" placeholder="Nama, username, email, nis, nip" class="h-12" />
+          </div>
+          
+          <!-- 2: Status -->
+          <div class="w-full md:w-40 flex flex-col gap-1.5">
+            <label class="text-sm font-bold text-slate-700 dark:text-slate-300 px-1">Status</label>
             <FormControl
               v-model="status"
               :options="[
@@ -154,9 +159,13 @@ onMounted(loadRegistrations)
                 { id: 'rejected', label: 'Rejected' },
                 { id: '', label: 'Semua Status' },
               ]"
+              class="h-12"
             />
-          </FormField>
-          <FormField label="Role" class="mb-0">
+          </div>
+
+          <!-- 3: Role -->
+          <div class="w-full md:w-40 flex flex-col gap-1.5">
+            <label class="text-sm font-bold text-slate-700 dark:text-slate-300 px-1">Role</label>
             <FormControl
               v-model="role"
               :options="[
@@ -164,27 +173,33 @@ onMounted(loadRegistrations)
                 { id: 'student', label: 'Student' },
                 { id: 'teacher', label: 'Teacher' },
               ]"
+              class="h-12"
             />
-          </FormField>
-          <FormField label="&nbsp;" class="mb-0">
-            <div class="flex flex-col gap-2">
-              <BaseButton
-                color="purple"
-                label="Terapkan Filter"
-                class="w-full h-12 justify-center"
-                @click="loadRegistrations"
-              />
-              <BaseButton
-                v-if="status === 'pending'"
-                :icon="mdiCheck"
-                color="success"
-                label="Approve Semua Sesuai Filter"
-                class="w-full justify-center"
-                :disabled="isBulkApproving || !canBulkApprove"
-                @click="bulkApproveByFilter"
-              />
-            </div>
-          </FormField>
+          </div>
+
+          <!-- 4: Terapkan -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-bold text-slate-700 dark:text-slate-300 px-1">Aksi</label>
+            <BaseButton
+              color="purple"
+              label="Terapkan Filter"
+              class="h-12 px-6"
+              @click="loadRegistrations"
+            />
+          </div>
+
+          <!-- 5: Bulk Approve -->
+          <div v-if="status === 'pending'" class="flex flex-col gap-1.5">
+            <label class="text-sm font-bold text-slate-700 dark:text-slate-300 px-1">Aksi</label>
+            <BaseButton
+              :icon="mdiCheck"
+              color="success"
+              label="Approve Semua"
+              class="h-12 px-6"
+              :disabled="isBulkApproving || !canBulkApprove"
+              @click="bulkApproveByFilter"
+            />
+          </div>
         </div>
 
         <div
