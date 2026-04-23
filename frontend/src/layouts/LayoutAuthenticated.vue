@@ -1,7 +1,7 @@
 <script setup>
 import { mdiForwardburger, mdiBackburger, mdiMenu, mdiAccountCircleOutline, mdiBellOutline, mdiClipboardTextClockOutline, mdiSchoolOutline } from '@mdi/js'
-import { computed, onMounted, ref, watch } from 'vue'
-import { useQuery } from '@tanstack/vue-query'
+import { computed, onMounted, ref, watch, onUnmounted } from 'vue'
+import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { useRouter } from 'vue-router'
 import { getMenuAsideMain, menuAsideBottom } from '@/menuAside.js'
 import { getMenuNavBar } from '@/menuNavBar.js'
@@ -33,9 +33,7 @@ router.beforeEach(() => {
 const menuAsideMain = computed(() => getMenuAsideMain(authStore.role))
 const menuNavBar = computed(() => getMenuNavBar(authStore.role, authStore.userDisplayName))
 
-import { useQuery, useQueryClient } from '@tanstack/vue-query'
-import { useRouter } from 'vue-router'
-import { onUnmounted } from 'vue'
+
 
 const queryClient = useQueryClient()
 const announcements = ref([])
