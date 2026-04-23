@@ -41,6 +41,12 @@ const exams = ref([])
 const isNotificationsExpanded = ref(false)
 const showBadge = ref(false)
 
+const notificationsCount = computed(() => announcements.value.length + exams.value.length)
+
+const markNotificationsAsRead = () => {
+  showBadge.value = false
+}
+
 // Real-time listener
 onMounted(() => {
   if (authStore.role === 'student') {
@@ -62,50 +68,31 @@ const { isLoading: isLoadingAnnouncements } = useQuery({
   queryKey: ['student', 'notifications'],
   queryFn: async () => {
     if (authStore.role !== 'student') return { announcements: [], exams: [] }
-    const [annResp, examsResp] = await Promise.all([
-      api.get('/api/v1/student/announcements', { params: { limit: 5, offset: 0 } }),
-      api.get('/api/v1/student/exams', { params: { limit: 5, offset: 0 } })
-    ])
-    
-    const newAnns = annResp?.data?.data || []
-    const upcoming = (examsResp?.data?.data || []).filter(item => {
-      const endsAt = item?.ends_at ? new Date(item.ends_at) : null
-      return !endsAt || Date.now() < endsAt.getTime()
-    })
-
-    announcements.value = newAnns
-    exams.value = upcoming.slice(0, 3)
-
-    // Badge logic
-    const lastSeenAnnId = localStorage.getItem('last_seen_announcement_id')
-    const lastSeenExamId = localStorage.getItem('last_seen_exam_id')
-    const hasNewAnn = newAnns[0]?.id?.toString() && newAnns[0]?.id?.toString() !== lastSeenAnnId
-    const hasNewExam = upcoming[0]?.id?.toString() && upcoming[0]?.id?.toString() !== lastSeenExamId
-
-    if (hasNewAnn || hasNewExam) {
-      showBadge.value = true
+    try {
+      const [annResp, examResp] = await Promise.all([
+        api.get('/api/v1/student/announcements', { params: { limit: 5, offset: 0 } }),
+        api.get('/api/v1/student/exams', { params: { limit: 5, offset: 0 } })
+      ])
+      
+      const newAnns = annResp.data?.data || []
+      const newExams = examResp.data?.data || []
+      
+      announcements.value = newAnns
+      exams.value = newExams
+      
+      if (newAnns.length > 0 || newExams.length > 0) {
+        showBadge.value = true
+      }
+      
+      return { announcements: newAnns, exams: newExams }
+    } catch (e) {
+      console.error('Failed to fetch notifications:', e)
+      return { announcements: [], exams: [] }
     }
-
-    return { announcements: newAnns, exams: upcoming }
   },
-  refetchInterval: 1000 * 60, // Polling automatic every 1 min
+  refetchInterval: 60000,
   enabled: computed(() => authStore.role === 'student'),
 })
-
-const announcementCount = computed(() => announcements.value.length)
-const examCount = computed(() => exams.value.length)
-const notificationsCount = computed(() => announcementCount.value + examCount.value)
-
-const markNotificationsAsRead = () => {
-  isNotificationsExpanded.value = !isNotificationsExpanded.value
-  if (isNotificationsExpanded.value) {
-    showBadge.value = false
-    const latestAnnId = announcements.value[0]?.id
-    const latestExamId = exams.value[0]?.id
-    if (latestAnnId) localStorage.setItem('last_seen_announcement_id', latestAnnId.toString())
-    if (latestExamId) localStorage.setItem('last_seen_exam_id', latestExamId.toString())
-  }
-}
 
 const menuClick = (event, item) => {
   if (item.isToggleLightDark) {
@@ -127,7 +114,7 @@ const menuClick = (event, item) => {
   >
     <div
       :class="[layoutAsidePadding, { 'ml-60 lg:ml-0': isAsideMobileExpanded }]"
-      class="min-h-screen w-screen bg-slate-50 pt-14 transition-(--transition-position) lg:w-auto dark:bg-slate-950 dark:text-slate-100"
+      class="min-h-screen w-screen bg-slate-50 pt-14 transition-(--transition-position) lg:w-auto dark:bg-slate-950 dark:text-slate-100 pb-24 lg:pb-0"
     >
       <NavBar
         :menu="menuNavBar"
@@ -144,10 +131,10 @@ const menuClick = (event, item) => {
           <BaseIcon :path="mdiMenu" size="24" />
         </NavBarItemPlain>
 
-        <template #right>
-          <div v-if="authStore.role === 'student'" class="relative flex items-center h-14">
+        <template #right v-if="authStore.role === 'student'">
+          <div class="relative flex items-center h-14 mr-4">
             <NavBarItemPlain 
-              @click.prevent="markNotificationsAsRead"
+              @click.prevent="isNotificationsExpanded = !isNotificationsExpanded; markNotificationsAsRead()"
               class="relative"
             >
               <div :class="{ 'animate-pulse drop-shadow-[0_0_10px_rgba(59,130,246,0.6)]': showBadge && notificationsCount > 0 }">
@@ -156,7 +143,6 @@ const menuClick = (event, item) => {
               <div v-if="showBadge && notificationsCount > 0" class="absolute top-3 right-3 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white dark:ring-slate-950">
                 {{ notificationsCount > 9 ? '9+' : notificationsCount }}
               </div>
-              <!-- Pulse ring -->
               <div v-if="showBadge && notificationsCount > 0" class="absolute inset-0 rounded-full bg-blue-400/20 animate-ping pointer-events-none"></div>
             </NavBarItemPlain>
 
@@ -258,5 +244,6 @@ const menuClick = (event, item) => {
         <div />
       </FooterBar>
     </div>
+    <BottomNavigation />
   </div>
 </template>
