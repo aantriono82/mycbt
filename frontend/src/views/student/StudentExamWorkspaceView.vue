@@ -12,26 +12,30 @@ import BaseIcon from '@/components/BaseIcon.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
+import { useExamStore } from '@/stores/exam.js'
+import { storeToRefs } from 'pinia'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const examStore = useExamStore()
 
-const sessionId = computed(() => route.params.sessionId)
-const isLoading = ref(true)
-const errorMessage = ref('')
-const questions = ref([])
-const currentIndex = ref(0)
-const answers = ref({})
-const timeLeft = ref(0)
-const timerInterval = ref(null)
-const submitDone = ref(false)
+const { 
+  sessionId, 
+  questions, 
+  answers, 
+  timeLeft, 
+  isLoading, 
+  errorMessage, 
+  submitDone, 
+  examTitle, 
+  currentQuestionIdx: currentIndex, 
+  currentQuestion 
+} = storeToRefs(examStore)
+
 const showSubmitModal = ref(false)
 const showQuestionListModal = ref(false)
 const flagged = ref({})
-const examTitle = ref('AtigaCBT Workspace')
-
-const currentQuestion = computed(() => questions.value[currentIndex.value])
 const participantName = computed(() => authStore.userDisplayName)
 
 const isFullscreen = ref(false)
@@ -87,7 +91,7 @@ const tokenChecking = ref(false)
 const TOKEN_OK_KEY = computed(() => `mycbt_session_token_ok_${String(sessionId.value || '')}`)
 
 const verifyToken = async () => {
-  if (!sessionId.value) return
+  if (!route.params.sessionId) return
   tokenError.value = ''
   const token = String(tokenValue.value || '').trim()
   if (!token) {
@@ -96,14 +100,15 @@ const verifyToken = async () => {
   }
   tokenChecking.value = true
   try {
-    await api.post(`/api/v1/student/sessions/${sessionId.value}/verify-token`, { token })
+    await api.post(`/api/v1/student/sessions/${route.params.sessionId}/verify-token`, { token })
     tokenVerified.value = true
     try {
       localStorage.setItem(TOKEN_OK_KEY.value, '1')
     } catch {
       // ignore
     }
-    await loadExamData()
+    await examStore.loadExamData(route.params.sessionId)
+    scheduleRenderMath()
   } catch (err) {
     tokenError.value = err?.response?.data?.error?.message || 'Token tidak valid'
   } finally {
@@ -118,24 +123,20 @@ const ensureAnswerShapeForQuestion = (q) => {
   const cur = answers.value[qid]
 
   if (t === 'mc_single') {
-    // Expected schema: { selected_option_id: "opt-id" }
     if (cur && typeof cur === 'object' && !Array.isArray(cur)) {
       answers.value[qid] = { selected_option_id: String(cur.selected_option_id || '') }
       return
     }
-    // Back-compat: stored as raw option id string
     answers.value[qid] = { selected_option_id: cur ? String(cur) : '' }
     return
   }
 
   if (t === 'mc_multiple') {
-    // Expected schema: { selected_option_ids: ["a","b"] }
     if (cur && typeof cur === 'object' && !Array.isArray(cur)) {
       const arr = Array.isArray(cur.selected_option_ids) ? cur.selected_option_ids : []
       answers.value[qid] = { selected_option_ids: arr.map(v => String(v)) }
       return
     }
-    // Back-compat: stored as string[] or single string
     if (Array.isArray(cur)) {
       answers.value[qid] = { selected_option_ids: cur.map(v => String(v)) }
       return
@@ -145,9 +146,6 @@ const ensureAnswerShapeForQuestion = (q) => {
   }
 
   if (t === 'true_false') {
-    // Expected schema:
-    // legacy: { value: true/false }
-    // statements: { values: { "<statement_id>": true/false } }
     if (q?.statements?.length) {
       if (cur && typeof cur === 'object' && !Array.isArray(cur)) {
         const next = { values: {} }
@@ -163,7 +161,6 @@ const ensureAnswerShapeForQuestion = (q) => {
         answers.value[qid] = next
         return
       }
-      // Back-compat: map like { [sid]: bool }
       if (cur && typeof cur === 'object' && !Array.isArray(cur)) {
         const next = { values: {} }
         for (const st of q.statements) {
@@ -189,20 +186,11 @@ const ensureAnswerShapeForQuestion = (q) => {
       answers.value[qid] = { value: cur }
       return
     }
-    if (cur === 'true' || cur === 1) {
-      answers.value[qid] = { value: true }
-      return
-    }
-    if (cur === 'false' || cur === 0) {
-      answers.value[qid] = { value: false }
-      return
-    }
     answers.value[qid] = { value: null }
     return
   }
 
   if (t === 'matching') {
-    // Expected schema: { pairs: { "<pairId:L>": "<pairId:R>" } }
     if (cur && typeof cur === 'object' && !Array.isArray(cur)) {
       const pairs = cur.pairs && typeof cur.pairs === 'object' && !Array.isArray(cur.pairs) ? cur.pairs : {}
       const nextPairs = {}
@@ -220,12 +208,10 @@ const ensureAnswerShapeForQuestion = (q) => {
   }
 
   if (t === 'essay' || t === 'short_answer') {
-    // Expected schema: { text: "..." }
     if (cur && typeof cur === 'object' && !Array.isArray(cur)) {
       answers.value[qid] = { text: String(cur.text || '') }
       return
     }
-    // Back-compat: raw text
     answers.value[qid] = { text: cur ? String(cur) : '' }
     return
   }
@@ -241,9 +227,7 @@ const renderHtml = (html) => {
       for (const attr of Array.from(el.attributes || [])) {
         if (/^on/i.test(attr.name)) el.removeAttribute(attr.name)
       }
-      if (el.tagName === 'IMG') {
-        el.setAttribute('loading', 'lazy')
-      }
+      if (el.tagName === 'IMG') el.setAttribute('loading', 'lazy')
       const style = el.getAttribute && el.getAttribute('style')
       if (style) {
         const parts = style.split(';').map(s => s.trim()).filter(Boolean)
@@ -268,121 +252,18 @@ const formatTime = (seconds) => {
   return [h, m, s].map(v => v < 10 ? '0' + v : v).join(':')
 }
 
-const loadExamData = async () => {
-  if (!sessionId.value) {
-    isLoading.value = false
-    errorMessage.value = 'ID Sesi tidak ditemukan'
-    return
-  }
-  isLoading.value = true
-  errorMessage.value = ''
-  try {
-    const [sessResp, questionsResp, answersResp] = await Promise.all([
-      api.get(`/api/v1/student/sessions/${sessionId.value}`),
-      api.get(`/api/v1/student/sessions/${sessionId.value}/questions`),
-      api.get(`/api/v1/student/sessions/${sessionId.value}/answers`)
-    ])
-
-    const state = sessResp.data.data
-    const questionsData = questionsResp.data.data
-    
-    // Update topbar title
-    if (state.exam?.title) {
-       examTitle.value = state.exam.title
-       document.title = state.exam.title + ' - AtigaCBT'
-    }
-
-    questions.value = Array.isArray(questionsData.questions) ? questionsData.questions : []
-    
-    // Process existing answers (mapped from array to object map)
-    const existingAnswersList = Array.isArray(answersResp.data.data) ? answersResp.data.data : []
-    const processed = {}
-    
-    // Fill with empty defaults based on question type
-    questions.value.forEach(q => {
-      if (q.type === 'mc_single') processed[q.id] = { selected_option_id: '' }
-      else if (q.type === 'mc_multiple') processed[q.id] = { selected_option_ids: [] }
-      else if (q.type === 'true_false') processed[q.id] = q.statements?.length ? { values: {} } : { value: null }
-      else if (q.type === 'matching') processed[q.id] = { pairs: {} }
-      else if (q.type === 'essay' || q.type === 'short_answer') processed[q.id] = { text: '' }
-      else processed[q.id] = {}
-    })
-
-    // Overlay with actual answers from backend
-    existingAnswersList.forEach(ans => {
-      const qid = ans.question_id
-      if (!qid) return
-      try {
-        // answer_json is already a JSON string from backend scan if it was raw bytes,
-        // but let's check if it's already an object/array from the JSON response.
-        const val = ans.answer_json
-        if (typeof val === 'string') {
-          processed[qid] = JSON.parse(val)
-        } else {
-          processed[qid] = val
-        }
-      } catch {
-        processed[qid] = ans.answer_json
-      }
-    })
-    answers.value = processed
-    questions.value.forEach(q => ensureAnswerShapeForQuestion(q))
-
-    // Timer calculation from session state
-    timeLeft.value = state.remaining_seconds || 0
-    
-    startTimer()
-    scheduleRenderMath()
-  } catch (err) {
-    errorMessage.value = err.response?.data?.error?.message || 'Gagal memuat data ujian'
-  } finally {
-    isLoading.value = false
-  }
-}
-
-const startTimer = () => {
-  if (timerInterval.value) clearInterval(timerInterval.value)
-  timerInterval.value = setInterval(() => {
-    if (timeLeft.value > 0) {
-      timeLeft.value--
-    } else {
-      clearInterval(timerInterval.value)
-      // Auto submit if time is out
-      submitExam()
-    }
-  }, 1000)
-}
-
-const saveAnswer = async (question) => {
-  if (!question?.id) return
-  try {
-    const answer = answers.value[question.id] ?? {}
-    await api.post(`/api/v1/student/sessions/${sessionId.value}/answers`, {
-      question_id: question.id,
-      answer_json: JSON.stringify(answer)
-    })
-  } catch (err) {
-    console.error('Failed to save answer:', err)
-  }
-}
-
 const submitExam = async () => {
   try {
-    isLoading.value = true
-    await api.post(`/api/v1/student/sessions/${sessionId.value}/submit`)
-    submitDone.value = true
+    await examStore.submitExam()
     showSubmitModal.value = false
   } catch (err) {
     alert(err.response?.data?.error?.message || 'Gagal mengirim jawaban')
-  } finally {
-    isLoading.value = false
   }
 }
 
 let mathRaf = 0
 const fixCommonLatexCommands = (input) => {
   const s = String(input || '')
-  // Auto-fix common TeX commands when author forgot leading backslash, e.g. "frac{1}{2}".
   return s.replace(
     /(^|[^\\a-zA-Z])(frac|sqrt|times|cdot|pm|mp|div|leq|geq|neq|approx|sum|prod|int|lim|infty|pi|alpha|beta|gamma|theta|lambda|mu|sigma|omega|sin|cos|tan|log|ln)\b/g,
     '$1\\\\$2',
@@ -433,18 +314,11 @@ const isAnswered = (q) => {
   return true
 }
 
-const goPrev = () => {
-  setIndex(currentIndex.value - 1)
-}
-
-const goNext = () => {
-  setIndex(currentIndex.value + 1)
-}
-
+const goPrev = () => setIndex(currentIndex.value - 1)
+const goNext = () => setIndex(currentIndex.value + 1)
 const setIndex = (idx) => {
   const n = Number(idx)
-  if (!Number.isFinite(n)) return
-  if (n < 0 || n >= questions.value.length) return
+  if (!Number.isFinite(n) || n < 0 || n >= questions.value.length) return
   currentIndex.value = n
 }
 
@@ -456,24 +330,23 @@ const onNavClick = (idx, ev) => {
 
 const toggleMulti = (questionId, optId) => {
   const qid = String(questionId || '')
-  if (!qid) return
   const id = String(optId || '')
-  if (!id) return
+  if (!qid || !id) return
   ensureAnswerShapeForQuestion({ id: qid, type: 'mc_multiple' })
   const cur = answers.value[qid]
-  const arr = Array.isArray(cur?.selected_option_ids) ? cur.selected_option_ids : []
+  const arr = Array.isArray(cur?.selected_option_ids) ? [...cur.selected_option_ids] : []
   const i = arr.indexOf(id)
   if (i >= 0) arr.splice(i, 1)
   else arr.push(id)
-  answers.value[qid] = { selected_option_ids: arr }
-  saveAnswer(currentQuestion.value)
+  answers.value[qid].selected_option_ids = arr
+  examStore.saveAnswer(qid)
 }
 
 const setTrueFalseLegacy = (val) => {
   const q = currentQuestion.value
   if (!q?.id) return
   answers.value[q.id] = { value: !!val }
-  saveAnswer(q)
+  examStore.saveAnswer(q.id)
 }
 
 const setTrueFalseStatement = (statementId, val) => {
@@ -483,8 +356,8 @@ const setTrueFalseStatement = (statementId, val) => {
   const cur = answers.value[q.id]
   const values = cur?.values && typeof cur.values === 'object' && !Array.isArray(cur.values) ? { ...cur.values } : {}
   values[String(statementId)] = !!val
-  answers.value[q.id] = { values }
-  saveAnswer(q)
+  answers.value[q.id].values = values
+  examStore.saveAnswer(q.id)
 }
 
 const setMatchingPair = (leftId, rightId) => {
@@ -498,56 +371,45 @@ const setMatchingPair = (leftId, rightId) => {
   if (!l) return
   if (!r) delete pairs[l]
   else pairs[l] = r
-  answers.value[q.id] = { pairs }
-  saveAnswer(q)
+  answers.value[q.id].pairs = pairs
+  examStore.saveAnswer(q.id)
 }
 
 const isFlagged = (qid) => !!flagged.value[String(qid || '')]
-
 const toggleFlagged = () => {
   const q = currentQuestion.value
-  if (!q) return
-  const id = String(q.id || '')
-  if (!id) return
-  flagged.value[id] = !flagged.value[id]
+  if (!q?.id) return
+  flagged.value[q.id] = !flagged.value[q.id]
 }
 
 watch(currentIndex, () => {
   const q = questions.value?.[currentIndex.value]
   if (q) ensureAnswerShapeForQuestion(q)
   scheduleRenderMath()
-  if (cardScrollEl.value && typeof cardScrollEl.value.scrollTo === 'function') {
-    cardScrollEl.value.scrollTo({ top: 0, behavior: 'smooth' })
-  } else if (cardScrollEl.value) {
-    cardScrollEl.value.scrollTop = 0
-  }
+  if (cardScrollEl.value) cardScrollEl.value.scrollTop = 0
   window.scrollTo({ top: 0, behavior: 'smooth' })
-
-  // Keep the active number visible in the sidebar navigator when list is long.
   setTimeout(() => {
     const el = document.querySelector(`[data-qnav-idx="${currentIndex.value}"]`)
-    if (el && typeof el.scrollIntoView === 'function') {
-      el.scrollIntoView({ block: 'nearest', inline: 'nearest' })
-    }
+    if (el) el.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }, 50)
 }, { flush: 'post' })
 
 onMounted(() => {
-  // Gate: require token entry before showing questions.
-  isLoading.value = false
-  try {
-    if (localStorage.getItem(TOKEN_OK_KEY.value) === '1') {
-      tokenVerified.value = true
-      loadExamData()
-    }
-  } catch {
-    // ignore
+  const sid = route.params.sessionId
+  if (sid) {
+    try {
+      if (localStorage.getItem(TOKEN_OK_KEY.value) === '1') {
+        tokenVerified.value = true
+        examStore.loadExamData(sid).then(() => scheduleRenderMath())
+      }
+    } catch {}
   }
   document.addEventListener('visibilitychange', handleVisibilityChange)
   document.addEventListener('fullscreenchange', handleFullscreenChange)
 })
+
 onUnmounted(() => {
-  if (timerInterval.value) clearInterval(timerInterval.value)
+  examStore.stopTimer()
   if (mathRaf) cancelAnimationFrame(mathRaf)
   document.removeEventListener('visibilitychange', handleVisibilityChange)
   document.removeEventListener('fullscreenchange', handleFullscreenChange)
@@ -568,13 +430,13 @@ onErrorCaptured((err) => {
 })
 
 const currentTextAnswer = computed({
-  get() {
+  get: () => {
     const q = currentQuestion.value
     if (!q?.id) return ''
     ensureAnswerShapeForQuestion(q)
     return String(answers.value[q.id]?.text || '')
   },
-  set(v) {
+  set: (v) => {
     const q = currentQuestion.value
     if (!q?.id) return
     ensureAnswerShapeForQuestion(q)
@@ -583,12 +445,10 @@ const currentTextAnswer = computed({
 })
 
 const stripHtml = (html) => String(html || '').replace(/<[^>]*>/g, '').trim()
-
 const matchingRightOptions = computed(() => {
   const q = currentQuestion.value
   if (!q || q.type !== 'matching') return []
-  const items = Array.isArray(q.matching_right) ? q.matching_right : []
-  return items.map(it => ({
+  return (q.matching_right || []).map(it => ({
     id: String(it.id || ''),
     text: stripHtml(it.content || ''),
     orderNo: it.order_no ?? null,
