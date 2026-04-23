@@ -16,6 +16,11 @@ const pinia = createPinia()
 // Create Vue app
 createApp(App).use(router).use(pinia).use(VueQueryPlugin).mount('#app')
 
+import { registerSW } from 'virtual:pwa-register'
+
+// Register PWA Service Worker
+registerSW({ immediate: true })
+
 const authStore = useAuthStore(pinia)
 
 authStore.loadMe()
