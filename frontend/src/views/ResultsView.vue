@@ -8,31 +8,13 @@ import CardBox from '@/components/CardBox.vue'
 import CardBoxWidget from '@/components/CardBoxWidget.vue'
 import { api } from '@/services/api.js'
 
-const results = ref([])
-const isLoading = ref(false)
-const errorMessage = ref('')
+import { useResultStore } from '@/stores/result.js'
+import { storeToRefs } from 'pinia'
 
-const loadResults = async () => {
-  isLoading.value = true
-  errorMessage.value = ''
-  try {
-    const { data } = await api.get('/api/v1/student/results', { params: { limit: 50, offset: 0 } })
-    results.value = data?.data || []
-  } catch (error) {
-    results.value = []
-    errorMessage.value = error?.response?.data?.error?.message || 'Gagal memuat hasil ujian dari backend'
-  } finally {
-    isLoading.value = false
-  }
-}
+const resultStore = useResultStore()
+const { results, isLoading, errorMessage, averageScore, totalExams } = storeToRefs(resultStore)
 
-onMounted(loadResults)
-
-const averageScore = computed(() => {
-  if (!results.value.length) return 0
-  const total = results.value.reduce((sum, item) => sum + Number(item.score || 0), 0)
-  return Math.round(total / results.value.length)
-})
+onMounted(() => resultStore.loadResults())
 
 const formatDateTime = (value) => {
   if (!value) return '-'
@@ -77,7 +59,7 @@ const statusLabel = (value) => {
           :icon="mdiChartBar"
           color="text-sky-500"
           label="Riwayat Ujian"
-          :number="results.length"
+          :number="totalExams"
         />
       </div>
 
