@@ -4,9 +4,12 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   mdiCheckCircleOutline,
   mdiInformationOutline,
-  mdiAlert
+  mdiAlert,
+  mdiFullscreen,
+  mdiFullscreenExit
 } from '@mdi/js'
 import BaseIcon from '@/components/BaseIcon.vue'
+import BaseButton from '@/components/BaseButton.vue'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
 
@@ -30,6 +33,21 @@ const examTitle = ref('AtigaCBT Workspace')
 
 const currentQuestion = computed(() => questions.value[currentIndex.value])
 const participantName = computed(() => authStore.userDisplayName)
+
+const isFullscreen = ref(false)
+const toggleFullscreen = () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(err => {
+      console.error(`Error attempting to enable full-screen mode: ${err.message}`)
+    })
+  } else {
+    document.exitFullscreen()
+  }
+}
+
+const handleFullscreenChange = () => {
+  isFullscreen.value = !!document.fullscreenElement
+}
 
 const cardScrollEl = ref(null)
 
@@ -526,11 +544,13 @@ onMounted(() => {
     // ignore
   }
   document.addEventListener('visibilitychange', handleVisibilityChange)
+  document.addEventListener('fullscreenchange', handleFullscreenChange)
 })
 onUnmounted(() => {
   if (timerInterval.value) clearInterval(timerInterval.value)
   if (mathRaf) cancelAnimationFrame(mathRaf)
   document.removeEventListener('visibilitychange', handleVisibilityChange)
+  document.removeEventListener('fullscreenchange', handleFullscreenChange)
 })
 
 const handleVisibilityChange = () => {
@@ -593,6 +613,14 @@ const matchingRightOptions = computed(() => {
           <span class="text-xs">SISA WAKTU:</span>
           <span class="font-mono">{{ formatTime(timeLeft) }}</span>
         </div>
+        <button
+          type="button"
+          class="hidden sm:flex items-center justify-center p-2 rounded-full hover:bg-white/10 transition-colors"
+          title="Toggle Fullscreen"
+          @click="toggleFullscreen"
+        >
+          <BaseIcon :path="isFullscreen ? mdiFullscreenExit : mdiFullscreen" size="20" />
+        </button>
         <button
           type="button"
           class="lg:hidden bg-white/10 border border-white/20 hover:bg-white/15 active:bg-white/20 px-3 py-2 rounded font-black uppercase text-[11px] tracking-widest"
