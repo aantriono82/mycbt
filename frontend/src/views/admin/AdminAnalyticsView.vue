@@ -69,75 +69,100 @@ const renderCharts = () => {
 
   // 1. Trend Chart
   if (trendChartCanvas.value && trendData.value.length > 0) {
+    const ctx = trendChartCanvas.value.getContext('2d')
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400)
+    gradient.addColorStop(0, 'rgba(79, 70, 229, 0.4)')
+    gradient.addColorStop(1, 'rgba(79, 70, 229, 0)')
+
     trendChart = new Chart(trendChartCanvas.value, {
       type: 'line',
       data: {
-        labels: trendData.value.map(d => d.label),
-        datasets: [{
-          label: 'Rata-rata Nilai',
-          data: trendData.value.map(d => d.score),
-          borderColor: '#4f46e5',
-          backgroundColor: 'rgba(79, 70, 229, 0.1)',
-          fill: true,
-          tension: 0.4,
-          pointRadius: 4,
-          pointBackgroundColor: '#4f46e5'
-        }]
+        labels: trendData.value.map((d) => d.label),
+        datasets: [
+          {
+            label: 'Rata-rata Nilai',
+            data: trendData.value.map((d) => d.score),
+            borderColor: '#6366f1',
+            backgroundColor: gradient,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: '#6366f1',
+            borderWidth: 3,
+          },
+        ],
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          y: { min: 0, max: 100, ticks: { stepSize: 20 } }
-        }
-      }
+          y: { min: 0, max: 100, ticks: { stepSize: 20 } },
+        },
+      },
     })
   }
 
   // 2. Subject Chart
   if (subjectChartCanvas.value && subjectData.value.length > 0) {
+    const ctx = subjectChartCanvas.value.getContext('2d')
+    const gradient = ctx.createLinearGradient(0, 0, 400, 0)
+    gradient.addColorStop(0, '#10b981')
+    gradient.addColorStop(1, '#34d399')
+
     subjectChart = new Chart(subjectChartCanvas.value, {
       type: 'bar',
       data: {
-        labels: subjectData.value.map(d => d.subject_name),
-        datasets: [{
-          label: 'Rata-rata Nilai',
-          data: subjectData.value.map(d => d.avg_score),
-          backgroundColor: '#10b981',
-          borderRadius: 6,
-        }]
+        labels: subjectData.value.map((d) => d.subject_name),
+        datasets: [
+          {
+            label: 'Rata-rata Nilai',
+            data: subjectData.value.map((d) => d.avg_score),
+            backgroundColor: gradient,
+            borderRadius: 10,
+          },
+        ],
       },
       options: {
         indexAxis: 'y',
         responsive: true,
+        maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { min: 0, max: 100 }
-        }
-      }
+          x: { min: 0, max: 100 },
+        },
+      },
     })
   }
 
   // 3. Group Chart
   if (groupChartCanvas.value && groupData.value.length > 0) {
+    const ctx = groupChartCanvas.value.getContext('2d')
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400)
+    gradient.addColorStop(0, '#6366f1')
+    gradient.addColorStop(1, '#a855f7')
+
     groupChart = new Chart(groupChartCanvas.value, {
       type: 'bar',
       data: {
-        labels: groupData.value.map(d => d.group_name),
-        datasets: [{
-          label: 'Rata-rata Nilai',
-          data: groupData.value.map(d => d.avg_score),
-          backgroundColor: '#6366f1',
-          borderRadius: 6,
-        }]
+        labels: groupData.value.map((d) => d.group_name),
+        datasets: [
+          {
+            label: 'Rata-rata Nilai',
+            data: groupData.value.map((d) => d.avg_score),
+            backgroundColor: gradient,
+            borderRadius: 10,
+          },
+        ],
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          y: { min: 0, max: 100 }
-        }
-      }
+          y: { min: 0, max: 100 },
+        },
+      },
     })
   }
 }

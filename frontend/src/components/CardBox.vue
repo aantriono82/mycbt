@@ -27,10 +27,10 @@ const hasFooterSlot = computed(() => slots.footer && !!slots.footer())
 
 const componentClass = computed(() => {
   const base = [
-    props.rounded,
+    props.rounded || 'rounded-[2rem]',
     props.flex,
     props.isModal ? 'dark:bg-slate-900' : 'dark:bg-slate-900/80 backdrop-blur-md',
-    'border border-slate-100 dark:border-slate-800 shadow-sm'
+    'border border-slate-100/50 dark:border-indigo-500/10 shadow-sm'
   ]
 
   if (props.isHoverable) {

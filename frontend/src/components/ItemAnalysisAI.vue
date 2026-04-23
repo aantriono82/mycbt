@@ -43,30 +43,32 @@ const highPriorityCount = computed(() => suggestions.value.filter(s => s.priorit
       </span>
     </div>
 
-    <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+    <div class="flex flex-wrap gap-3">
       <div 
-        v-for="s in suggestions" 
+        v-for="(s, idx) in suggestions" 
         :key="s.question_id"
-        class="p-3 rounded-xl border bg-white dark:bg-slate-900 shadow-sm flex flex-col h-full"
+        class="group relative flex items-center gap-2 p-2 px-3 rounded-2xl border transition-all hover:scale-105 cursor-help"
         :class="
           s.priority === 'high' 
-            ? 'border-red-200 dark:border-red-900/40 bg-red-50/10' 
-            : 'border-slate-200 dark:border-slate-800'
+            ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 shadow-sm shadow-red-100 dark:shadow-none' 
+            : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
         "
       >
-        <div class="flex items-start gap-2 mb-2">
-          <div 
-            class="p-1.5 rounded-lg shrink-0"
-            :class="s.priority === 'high' ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'"
-          >
-            <BaseIcon :path="s.priority === 'high' ? mdiAlertDecagram : mdiFlag" size="18" />
-          </div>
-          <div>
-            <div class="text-[10px] font-bold uppercase text-slate-400 tracking-tighter">Butir ID: {{ s.question_id.split('-')[0] }}...</div>
-            <div class="text-xs font-bold dark:text-slate-200" v-for="(tip, idx) in s.tips" :key="idx">
-              {{ tip }}
-            </div>
-          </div>
+        <div 
+          class="flex items-center justify-center w-6 h-6 rounded-lg font-black text-xs"
+          :class="s.priority === 'high' ? 'bg-red-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'"
+        >
+          {{ idx + 1 }}
+        </div>
+        <div class="text-[10px] font-bold uppercase tracking-tight truncate max-w-[80px]">
+          Butir {{ s.question_id.split('-')[0] }}
+        </div>
+        
+        <!-- Tooltip Hint (Optional but nice for UX) -->
+        <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+          <div class="font-black mb-1 text-sky-400">SARAN AI:</div>
+          {{ s.tips.join('. ') }}
+          <div class="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
         </div>
       </div>
     </div>

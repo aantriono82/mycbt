@@ -19,16 +19,17 @@ const emit = defineEmits(['menu-click'])
 const hasColor = computed(() => props.item && props.item.color)
 
 const asideMenuItemActiveStyle = computed(() =>
-  hasColor.value ? '' : 'aside-menu-item-active font-bold',
+  hasColor.value ? '' : 'aside-menu-item-active font-extrabold shadow-lg shadow-blue-500/20',
 )
 
 const isDropdownActive = ref(false)
 
 const componentClass = computed(() => [
-  props.isDropdownList ? 'py-3 px-6 text-sm' : 'py-3',
+  props.isDropdownList ? 'py-2.5 px-6 text-[16px]' : 'py-3 text-[17px]',
+  'rounded-2xl transition-all duration-300 mb-1 px-2',
   hasColor.value
     ? getButtonColor(props.item.color, false, true)
-    : `aside-menu-item dark:text-slate-300 dark:hover:text-white`,
+    : `text-slate-400 hover:text-white hover:bg-white/5 hover:translate-x-1`,
 ])
 
 const activeClass = (isExactActive) => isExactActive ? asideMenuItemActiveStyle.value : ''
@@ -102,7 +103,7 @@ const menuClick = (event) => {
     <AsideMenuList
       v-if="hasDropdown"
       :menu="item.menu"
-      :class="['aside-menu-dropdown', isDropdownActive ? 'block dark:bg-slate-800/50' : 'hidden']"
+      :class="['aside-menu-dropdown', isDropdownActive ? 'block bg-white/5 rounded-2xl mb-2' : 'hidden']"
       is-dropdown-list
     />
   </li>

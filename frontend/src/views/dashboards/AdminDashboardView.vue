@@ -68,15 +68,19 @@ onMounted(loadStats)
 <template>
   <LayoutAuthenticated>
     <SectionMain>
-      <!-- Header Section -->
-      <div class="flex flex-col md:flex-row md:items-center justify-between mb-8">
-        <div>
-          <h1 class="text-3xl font-bold text-gray-800 dark:text-slate-100">Selamat Datang, Admin Utama!</h1>
-          <p class="text-gray-500 mt-1 dark:text-slate-400">Kelola sistem ujian berbasis komputer dengan mudah</p>
-        </div>
+      <!-- Header Section with Mesh Accent -->
+      <div class="relative overflow-hidden rounded-[2rem] bg-white dark:bg-slate-900 shadow-sm border border-slate-100/50 dark:border-slate-800/50 p-8 mb-8">
+        <div class="absolute top-[-20%] right-[-10%] w-64 h-64 rounded-full bg-blue-400/10 blur-3xl"></div>
+        <div class="absolute bottom-[-20%] left-[-10%] w-64 h-64 rounded-full bg-indigo-400/10 blur-3xl"></div>
         
-        <div class="flex items-center space-x-6 mt-4 md:mt-0 text-sm font-medium">
-          <span class="text-gray-400 dark:text-slate-500">Support:</span>
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between">
+          <div>
+            <h1 class="text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">Selamat Datang, Admin Utama!</h1>
+            <p class="text-slate-500 mt-1 dark:text-slate-400 font-medium">Kelola sistem ujian berbasis komputer dengan lebih elegan</p>
+          </div>
+          
+          <div class="flex items-center space-x-6 mt-6 md:mt-0 text-sm font-bold">
+            <span class="text-slate-400 dark:text-slate-500 uppercase tracking-widest text-[10px]">Support:</span>
           <a href="https://t.me/aantriono" target="_blank" class="flex items-center text-blue-600 hover:text-blue-700">
             <BaseIcon :path="mdiSend" size="18" class="mr-1 rotate-[-30deg]" />
             Telegram
@@ -91,6 +95,7 @@ onMounted(loadStats)
           </a>
         </div>
       </div>
+    </div>
 
 
       <div v-if="!authStore.isAuthenticated" class="mb-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-700 border border-amber-100">
@@ -107,30 +112,35 @@ onMounted(loadStats)
           :number="stats.totalSiswa" 
           :icon="mdiAccountMultipleOutline" 
           color="blue" 
+          :loading="isLoading"
         />
         <DashboardCard 
           label="Siswa Aktif" 
           :number="stats.siswaAktif" 
           :icon="mdiAccountCheckOutline" 
           color="emerald" 
+          :loading="isLoading"
         />
         <DashboardCard 
           label="Bank Soal" 
           :number="stats.bankSoal" 
           :icon="mdiBookOpenVariant" 
           color="purple" 
+          :loading="isLoading"
         />
         <DashboardCard 
           label="Ujian Aktif" 
           :number="stats.ujianAktif" 
           :icon="mdiFileDocumentCheckOutline" 
           color="orange" 
+          :loading="isLoading"
         />
         <DashboardCard 
           label="Total Nilai" 
           :number="stats.totalNilai" 
           :icon="mdiChartBoxOutline" 
           color="indigo" 
+          :loading="isLoading"
         />
       </div>
 
