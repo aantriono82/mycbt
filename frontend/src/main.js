@@ -1,6 +1,8 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
+import { VueQueryPlugin } from '@tanstack/vue-query'
+
 import App from './App.vue'
 import router from './router'
 import { useAuthStore } from '@/stores/auth.js'
@@ -12,7 +14,7 @@ import 'katex/dist/katex.min.css'
 const pinia = createPinia()
 
 // Create Vue app
-createApp(App).use(router).use(pinia).mount('#app')
+createApp(App).use(router).use(pinia).use(VueQueryPlugin).mount('#app')
 
 const authStore = useAuthStore(pinia)
 

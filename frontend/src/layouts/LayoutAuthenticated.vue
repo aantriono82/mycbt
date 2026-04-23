@@ -1,6 +1,7 @@
 <script setup>
 import { mdiForwardburger, mdiBackburger, mdiMenu, mdiAccountCircleOutline, mdiBellOutline, mdiClipboardTextClockOutline, mdiSchoolOutline } from '@mdi/js'
 import { computed, onMounted, ref, watch } from 'vue'
+import { useQuery } from '@tanstack/vue-query'
 import { useRouter } from 'vue-router'
 import { getMenuAsideMain, menuAsideBottom } from '@/menuAside.js'
 import { getMenuNavBar } from '@/menuNavBar.js'
@@ -32,76 +33,81 @@ router.beforeEach(() => {
 const menuAsideMain = computed(() => getMenuAsideMain(authStore.role))
 const menuNavBar = computed(() => getMenuNavBar(authStore.role, authStore.userDisplayName))
 
-const announcementCount = ref(0)
-const examCount = ref(0)
-const notificationsCount = computed(() => announcementCount.value + examCount.value)
+import { useQuery, useQueryClient } from '@tanstack/vue-query'
+import { useRouter } from 'vue-router'
+import { onUnmounted } from 'vue'
+
+const queryClient = useQueryClient()
 const announcements = ref([])
 const exams = ref([])
-const isLoadingAnnouncements = ref(false)
 const isNotificationsExpanded = ref(false)
 const showBadge = ref(false)
 
-const loadNotificationsData = async (isInitial = false) => {
-  if (authStore.role !== 'student') return
-  isLoadingAnnouncements.value = true
-  try {
+// Real-time listener
+onMounted(() => {
+  if (authStore.role === 'student') {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+    const token = localStorage.getItem('mycbt_token')
+    const es = new EventSource(`${baseUrl}/api/v1/student/notifications/stream?token=${token}`)
+    
+    es.addEventListener('update', () => {
+      queryClient.invalidateQueries({ queryKey: ['student', 'notifications'] })
+    })
+
+    onUnmounted(() => {
+      es.close()
+    })
+  }
+})
+
+const { isLoading: isLoadingAnnouncements } = useQuery({
+  queryKey: ['student', 'notifications'],
+  queryFn: async () => {
+    if (authStore.role !== 'student') return { announcements: [], exams: [] }
     const [annResp, examsResp] = await Promise.all([
       api.get('/api/v1/student/announcements', { params: { limit: 5, offset: 0 } }),
       api.get('/api/v1/student/exams', { params: { limit: 5, offset: 0 } })
     ])
     
-    const newAnnouncements = annResp?.data?.data || []
-    const newAnnCount = annResp?.data?.meta?.total || 0
+    const newAnns = annResp?.data?.data || []
     const upcoming = (examsResp?.data?.data || []).filter(item => {
       const endsAt = item?.ends_at ? new Date(item.ends_at) : null
       return !endsAt || Date.now() < endsAt.getTime()
     })
-    const newExamCount = upcoming.length
 
-    // Persistent read state logic
+    announcements.value = newAnns
+    exams.value = upcoming.slice(0, 3)
+
+    // Badge logic
     const lastSeenAnnId = localStorage.getItem('last_seen_announcement_id')
     const lastSeenExamId = localStorage.getItem('last_seen_exam_id')
-    
-    const latestAnnId = newAnnouncements[0]?.id?.toString()
-    const latestExamId = upcoming[0]?.id?.toString()
-
-    // Show badge only if there's something newer than what we've seen
-    const hasNewAnn = latestAnnId && latestAnnId !== lastSeenAnnId
-    const hasNewExam = latestExamId && latestExamId !== lastSeenExamId
+    const hasNewAnn = newAnns[0]?.id?.toString() && newAnns[0]?.id?.toString() !== lastSeenAnnId
+    const hasNewExam = upcoming[0]?.id?.toString() && upcoming[0]?.id?.toString() !== lastSeenExamId
 
     if (hasNewAnn || hasNewExam) {
       showBadge.value = true
     }
 
-    announcements.value = newAnnouncements
-    announcementCount.value = newAnnCount
-    exams.value = upcoming.slice(0, 3)
-    examCount.value = newExamCount
-  } catch {
-    announcements.value = []
-    exams.value = []
-  } finally {
-    isLoadingAnnouncements.value = false
-  }
-}
+    return { announcements: newAnns, exams: upcoming }
+  },
+  refetchInterval: 1000 * 60, // Polling automatic every 1 min
+  enabled: computed(() => authStore.role === 'student'),
+})
 
-onMounted(() => loadNotificationsData(true))
+const announcementCount = computed(() => announcements.value.length)
+const examCount = computed(() => exams.value.length)
+const notificationsCount = computed(() => announcementCount.value + examCount.value)
 
 const markNotificationsAsRead = () => {
   isNotificationsExpanded.value = !isNotificationsExpanded.value
   if (isNotificationsExpanded.value) {
     showBadge.value = false
-    // Persist seen state
     const latestAnnId = announcements.value[0]?.id
     const latestExamId = exams.value[0]?.id
     if (latestAnnId) localStorage.setItem('last_seen_announcement_id', latestAnnId.toString())
     if (latestExamId) localStorage.setItem('last_seen_exam_id', latestExamId.toString())
   }
 }
-
-watch(isNotificationsExpanded, (val) => {
-  if (val) loadNotificationsData()
-})
 
 const menuClick = (event, item) => {
   if (item.isToggleLightDark) {

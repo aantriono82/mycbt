@@ -7,11 +7,29 @@ import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.
 import CardBox from '@/components/CardBox.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
+import BaseSkeleton from '@/components/BaseSkeleton.vue'
+import { useQuery } from '@tanstack/vue-query'
 import { api } from '@/services/api.js'
 
-const isLoading = ref(false)
-const errorMessage = ref('')
-const announcements = ref([])
+const { 
+  data: items, 
+  isLoading, 
+  isError, 
+  error, 
+  refetch 
+} = useQuery({
+  queryKey: ['student', 'announcements'],
+  queryFn: async () => {
+    const { data } = await api.get('/api/v1/student/announcements', {
+      params: { limit: 50, offset: 0 },
+    })
+    return data?.data || []
+  },
+  staleTime: 1000 * 60 * 5, // 5 minutes
+})
+
+const announcements = computed(() => items.value || [])
+const errorMessage = computed(() => isError.value ? (error.value?.response?.data?.error?.message || 'Gagal memuat pengumuman') : '')
 
 const formatDateTime = (value) => {
   if (!value) return '-'
@@ -34,23 +52,7 @@ const categoryConfig = (value) => {
   return { label: value || 'General', color: 'bg-sky-100 text-sky-700 dark:border-sky-900/40 dark:bg-sky-900/20 dark:text-sky-400', icon: mdiMessageOutline }
 }
 
-const loadAnnouncements = async () => {
-  isLoading.value = true
-  errorMessage.value = ''
-  try {
-    const { data } = await api.get('/api/v1/student/announcements', {
-      params: { limit: 50, offset: 0 },
-    })
-    announcements.value = data?.data || []
-  } catch (error) {
-    announcements.value = []
-    errorMessage.value = error?.response?.data?.error?.message || 'Gagal memuat pengumuman'
-  } finally {
-    isLoading.value = false
-  }
-}
-
-onMounted(loadAnnouncements)
+const loadAnnouncements = () => refetch()
 </script>
 
 <template>
@@ -61,10 +63,23 @@ onMounted(loadAnnouncements)
       </SectionTitleLineWithButton>
 
       <div class="grid gap-6">
-        <div v-if="isLoading" class="flex flex-col items-center justify-center py-20 animate-pulse">
-           <BaseIcon :path="mdiBullhornOutline" size="48" class="text-slate-200 dark:text-slate-800 mb-4" />
-           <p class="text-sm text-slate-400 italic">Mencari informasi terbaru...</p>
-        </div>
+        <template v-if="isLoading">
+          <div v-for="i in 3" :key="i" class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+             <div class="mb-6 flex items-center gap-3">
+               <BaseSkeleton width="w-10" height="h-10" rounded="rounded-2xl" />
+               <div class="space-y-2">
+                 <BaseSkeleton width="w-20" height="h-2" />
+                 <BaseSkeleton width="w-32" height="h-3" />
+               </div>
+             </div>
+             <BaseSkeleton width="w-3/4" height="h-8" class="mb-4" />
+             <div class="space-y-3">
+               <BaseSkeleton width="w-full" height="h-3" />
+               <BaseSkeleton width="w-full" height="h-3" />
+               <BaseSkeleton width="w-2/3" height="h-3" />
+             </div>
+          </div>
+        </template>
 
         <CardBox v-else-if="errorMessage" class="border-red-100 bg-red-50/50 dark:border-red-900/20 dark:bg-red-900/10">
           <p class="text-sm text-red-700 dark:text-red-400 font-bold text-center py-4">{{ errorMessage }}</p>
