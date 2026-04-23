@@ -13,6 +13,7 @@ import NavBarItemPlain from '@/components/NavBarItemPlain.vue'
 import AsideMenu from '@/components/AsideMenu.vue'
 import FooterBar from '@/components/FooterBar.vue'
 import BackendHealthBanner from '@/components/BackendHealthBanner.vue'
+import BottomNavigation from '@/components/BottomNavigation.vue'
 import { api } from '@/services/api.js'
 
 const layoutAsidePadding = 'xl:pl-60'
