@@ -9,6 +9,7 @@
   --transition-position: right, left, top, bottom, margin, padding;
   --font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
   --font-heading: 'Outfit', sans-serif;
+  --shadow-premium: 0 20px 50px rgba(8, 112, 184, 0.05);
 }
 
 @import './_checkbox-radio-switch.css';
@@ -67,7 +68,7 @@
   }
 
   .card-premium {
-    @apply border-slate-100 dark:border-indigo-500/10 shadow-sm hover:shadow-[0_20px_50px_rgba(8, 112, 184, 0.05)] transition-all duration-300 rounded-[2rem] bg-white dark:bg-slate-900/40 backdrop-blur-md;
+    @apply border-slate-100 dark:border-indigo-500/10 shadow-sm hover:shadow-premium transition-all duration-300 rounded-[2rem] bg-white dark:bg-slate-900/40 backdrop-blur-md;
   }
 
   .input-premium {
