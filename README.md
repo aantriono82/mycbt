@@ -8,22 +8,18 @@ Scaffold aplikasi CBT (Computer Based Test) dengan:
 Dokumen implementasi lengkap: lihat [docs/BLUEPRINT.md](/home/aantriono/dev/mycbt/docs/BLUEPRINT.md).
 Kontrak API awal (OpenAPI): [docs/openapi.yaml](/home/aantriono/dev/mycbt/docs/openapi.yaml).
 
-## Status Implementasi (2026-04-22)
+## Status Implementasi (2026-04-23)
 
-- **Bulk Approve Verifikasi Pendaftaran**: Halaman `/admin/master-data/verifikasi-pendaftaran` kini memiliki aksi `Approve Semua Sesuai Filter` untuk memproses pendaftaran `pending` secara massal (filter `role` + `q`). Backend mengeksekusi approval per-item dengan alur role-aware (`student`/`teacher`) dan mengembalikan ringkasan hasil (approved, failed, remaining + failure details terbatas).
-- **Paritas Panel Admin/Guru untuk Bank Soal & Ujian**: Route admin dan guru kini sengaja memakai view operasional yang sama untuk `Bank Soal`, `Impor Soal`, `Pratinjau`, `Jadwal Ujian`, `Token`, `Monitor`, dan `Evaluasi`. Perbedaannya ada di RBAC dan scope data: guru hanya melihat/mengelola miliknya sendiri, sedangkan admin punya kontrol lintas guru.
-- **Refinement Import Soal & LaTeX Short Answer**: Tombol template soal kini dipusatkan hanya di submenu `Impor Soal`, editor `/bank-soal/new?id=...` otomatis membuka soal nomor 1 saat bank soal sudah memiliki isi, dan alur LaTeX untuk `short_answer` diperbaiki agar formula tidak kembali ke teks mentah setelah insert/edit Sigma. Kunci jawaban isian singkat di pratinjau juga kini dirender sebagai rumus.
-- **Stabilisasi Sigma/LaTeX di Editor Bank Soal**: Tombol Sigma pada editor `/admin/bank-soal/new` kini merender formula lewat KaTeX ke MathML dan dipertahankan oleh schema TinyMCE (`custom_elements` + `extended_valid_elements`) agar tidak berubah menjadi teks literal (contoh `\sqrt{98}`). Warning Vue `Property "vSlot" was accessed during render...` pada sidebar juga sudah diperbaiki di komponen menu.
-- **Resolved Student Registration Approval**: Mengatasi error "nis required" saat admin menyetujui pendaftaran siswa. Implementasi *Triple Fallback Logic* (NIS → NISN → Username) pada backend; logika lookup nama Kelas/Rombel diperbarui agar toleran terhadap ketidakcocokan nama, sehingga approval tidak terblokir. Formulir `GoogleRegistrationForm.vue` juga diperbarui untuk menangkap kolom NIS secara eksplisit.
-- **Admin UI Color Theme Consistency**: Pembaruan estetika menyeluruh pada halaman-halaman panel admin. Halaman Verifikasi Pendaftaran kini memiliki kolom aksi bertema ungu (purple). Halaman Log Aktivitas dan Audit Log memiliki skema warna tombol yang konsisten: Refresh & Apply (biru), Reset (hijau solid), Hapus >30 Hari (ungu), Export CSV (hijau solid), dan Hapus Semua (merah).
-- **Admin Panel Backend Smoke Audit**: Menambahkan skrip `scripts/audit_admin.sh` untuk smoke-test endpoint yang dipakai panel admin (login, settings, analytics, LMS, master data CRUD, bank soal, ujian, token) secara end-to-end (create dummy data + cleanup).
-- **Fix Analytics & LMS Endpoints**: Memperbaiki endpoint yang 500 karena query mengacu ke kolom yang tidak ada (mis. `es.score`, `e.start_at`). Analytics dan export hasil LMS kini menghitung skor lewat scoring engine dan memakai schema yang benar (`starts_at/ends_at`, join `exam_sessions -> students -> users`).
-- **Template Import DOCX (LaTeX-ready)**: Template import DOCX sekarang dipusatkan di submenu `/bank-soal/import` agar tidak duplikat di editor Bank Soal. Template tetap mendukung penulisan LaTeX sebagai teks dengan delimiter `$...$` dan `$$...$$`. Panduan: `docs/template-soal-docx.md`.
-- **Timezone-Aware Session Management**: Validasi jendela waktu pengerjaan (Sesi 1, 2, dsb) kini sepenuhnya akurat mengikuti zona waktu lokal (WIB/WITA/WIT), mencegah akses di luar jam yang ditentukan.
-- **Modernized Exam Administration UI**: Interface pengelola ujian diperbarui dengan skema warna status yang premium (Warning untuk Draft, Contrast untuk Archive) dan fitur penghapusan jadwal yang terintegrasi.
-- **Robust Workspace Navigation**: Perbaikan error navigasi (router) dan reaktivitas pada lembar pengerjaan siswa, menjamin perpindahan antar soal yang mulus dan stabil.
-- **Resolved Student Access Issues**: Penanganan error 500 pada alur Join ujian yang kini memberikan pesan informatif saat terjadi mismatch waktu sesi.
-- **Optimized Token Delivery**: Arsitektur backend menggunakan `LEFT JOIN LATERAL` untuk menjamin token ujian terbaru selalu tampil stabil di dashboard siswa.
+- **Modernisasi UI/UX (Skeleton Screens)**: Implementasi komponen `BaseSkeleton.vue` pada Dashboard Siswa, Pusat Pengumuman, dan Evaluasi Admin untuk menghilangkan *layout shift* dan memberikan feedback visual yang premium saat data sedang dimuat.
+- **Optimasi Data dengan TanStack Query**: Integrasi `@tanstack/vue-query` untuk manajemen *server state*. Memungkinkan percepatan akses data melalui *automatic caching*, sinkronisasi latar belakang, dan pengurangan beban request ke server.
+- **Real-time Notifications (SSE)**: Implementasi *streaming* notifikasi via *Server-Sent Events* (SSE) di backend dan frontend. Siswa kini mendapatkan update instan untuk pengumuman atau perubahan jadwal ujian tanpa perlu memuat ulang halaman.
+- **Progressive Web App (PWA) & Fullscreen Mode**: Aplikasi kini dapat diinstal sebagai PWA di desktop/mobile. Menyertakan fitur *Fullscreen Mode* pada lembar kerja ujian untuk membantu siswa fokus dan meminimalisir pembukaan tab lain selama durasi ujian.
+- **Centralized Error Handling & Global Toast**: Implementasi Axios interceptor untuk menangani error secara global (401, 403, 500, network error). Dilengkapi dengan sistem notifikasi *toast* (Pinia-based) yang seragam di seluruh aplikasi, menggantikan blok try-catch yang redundan.
+- **Pinia State Refactoring**: Sentralisasi logika operasional ujian (`examStore`) dan hasil ujian (`resultStore`) ke Pinia, memisahkan logika bisnis dari komponen UI agar kode lebih ringkas dan mudah dipelihara.
+- **Stabilisasi & Linting**: Perbaikan bug deklarasi ganda pada layout dan sinkronisasi status token ujian.
+- **Bulk Approve Verifikasi Pendaftaran**: Halaman `/admin/master-data/verifikasi-pendaftaran` kini memiliki aksi `Approve Semua Sesuai Filter` untuk memproses pendaftaran `pending` secara massal.
+- **Paritas Panel Admin/Guru**: Route admin dan guru memakai view operasional yang sama dengan RBAC yang ketat.
+- **Timezone-Aware Session Management**: Validasi jendela waktu pengerjaan akurat mengikuti zona waktu lokal (WIB/WITA/WIT).
 
 Backend yang sudah berjalan:
 - Auth JWT (`/api/v1/auth/login`, `/api/v1/me`) + RBAC sederhana (admin/teacher/student).
