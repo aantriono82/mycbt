@@ -5,9 +5,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 
 	"mycbt/backend/internal/httpapi/middleware"
 	"mycbt/backend/internal/repo/loginlogrepo"
@@ -114,6 +116,126 @@ func (h *AuthHandler) Me(c *gin.Context) {
 
 func (h *AuthHandler) Logout(c *gin.Context) {
 	// Stateless JWT for now.
+	c.JSON(http.StatusOK, gin.H{"data": gin.H{"ok": true}})
+}
+
+type updateMeReq struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+func (h *AuthHandler) UpdateMe(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": gin.H{"code": "unauthorized", "message": "unauthorized"}})
+		return
+	}
+
+	var req updateMeReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "bad_request", "message": "invalid json"}})
+		return
+	}
+
+	name := strings.TrimSpace(req.Name)
+	email := strings.TrimSpace(req.Email)
+	if name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "bad_request", "message": "name is required"}})
+		return
+	}
+
+	if err := h.users.UpdateProfile(c.Request.Context(), userID, name, email); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "internal", "message": "failed to update profile"}})
+		return
+	}
+
+	u, ok, err := h.users.GetByID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": gin.H{"code": "unauthorized", "message": "unauthorized"}})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": gin.H{
+			"id":        u.ID,
+			"username":  u.Username,
+			"role":      u.Role,
+			"name":      u.Name,
+			"email":     u.Email,
+			"photo_url": u.PhotoURL,
+			"is_active": u.IsActive,
+		},
+	})
+}
+
+type changePasswordReq struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+	Confirmation    string `json:"password_confirmation"`
+}
+
+func (h *AuthHandler) ChangePassword(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": gin.H{"code": "unauthorized", "message": "unauthorized"}})
+		return
+	}
+
+	var req changePasswordReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "bad_request", "message": "invalid json"}})
+		return
+	}
+
+	current := strings.TrimSpace(req.CurrentPassword)
+	next := strings.TrimSpace(req.NewPassword)
+	confirm := strings.TrimSpace(req.Confirmation)
+
+	if current == "" || next == "" || confirm == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "bad_request", "message": "current_password, new_password, password_confirmation required"}})
+		return
+	}
+	if len(next) < 8 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "bad_request", "message": "new_password too short (min 8)"}})
+		return
+	}
+	if next != confirm {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "bad_request", "message": "password confirmation mismatch"}})
+		return
+	}
+
+	u, ok, err := h.users.GetByID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": gin.H{"code": "unauthorized", "message": "unauthorized"}})
+		return
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(current)); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": gin.H{"code": "invalid_credentials", "message": "current password invalid"}})
+		return
+	}
+	if current == next {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "bad_request", "message": "new password must be different"}})
+		return
+	}
+
+	hash, err := authsvc.HashPassword(next)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "internal", "message": "failed to process password"}})
+		return
+	}
+	if err := h.users.UpdatePassword(c.Request.Context(), userID, hash); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "internal", "message": "failed to update password"}})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"data": gin.H{"ok": true}})
 }
 

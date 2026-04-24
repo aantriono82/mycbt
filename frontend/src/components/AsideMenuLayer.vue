@@ -39,7 +39,7 @@ const asideLgCloseClick = (event) => {
           <img src="/logo_a3_blue.png" class="mr-3 h-10 w-10 rounded-xl shadow-lg hover:scale-110 transition-transform duration-300 brightness-110" alt="Logo" />
           <div class="flex flex-col leading-tight">
             <b class="font-black uppercase tracking-tighter text-xl bg-clip-text text-transparent bg-gradient-to-br from-blue-400 via-indigo-400 to-violet-400">AtigaCBT</b>
-            <span class="text-[9px] font-bold text-slate-500 tracking-widest uppercase">Professional LMS</span>
+            <span class="text-[9px] font-bold text-slate-500 tracking-widest uppercase">Professional CBT</span>
           </div>
         </div>
         <button class="hidden p-3 lg:inline-block xl:hidden text-white/70 hover:text-white" @click.prevent="asideLgCloseClick">

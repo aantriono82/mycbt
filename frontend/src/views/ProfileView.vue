@@ -56,6 +56,8 @@ const passwordForm = reactive({
 const photoFile = ref(null)
 const photoPreview = ref(null)
 const isUploading = ref(false)
+const isSavingProfile = ref(false)
+const isChangingPassword = ref(false)
 
 const handleFileUpload = (e) => {
   const file = e.target.files[0]
@@ -93,12 +95,60 @@ const uploadPhoto = async () => {
   }
 }
 
-const submitProfile = () => {
-  // Backend update profile belum tersedia.
+const submitProfile = async () => {
+  const name = String(profileForm.name || '').trim()
+  const email = String(profileForm.email || '').trim()
+  if (!name) {
+    alert('Nama wajib diisi')
+    return
+  }
+
+  isSavingProfile.value = true
+  try {
+    await api.put('/api/v1/me', { name, email })
+    await authStore.loadMe()
+    alert('Profil berhasil diperbarui')
+  } catch (error) {
+    alert(error?.response?.data?.error?.message || 'Gagal menyimpan profil')
+  } finally {
+    isSavingProfile.value = false
+  }
 }
 
-const submitPass = () => {
-  // Backend change password belum tersedia.
+const submitPass = async () => {
+  const current = String(passwordForm.password_current || '')
+  const next = String(passwordForm.password || '')
+  const confirm = String(passwordForm.password_confirmation || '')
+
+  if (!current || !next || !confirm) {
+    alert('Semua field password wajib diisi')
+    return
+  }
+  if (next.length < 8) {
+    alert('Password baru minimal 8 karakter')
+    return
+  }
+  if (next !== confirm) {
+    alert('Konfirmasi password tidak sama')
+    return
+  }
+
+  isChangingPassword.value = true
+  try {
+    await api.post('/api/v1/me/password', {
+      current_password: current,
+      new_password: next,
+      password_confirmation: confirm,
+    })
+    passwordForm.password_current = ''
+    passwordForm.password = ''
+    passwordForm.password_confirmation = ''
+    alert('Password berhasil diubah')
+  } catch (error) {
+    alert(error?.response?.data?.error?.message || 'Gagal mengubah password')
+  } finally {
+    isChangingPassword.value = false
+  }
 }
 </script>
 
@@ -180,8 +230,7 @@ const submitPass = () => {
 
           <template #footer>
             <BaseButtons>
-              <BaseButton color="info" type="submit" label="Simpan Profil" />
-              <BaseButton color="whiteDark" outline label="Endpoint Belum Aktif" />
+              <BaseButton color="info" type="submit" :label="isSavingProfile ? 'Menyimpan...' : 'Simpan Profil'" :disabled="isSavingProfile" />
             </BaseButtons>
           </template>
         </CardBox>
@@ -221,8 +270,7 @@ const submitPass = () => {
 
           <template #footer>
             <BaseButtons>
-              <BaseButton type="submit" color="info" label="Ubah Password" />
-              <BaseButton color="whiteDark" outline label="Endpoint Belum Aktif" />
+              <BaseButton type="submit" color="info" :label="isChangingPassword ? 'Memproses...' : 'Ubah Password'" :disabled="isChangingPassword" />
             </BaseButtons>
           </template>
         </CardBox>
