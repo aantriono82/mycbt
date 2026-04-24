@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"mycbt/backend/internal/httpapi/middleware"
+	"mycbt/backend/internal/httpapi/pgerr"
 	"mycbt/backend/internal/repo/masterrepo"
 	"mycbt/backend/internal/repo/studentexamrepo"
 )
@@ -67,6 +68,10 @@ func (h *AttendanceHandler) CreateSession(c *gin.Context) {
 
 	session, err := h.sessions.Create(c.Request.Context(), examID, token, req.Lat, req.Lon, req.RadiusMeters, expiresAt)
 	if err != nil {
+		if pgerr.Code(err) == pgerr.CodeForeignKeyViolation {
+			c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "exam not found"}})
+			return
+		}
 		c.Error(err)
 		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "failed to create attendance session"}})
 		return

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -758,9 +759,21 @@ func (h *QuestionBankHandler) CloneSet(c *gin.Context) {
 		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "invalid json"}})
 		return
 	}
+	if strings.TrimSpace(req.TeacherID) == "" {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "teacher_id required"}})
+		return
+	}
 
 	newID, err := h.qb.CloneSet(c.Request.Context(), c.Param("id"), req.TeacherID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "question set not found"}})
+			return
+		}
+		if pgerr.Code(err) == pgerr.CodeForeignKeyViolation {
+			c.JSON(409, gin.H{"error": gin.H{"code": "conflict", "message": "invalid teacher_id"}})
+			return
+		}
 		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": err.Error()}})
 		return
 	}
