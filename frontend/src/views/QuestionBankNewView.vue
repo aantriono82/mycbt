@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, reactive, ref, computed, watch, defineAsyncComponent } from 'vue'
+import { onMounted, reactive, ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   mdiDatabasePlus,
@@ -27,8 +27,8 @@ import FormFilePicker from '@/components/FormFilePicker.vue'
 import { api } from '@/services/api.js'
 import BaseButtons from '@/components/BaseButtons.vue'
 import CardBoxModal from '@/components/CardBoxModal.vue'
-const RichEditor = defineAsyncComponent(() => import('@/components/RichEditor.vue'))
-const QuestionQuickAddCard = defineAsyncComponent(() => import('@/components/QuestionQuickAddCard.vue'))
+import RichEditor from '@/components/RichEditor.vue'
+import QuestionQuickAddCard from '@/components/QuestionQuickAddCard.vue'
 
 
 const router = useRouter()
@@ -66,6 +66,7 @@ const createForm = reactive({
 
 // Step 2: Question Editor
 const editingQuestionId = ref('')
+const editorRenderVersion = ref(0)
 const questionForm = reactive({
   type: 'mc_single',
   stem: '',
@@ -79,7 +80,8 @@ const questionForm = reactive({
 })
 
 const activeEditorScopeKey = computed(() => {
-  return editingQuestionId.value || `new-${questionForm.type}-${questionForm.order_no}`
+  const base = editingQuestionId.value || `new-${questionForm.type}-${questionForm.order_no}`
+  return `${base}-v${editorRenderVersion.value}`
 })
 
 const questionTypeOptions = reactive([
@@ -446,6 +448,7 @@ const resetQuestionForm = (keepType = true) => {
   resetShortAnswers()
   resetTrueFalseStatements()
   resetMatchingPairs()
+  editorRenderVersion.value += 1
 }
 
 const isQuickAddOpen = ref(false)
@@ -701,6 +704,9 @@ const populateQuestionForm = (item) => {
     })
     if (matchingPairs.length === 0) { matchingPairs.push({ left_content: '', right_content: '' }); matchingPairs.push({ left_content: '', right_content: '' }) }
   }
+
+  // Force TinyMCE instances to fully remount after switching question payload.
+  editorRenderVersion.value += 1
 }
 
 
@@ -972,14 +978,14 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                 </div>
               </div>
               <div class="flex items-center gap-3">
-                 <button 
+                 <button type="button" 
                    class="flex items-center gap-2 px-6 py-2.5 rounded-xl border-2 border-purple-600 text-purple-600 font-bold hover:bg-purple-50 transition-all active:scale-95"
                    @click="resetQuestionForm"
                  >
                    <BaseIcon :path="mdiRefresh" size="20" />
                    <span>Reset</span>
                  </button>
-                 <button 
+                 <button type="button" 
                    class="flex items-center gap-2 px-8 py-2.5 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-700 shadow-lg shadow-purple-200 transition-all active:scale-95"
                    @click="saveQuestion"
                  >
@@ -1026,7 +1032,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                            class="h-5 w-5 accent-purple-600 cursor-pointer"
                          />
                        </label>
-                      <button
+                      <button type="button"
                         class="h-7 w-7 flex items-center justify-center rounded-lg transition-colors"
                         :disabled="mcOptions.length <= 2"
                         :class="mcOptions.length <= 2 ? 'text-slate-300 cursor-not-allowed' : 'text-red-400 hover:bg-red-50 hover:text-red-600 cursor-pointer'"
@@ -1050,7 +1056,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                 </div>
 
                 <!-- Tambah Jawaban Button -->
-                <button
+                <button type="button"
                   class="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 border-dashed border-emerald-400 text-emerald-600 font-bold bg-emerald-50/50 hover:bg-emerald-50 transition-all active:scale-95"
                   @click="addMcOption"
                 >
@@ -1098,14 +1104,14 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
               </div>
             </div>
             <div class="flex items-center gap-3">
-              <button
+              <button type="button"
                 class="flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-50 transition-all active:scale-95"
                 @click="resetQuestionForm"
               >
                 <BaseIcon :path="mdiRefresh" size="18" />
                 Reset
               </button>
-              <button
+              <button type="button"
                 class="flex items-center gap-2 px-7 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95"
                 @click="saveQuestion"
               >
@@ -1160,7 +1166,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                         class="h-5 w-5 rounded accent-blue-600 cursor-pointer"
                       />
                     </label>
-                    <button
+                    <button type="button"
                       class="h-7 w-7 flex items-center justify-center rounded-lg transition-colors"
                       :disabled="mcMultipleOptions.length <= 2"
                       :class="mcMultipleOptions.length <= 2 ? 'text-slate-300 cursor-not-allowed' : 'text-red-400 hover:bg-red-50 hover:text-red-600 cursor-pointer'"
@@ -1184,7 +1190,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
               </div>
 
               <!-- Tambah Jawaban Button -->
-              <button
+              <button type="button"
                 class="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 border-dashed border-emerald-400 text-emerald-600 font-bold bg-emerald-50/50 hover:bg-emerald-50 transition-all active:scale-95"
                 @click="addMcMultipleOption"
               >
@@ -1231,14 +1237,14 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
               </div>
             </div>
             <div class="flex items-center gap-3">
-              <button
+              <button type="button"
                 class="flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-50 transition-all active:scale-95"
                 @click="resetQuestionForm"
               >
                 <BaseIcon :path="mdiRefresh" size="18" />
                 Reset
               </button>
-              <button
+              <button type="button"
                 class="flex items-center gap-2 px-7 py-2.5 rounded-xl bg-teal-600 text-white font-bold hover:bg-teal-700 shadow-lg shadow-teal-200 transition-all active:scale-95"
                 @click="saveQuestion"
               >
@@ -1292,7 +1298,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                     <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 text-[10px] font-black uppercase tracking-wider">
                       ✓ Diterima
                     </span>
-                    <button
+                    <button type="button"
                       class="h-7 w-7 flex items-center justify-center rounded-lg transition-colors"
                       :disabled="shortAnswers.length <= 1"
                       :class="shortAnswers.length <= 1 ? 'text-slate-300 cursor-not-allowed' : 'text-red-400 hover:bg-red-50 hover:text-red-600 cursor-pointer'"
@@ -1317,7 +1323,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
               </div>
 
               <!-- Tambah Jawaban Button -->
-              <button
+              <button type="button"
                 class="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 border-dashed border-teal-400 text-teal-600 font-bold bg-teal-50/50 hover:bg-teal-50 transition-all active:scale-95"
                 @click="addShortAnswer"
               >
@@ -1369,14 +1375,14 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
               </div>
             </div>
             <div class="flex items-center gap-3">
-              <button
+              <button type="button"
                 class="flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-50 transition-all active:scale-95"
                 @click="resetQuestionForm"
               >
                 <BaseIcon :path="mdiRefresh" size="18" />
                 Reset
               </button>
-              <button
+              <button type="button"
                 class="flex items-center gap-2 px-7 py-2.5 rounded-xl bg-violet-600 text-white font-bold hover:bg-violet-700 shadow-lg shadow-violet-200 transition-all active:scale-95"
                 @click="saveQuestion"
               >
@@ -1512,14 +1518,14 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                 </div>
               </div>
               <div class="flex items-center gap-3">
-                <button 
+                <button type="button" 
                   class="flex items-center gap-2 px-6 py-2.5 rounded-xl border-2 border-emerald-600 text-emerald-600 font-bold hover:bg-emerald-50 transition-all active:scale-95"
                   @click="resetQuestionForm"
                 >
                   <BaseIcon :path="mdiRefresh" size="20" />
                   <span>Reset</span>
                 </button>
-                <button 
+                <button type="button" 
                   class="flex items-center gap-2 px-8 py-2.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all active:scale-95"
                   @click="saveQuestion"
                 >
@@ -1559,18 +1565,18 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                           <div class="flex items-center gap-2">
                             <!-- Toggle Button Style for True/False -->
                             <div class="flex bg-slate-200 dark:bg-slate-800 rounded-lg p-0.5">
-                               <button 
+                               <button type="button" 
                                  @click="st.correct = true"
                                  class="px-3 py-1 rounded-md text-[10px] font-black transition-all"
                                  :class="st.correct ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'"
                                >BENAR</button>
-                               <button 
+                               <button type="button" 
                                  @click="st.correct = false"
                                  class="px-3 py-1 rounded-md text-[10px] font-black transition-all"
                                  :class="!st.correct ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'"
                                >SALAH</button>
                             </div>
-                            <button 
+                            <button type="button" 
                               v-if="trueFalseStatements.length > 1"
                               @click="removeTrueFalseStatement(idx)"
                               class="text-red-400 hover:text-red-600 transition-colors p-1"
@@ -1589,7 +1595,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                     </div>
                  </div>
 
-                 <button
+                 <button type="button"
                     class="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-emerald-400 text-emerald-600 font-bold bg-emerald-50/30 hover:bg-emerald-50 transition-all active:scale-95 mt-4"
                     @click="addTrueFalseStatement"
                   >
@@ -1609,8 +1615,8 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                   <div class="flex items-center justify-between mb-3">
                     <span class="text-[10px] font-black text-slate-400 px-2 py-0.5 bg-slate-100 rounded">#{{ item.order_no }}</span>
                     <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button class="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100" @click="populateQuestionForm(item)"><BaseIcon :path="mdiPencil" size="14" /></button>
-                      <button class="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100" @click="deleteQuestion(item.id)"><BaseIcon :path="mdiDelete" size="14" /></button>
+                      <button type="button" class="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100" @click="populateQuestionForm(item)"><BaseIcon :path="mdiPencil" size="14" /></button>
+                      <button type="button" class="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100" @click="deleteQuestion(item.id)"><BaseIcon :path="mdiDelete" size="14" /></button>
                     </div>
                   </div>
                   <div class="flex gap-2 mb-2">
@@ -1643,14 +1649,14 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                 </div>
               </div>
               <div class="flex items-center gap-3">
-                <button 
+                <button type="button" 
                   class="flex items-center gap-2 px-6 py-2.5 rounded-xl border-2 border-amber-500 text-amber-500 font-bold hover:bg-amber-50 transition-all active:scale-95"
                   @click="resetQuestionForm"
                 >
                   <BaseIcon :path="mdiRefresh" size="20" />
                   <span>Reset</span>
                 </button>
-                <button 
+                <button type="button" 
                   class="flex items-center gap-2 px-8 py-2.5 rounded-xl bg-amber-500 text-white font-bold hover:bg-amber-600 shadow-lg shadow-amber-200 transition-all active:scale-95"
                   @click="saveQuestion"
                 >
@@ -1691,7 +1697,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                             <span class="h-6 w-6 flex items-center justify-center rounded-lg bg-amber-500 text-white text-[10px] font-black font-mono shadow-sm">{{ idx + 1 }}</span>
                             <span class="text-xs font-black text-slate-500 uppercase tracking-widest">Pasangan #{{ idx + 1 }}</span>
                           </div>
-                          <button 
+                          <button type="button" 
                             v-if="matchingPairs.length > 1"
                             @click="removeMatchingPair(idx)" 
                             class="text-red-400 hover:text-red-600 transition-colors"
@@ -1739,7 +1745,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                     </div>
                  </div>
 
-                 <button
+                 <button type="button"
                     class="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 border-dashed border-amber-400 text-amber-600 font-bold bg-amber-50/30 hover:bg-amber-50 transition-all active:scale-95 mt-4"
                     @click="addMatchingPair"
                   >

@@ -121,6 +121,8 @@ func NewHandler(deps Deps) http.Handler {
 		v1.POST("/auth/login", middleware.RateLimit("auth_login", 10, time.Minute), authH.Login)
 		v1.POST("/auth/logout", middleware.RequireAuth(deps.Auth), authH.Logout)
 		v1.GET("/me", middleware.RequireAuth(deps.Auth), authH.Me)
+		v1.PUT("/me", middleware.RequireAuth(deps.Auth), authH.UpdateMe)
+		v1.POST("/me/password", middleware.RequireAuth(deps.Auth), authH.ChangePassword)
 		v1.POST("/me/photo", middleware.RequireAuth(deps.Auth), authH.UploadPhoto)
 	}
 

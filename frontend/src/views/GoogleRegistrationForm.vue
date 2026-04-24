@@ -164,7 +164,7 @@ const groupOptions = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
           </div>
           <div class="ml-4">
             <h1 class="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">Atiga CBT</h1>
-            <p class="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Professional LMS</p>
+            <p class="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Professional CBT</p>
           </div>
         </div>
 

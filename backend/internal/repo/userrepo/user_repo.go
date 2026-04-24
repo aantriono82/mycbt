@@ -162,3 +162,9 @@ func (r *Repo) UpdatePassword(ctx context.Context, id string, hash string) error
 	_, err := r.pool.Exec(ctx, q, hash, id)
 	return err
 }
+
+func (r *Repo) UpdateProfile(ctx context.Context, id, name, email string) error {
+	const q = `UPDATE users SET name = $1, email = NULLIF($2,''), updated_at = now() WHERE id = $3`
+	_, err := r.pool.Exec(ctx, q, name, email, id)
+	return err
+}
