@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, reactive, ref, computed, watch } from 'vue'
+import { onMounted, reactive, ref, computed, watch, defineAsyncComponent } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   mdiDatabasePlus,
@@ -25,14 +25,15 @@ import FormField from '@/components/FormField.vue'
 import FormControl from '@/components/FormControl.vue'
 import FormFilePicker from '@/components/FormFilePicker.vue'
 import { api } from '@/services/api.js'
-import RichEditor from '@/components/RichEditor.vue'
 import BaseButtons from '@/components/BaseButtons.vue'
 import CardBoxModal from '@/components/CardBoxModal.vue'
-import QuestionQuickAddCard from '@/components/QuestionQuickAddCard.vue'
+const RichEditor = defineAsyncComponent(() => import('@/components/RichEditor.vue'))
+const QuestionQuickAddCard = defineAsyncComponent(() => import('@/components/QuestionQuickAddCard.vue'))
 
 
 const router = useRouter()
 const route = useRoute()
+const routeRolePrefix = computed(() => (route.path.startsWith('/admin') ? '/admin' : '/teacher'))
 
 // State management
 const currentSetId = ref(route.query.id || '')
@@ -89,6 +90,12 @@ const questionTypeOptions = reactive([
   { value: 'essay', label: 'Uraian' },
   { value: 'true_false', label: 'Benar / Salah' },
 ])
+const allowedQuestionTypes = computed(() => questionTypeOptions.map((item) => item.value))
+const normalizeEditorType = (value) => {
+  const normalized = String(value || '').trim()
+  if (!normalized || !allowedQuestionTypes.value.includes(normalized)) return 'mc_single'
+  return normalized
+}
 
 const mcOptions = reactive([
   { label: 'A', content: '', is_correct: true },
@@ -719,7 +726,19 @@ const goToPreview = () => {
   router.push(`/${role}/bank-soal/preview/${currentSetId.value}`)
 }
 
+const syncEditorTypeRoute = (nextType) => {
+  const normalized = normalizeEditorType(nextType)
+  const current = String(route.params.editorType || '').trim()
+  if (current === normalized) return
+  router.replace({
+    path: `${routeRolePrefix.value}/bank-soal/new/${normalized}`,
+    query: route.query,
+  })
+}
+
 onMounted(async () => {
+  questionForm.type = normalizeEditorType(route.params.editorType)
+  syncEditorTypeRoute(questionForm.type)
   loadSubjects()
   loadLevels()
   if (currentSetId.value) {
@@ -728,6 +747,21 @@ onMounted(async () => {
     initEditorFromFirstQuestion()
   }
 })
+
+watch(
+  () => route.params.editorType,
+  (nextType) => {
+    const normalized = normalizeEditorType(nextType)
+    if (questionForm.type !== normalized) questionForm.type = normalized
+  },
+)
+
+watch(
+  () => questionForm.type,
+  (nextType) => {
+    syncEditorTypeRoute(nextType)
+  },
+)
 
 // Watch for query changes (if user clicks "Buat Soal" again)
 watch(() => route.query.id, async (newId) => {
@@ -765,7 +799,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
             v-if="isStepEditor"
             :icon="mdiPencil"
             :label="isEditingMetadata ? 'Batal Edit Judul' : 'Edit Info Bank Soal'"
-            color="warning"
+            color="purple"
             small
             @click="isEditingMetadata = !isEditingMetadata"
           />
@@ -827,42 +861,44 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
 
       <!-- Edit Metadata Section (Toggleable when in Editor) -->
       <div v-if="isStepEditor && isEditingMetadata" class="mb-6 animate-fade-in-down">
-         <CardBox class="shadow-lg border-2 border-warning/30">
-            <div class="flex items-center justify-between mb-4">
-               <h3 class="text-lg font-bold flex items-center gap-2">
-                  <BaseIcon :path="mdiPencil" />
+         <div class="rounded-3xl bg-purple-600 shadow-2xl shadow-purple-300/40 p-6 text-white">
+            <div class="flex items-center justify-between mb-6">
+               <h3 class="text-xl font-bold flex items-center gap-3">
+                  <div class="h-10 w-10 bg-white/20 rounded-full flex items-center justify-center">
+                    <BaseIcon :path="mdiPencil" />
+                  </div>
                   Edit Informasi Bank Soal
                </h3>
-               <BaseButton :icon="mdiContentSave" color="warning" label="Simpan Perubahan" @click="updateMetadata" />
+               <BaseButton :icon="mdiContentSave" color="white" label="Simpan Perubahan" @click="updateMetadata" />
             </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-               <FormField label="Judul Bank Soal">
+               <FormField label="Judul Bank Soal" class="white-label">
                   <FormControl v-model="createForm.title" />
                </FormField>
-               <FormField label="Jenjang">
+               <FormField label="Jenjang" class="white-label">
                   <FormControl
                     v-model="createForm.jenjang"
                     :options="[{ value: '', label: 'Pilih Jenjang' }, { value: 'SD', label: 'SD' }, { value: 'SMP', label: 'SMP' }, { value: 'SMA', label: 'SMA' }, { value: 'SMK', label: 'SMK' }]"
                   />
                </FormField>
-               <FormField label="Level / Kelas">
+               <FormField label="Level / Kelas" class="white-label">
                   <FormControl
                     v-model="createForm.level_id"
                     :options="[{ value: '', label: 'Pilih Level' }, ...levels.map(l => ({ value: l.id, label: l.name }))]"
                   />
                </FormField>
             </div>
-         </CardBox>
+         </div>
       </div>
 
       <!-- STEP 1: CREATION FORM -->
       <div v-if="!isStepEditor" class="max-w-2xl mx-auto py-12 animate-fade-in-up">
-        <CardBox class="shadow-2xl p-10">
+        <CardBox class="shadow-2xl p-10 border-t-8 border-purple-600">
           <div class="text-center mb-8">
-            <div class="h-16 w-16 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-              <BaseIcon :path="mdiDatabasePlus" size="32" class="text-blue-500" />
+            <div class="h-16 w-16 bg-purple-50 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <BaseIcon :path="mdiDatabasePlus" size="32" class="text-purple-600" />
             </div>
-            <h2 class="text-2xl font-black dark:text-slate-100">Buat Bank Soal</h2>
+            <h2 class="text-2xl font-black dark:text-slate-100 uppercase tracking-tight">Buat Bank Soal</h2>
             <p class="text-slate-500 dark:text-slate-400 mt-2">Isi data dasar untuk memulai pembuatan soal.</p>
           </div>
 
@@ -906,7 +942,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
             <div class="pt-4">
               <BaseButton
                 :icon="mdiContentSave"
-                color="info"
+                color="purple"
                 label="Buat & Lanjut ke Editor Soal"
                 class="w-full py-4 text-lg font-bold shadow-lg"
                 :loading="isLoading"
@@ -927,7 +963,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
               <div class="flex items-center gap-6">
                 <h4 class="font-extrabold text-2xl dark:text-slate-100 flex items-center gap-3">
                    <span class="text-slate-800 dark:text-slate-200">No:</span>
-                   <span class="bg-indigo-600 text-white px-3 py-1 rounded-xl text-lg min-w-[40px] text-center shadow-lg shadow-indigo-200">{{ questionForm.order_no }}</span>
+                  <span class="bg-purple-600 text-white px-3 py-1 rounded-xl text-lg min-w-[40px] text-center shadow-lg shadow-purple-200">{{ questionForm.order_no }}</span>
                 </h4>
                 <div class="h-10 w-[1px] bg-slate-200 dark:bg-slate-800"></div>
                 <div class="flex items-center gap-3">
@@ -936,20 +972,20 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                 </div>
               </div>
               <div class="flex items-center gap-3">
-                <button 
-                  class="flex items-center gap-2 px-6 py-2.5 rounded-xl border-2 border-indigo-600 text-indigo-600 font-bold hover:bg-indigo-50 transition-all active:scale-95"
-                  @click="resetQuestionForm"
-                >
-                  <BaseIcon :path="mdiRefresh" size="20" />
-                  <span>Reset</span>
-                </button>
-                <button 
-                  class="flex items-center gap-2 px-8 py-2.5 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all active:scale-95"
-                  @click="saveQuestion"
-                >
-                  <BaseIcon :path="mdiPlus" size="20" />
-                  <span>Simpan</span>
-                </button>
+                 <button 
+                   class="flex items-center gap-2 px-6 py-2.5 rounded-xl border-2 border-purple-600 text-purple-600 font-bold hover:bg-purple-50 transition-all active:scale-95"
+                   @click="resetQuestionForm"
+                 >
+                   <BaseIcon :path="mdiRefresh" size="20" />
+                   <span>Reset</span>
+                 </button>
+                 <button 
+                   class="flex items-center gap-2 px-8 py-2.5 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-700 shadow-lg shadow-purple-200 transition-all active:scale-95"
+                   @click="saveQuestion"
+                 >
+                   <BaseIcon :path="mdiPlus" size="20" />
+                   <span>Simpan</span>
+                 </button>
               </div>
             </div>
 
@@ -967,29 +1003,29 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                 <div
                   v-for="(opt, idx) in mcOptions"
                   :key="`${activeEditorScopeKey}-mc-single-${opt.label}`"
-                  class="rounded-xl border overflow-hidden shadow-sm bg-white dark:bg-slate-900 transition-all"
-                  :class="opt.is_correct ? 'border-indigo-400 ring-2 ring-indigo-400/40' : 'border-slate-200 dark:border-slate-800'"
+                   class="rounded-xl border overflow-hidden shadow-sm bg-white dark:bg-slate-900 transition-all"
+                   :class="opt.is_correct ? 'border-purple-400 ring-4 ring-purple-400/20' : 'border-slate-200 dark:border-slate-800'"
                 >
                   <!-- Card Header -->
-                  <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                       <div class="h-7 w-7 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center">
-                         <BaseIcon :path="mdiPencil" size="14" class="text-indigo-600 dark:text-indigo-400" />
-                       </div>
-                       <span class="font-black text-sm text-slate-700 dark:text-slate-200">Jawaban {{ opt.label }}</span>
-                    </div>
+                   <div class="px-4 py-3 border-b border-purple-100 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-900/60 flex items-center justify-between">
+                     <div class="flex items-center gap-2">
+                        <div class="h-7 w-7 rounded-lg bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center">
+                          <BaseIcon :path="mdiPencil" size="14" class="text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <span class="font-black text-sm text-purple-700 dark:text-purple-200">Jawaban {{ opt.label }}</span>
+                     </div>
                     <div class="flex items-center gap-3">
                       <!-- Single-correct radio indicator -->
-                      <label class="flex items-center gap-2 cursor-pointer select-none">
-                        <span class="text-sm font-semibold" :class="opt.is_correct ? 'text-indigo-600' : 'text-slate-400'">Jawaban benar</span>
-                        <input
-                          type="radio"
-                          :name="'mc-correct-' + currentSetId"
-                          :checked="opt.is_correct"
-                          @change="mcCorrectLabel = opt.label"
-                          class="h-5 w-5 accent-indigo-600 cursor-pointer"
-                        />
-                      </label>
+                       <label class="flex items-center gap-2 cursor-pointer select-none">
+                         <span class="text-sm font-semibold" :class="opt.is_correct ? 'text-purple-600' : 'text-slate-400'">Jawaban benar</span>
+                         <input
+                           type="radio"
+                           :name="'mc-correct-' + currentSetId"
+                           :checked="opt.is_correct"
+                           @change="mcCorrectLabel = opt.label"
+                           class="h-5 w-5 accent-purple-600 cursor-pointer"
+                         />
+                       </label>
                       <button
                         class="h-7 w-7 flex items-center justify-center rounded-lg transition-colors"
                         :disabled="mcOptions.length <= 2"
@@ -1846,5 +1882,12 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+.white-label :deep(label) {
+  color: white !important;
+}
+.white-label :deep(.text-slate-500),
+.white-label :deep(.text-gray-500) {
+  color: rgba(255, 255, 255, 0.7) !important;
 }
 </style>

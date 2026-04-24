@@ -8,28 +8,26 @@ import CardBox from '@/components/CardBox.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
 import BaseSkeleton from '@/components/BaseSkeleton.vue'
-import { useQuery } from '@tanstack/vue-query'
 import { api } from '@/services/api.js'
 
-const { 
-  data: items, 
-  isLoading, 
-  isError, 
-  error, 
-  refetch 
-} = useQuery({
-  queryKey: ['student', 'announcements'],
-  queryFn: async () => {
+const announcements = ref([])
+const isLoading = ref(false)
+const errorMessage = ref('')
+
+const loadAnnouncements = async () => {
+  isLoading.value = true
+  errorMessage.value = ''
+  try {
     const { data } = await api.get('/api/v1/student/announcements', {
       params: { limit: 50, offset: 0 },
     })
-    return data?.data || []
-  },
-  staleTime: 1000 * 60 * 5, // 5 minutes
-})
-
-const announcements = computed(() => items.value || [])
-const errorMessage = computed(() => isError.value ? (error.value?.response?.data?.error?.message || 'Gagal memuat pengumuman') : '')
+    announcements.value = data?.data || []
+  } catch (err) {
+    errorMessage.value = err?.response?.data?.error?.message || 'Gagal memuat pengumuman'
+  } finally {
+    isLoading.value = false
+  }
+}
 
 const formatDateTime = (value) => {
   if (!value) return '-'
@@ -52,7 +50,9 @@ const categoryConfig = (value) => {
   return { label: value || 'General', color: 'bg-sky-100 text-sky-700 dark:border-sky-900/40 dark:bg-sky-900/20 dark:text-sky-400', icon: mdiMessageOutline }
 }
 
-const loadAnnouncements = () => refetch()
+onMounted(() => {
+  loadAnnouncements()
+})
 </script>
 
 <template>

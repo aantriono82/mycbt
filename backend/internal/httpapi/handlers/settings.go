@@ -181,12 +181,15 @@ func (h *SettingsHandler) GetSMTP(c *gin.Context) {
 }
 
 type putSMTPReq struct {
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	User     string `json:"user"`
-	Password string `json:"password"`
-	From     string `json:"from"`
-	UseTLS   bool   `json:"use_tls"`
+	Host       string `json:"host"`
+	Port       int    `json:"port"`
+	User       string `json:"user"`
+	Username   string `json:"username"`   // legacy alias from old frontend
+	Password   string `json:"password"`
+	From       string `json:"from"`
+	FromEmail  string `json:"from_email"` // legacy alias from old frontend
+	UseTLS     bool   `json:"use_tls"`
+	Encryption string `json:"encryption"` // legacy alias: tls/ssl/none
 }
 
 func (h *SettingsHandler) PutSMTP(c *gin.Context) {
@@ -207,13 +210,31 @@ func (h *SettingsHandler) PutSMTP(c *gin.Context) {
 		password = cur.Password
 	}
 
+	user := strings.TrimSpace(req.User)
+	if user == "" {
+		user = strings.TrimSpace(req.Username)
+	}
+
+	from := strings.TrimSpace(req.From)
+	if from == "" {
+		from = strings.TrimSpace(req.FromEmail)
+	}
+
+	useTLS := req.UseTLS
+	switch strings.ToLower(strings.TrimSpace(req.Encryption)) {
+	case "tls", "ssl":
+		useTLS = true
+	case "none":
+		useTLS = false
+	}
+
 	data, err := h.settings.UpsertSMTP(c.Request.Context(), masterrepo.SMTPConfig{
-		Host:     req.Host,
+		Host:     strings.TrimSpace(req.Host),
 		Port:     req.Port,
-		User:     req.User,
+		User:     user,
 		Password: password,
-		From:     req.From,
-		UseTLS:   req.UseTLS,
+		From:     from,
+		UseTLS:   useTLS,
 	})
 	if err != nil {
 		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})

@@ -10,6 +10,7 @@ import {
 } from '@mdi/js'
 import BaseIcon from '@/components/BaseIcon.vue'
 import BaseButton from '@/components/BaseButton.vue'
+import QuillEditor from '@/components/QuillEditor.vue'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
 import { useExamStore } from '@/stores/exam.js'
@@ -256,6 +257,7 @@ const submitExam = async () => {
   try {
     await examStore.submitExam()
     showSubmitModal.value = false
+    await router.push('/student/hasil')
   } catch (err) {
     alert(err.response?.data?.error?.message || 'Gagal mengirim jawaban')
   }
@@ -296,22 +298,60 @@ const scheduleRenderMath = async () => {
   })
 }
 
-const isAnswered = (q) => {
-  const id = String(q?.id ?? '')
-  if (!id) return false
-  const t = String(q?.type ?? '')
-  const ans = answers.value[id]
-  if (!ans) return false
-
-  if (t === 'mc_single') return !!String(ans?.selected_option_id || '').trim()
-  if (t === 'mc_multiple') return Array.isArray(ans?.selected_option_ids) && ans.selected_option_ids.length > 0
-  if (t === 'true_false') {
-    if (q?.statements?.length) return ans?.values && Object.keys(ans.values).length > 0
-    return typeof ans?.value === 'boolean'
+const answeredQuestionMap = computed(() => {
+  const map = {}
+  for (const q of questions.value || []) {
+    const id = String(q?.id ?? '')
+    if (!id) continue
+    const t = String(q?.type ?? '')
+    const ans = answers.value[id]
+    let answered = false
+    if (ans) {
+      if (t === 'mc_single') answered = !!String(ans?.selected_option_id || '').trim()
+      else if (t === 'mc_multiple') answered = Array.isArray(ans?.selected_option_ids) && ans.selected_option_ids.length > 0
+      else if (t === 'true_false') {
+        answered = q?.statements?.length ? !!(ans?.values && Object.keys(ans.values).length > 0) : typeof ans?.value === 'boolean'
+      } else if (t === 'short_answer' || t === 'essay') answered = !!String(ans?.text || '').trim()
+      else if (t === 'matching') answered = !!(ans?.pairs && Object.keys(ans.pairs).length > 0)
+      else answered = true
+    }
+    map[id] = answered
   }
-  if (t === 'short_answer' || t === 'essay') return !!String(ans?.text || '').trim()
-  if (t === 'matching') return ans?.pairs && Object.keys(ans.pairs).length > 0
-  return true
+  return map
+})
+
+const unansweredCount = computed(() => {
+  const total = Array.isArray(questions.value) ? questions.value.length : 0
+  if (total <= 0) return 0
+  let answered = 0
+  for (const q of questions.value) {
+    const id = String(q?.id ?? '')
+    if (!id) continue
+    if (answeredQuestionMap.value[id]) answered += 1
+  }
+  return Math.max(0, total - answered)
+})
+
+const navStatusById = computed(() => {
+  const out = {}
+  for (const [idx, q] of (questions.value || []).entries()) {
+    const id = String(q?.id ?? '')
+    if (!id) continue
+    if (idx === currentIndex.value) out[id] = 'current'
+    else if (flagged.value[id]) out[id] = 'flagged'
+    else if (answeredQuestionMap.value[id]) out[id] = 'answered'
+    else out[id] = 'unanswered'
+  }
+  return out
+})
+
+const navButtonClass = (q, idx) => {
+  const id = String(q?.id ?? '')
+  const status = navStatusById.value[id] || (idx === currentIndex.value ? 'current' : 'unanswered')
+  if (status === 'current') return 'border-[#0B7EA1] ring-1 ring-[#0B7EA1] text-[#0B7EA1] bg-white'
+  if (status === 'flagged') return 'bg-[#F4C20D] border-[#F4C20D] text-white'
+  if (status === 'answered') return 'bg-emerald-500 border-emerald-500 text-white'
+  return 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
 }
 
 const goPrev = () => setIndex(currentIndex.value - 1)
@@ -326,6 +366,18 @@ const onNavClick = (idx, ev) => {
   if (ev?.preventDefault) ev.preventDefault()
   if (ev?.stopPropagation) ev.stopPropagation()
   setIndex(idx)
+}
+
+const onNavClickAndClose = (idx, ev) => {
+  onNavClick(idx, ev)
+  showQuestionListModal.value = false
+}
+
+const saveAnswer = (q) => {
+  const qid = String(q?.id ?? '')
+  if (!qid) return
+  ensureAnswerShapeForQuestion(q)
+  examStore.saveAnswer(qid)
 }
 
 const toggleMulti = (questionId, optId) => {
@@ -385,6 +437,7 @@ const toggleFlagged = () => {
 watch(currentIndex, () => {
   const q = questions.value?.[currentIndex.value]
   if (q) ensureAnswerShapeForQuestion(q)
+  syncEditorModelByQuestion()
   scheduleRenderMath()
   if (cardScrollEl.value) cardScrollEl.value.scrollTop = 0
   window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -393,6 +446,14 @@ watch(currentIndex, () => {
     if (el) el.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }, 50)
 }, { flush: 'post' })
+
+watch(
+  () => currentQuestion.value?.id,
+  () => {
+    syncEditorModelByQuestion()
+  },
+  { immediate: true },
+)
 
 onMounted(() => {
   const sid = route.params.sessionId
@@ -411,6 +472,7 @@ onMounted(() => {
 onUnmounted(() => {
   examStore.stopTimer()
   if (mathRaf) cancelAnimationFrame(mathRaf)
+  if (textAnswerSaveTimer) clearTimeout(textAnswerSaveTimer)
   document.removeEventListener('visibilitychange', handleVisibilityChange)
   document.removeEventListener('fullscreenchange', handleFullscreenChange)
 })
@@ -445,6 +507,75 @@ const currentTextAnswer = computed({
 })
 
 const stripHtml = (html) => String(html || '').replace(/<[^>]*>/g, '').trim()
+const shortAnswerEditorHtml = ref('')
+const essayEditorHtml = ref('')
+let textAnswerSaveTimer = 0
+
+const textToQuillHtml = (text) => {
+  const raw = String(text || '')
+  if (!raw.trim()) return ''
+  return `<p>${raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`
+}
+
+const quillHtmlToPlainText = (html) => {
+  const raw = String(html || '')
+  if (!raw.trim()) return ''
+  try {
+    const doc = new DOMParser().parseFromString(raw, 'text/html')
+    doc.querySelectorAll('.ql-formula[data-value]').forEach((node) => {
+      const latex = String(node.getAttribute('data-value') || '').trim()
+      node.replaceWith(doc.createTextNode(latex))
+    })
+    const text = String(doc.body.textContent || '')
+    return text.replace(/\s+/g, ' ').trim()
+  } catch {
+    return stripHtml(raw)
+  }
+}
+
+const syncEditorModelByQuestion = () => {
+  const q = currentQuestion.value
+  if (!q?.id) {
+    shortAnswerEditorHtml.value = ''
+    essayEditorHtml.value = ''
+    return
+  }
+  ensureAnswerShapeForQuestion(q)
+  const current = String(answers.value[q.id]?.text || '')
+  if (q.type === 'short_answer') {
+    shortAnswerEditorHtml.value = textToQuillHtml(current)
+    essayEditorHtml.value = ''
+    return
+  }
+  if (q.type === 'essay') {
+    essayEditorHtml.value = current
+    shortAnswerEditorHtml.value = ''
+    return
+  }
+  shortAnswerEditorHtml.value = ''
+  essayEditorHtml.value = ''
+}
+
+const queueSaveCurrentTextAnswer = () => {
+  if (textAnswerSaveTimer) clearTimeout(textAnswerSaveTimer)
+  textAnswerSaveTimer = setTimeout(() => {
+    if (!currentQuestion.value?.id) return
+    saveAnswer(currentQuestion.value)
+  }, 450)
+}
+
+const onShortAnswerEditorUpdate = (html) => {
+  shortAnswerEditorHtml.value = String(html || '')
+  currentTextAnswer.value = quillHtmlToPlainText(shortAnswerEditorHtml.value)
+  queueSaveCurrentTextAnswer()
+}
+
+const onEssayEditorUpdate = (html) => {
+  essayEditorHtml.value = String(html || '')
+  currentTextAnswer.value = essayEditorHtml.value
+  queueSaveCurrentTextAnswer()
+}
+
 const matchingRightOptions = computed(() => {
   const q = currentQuestion.value
   if (!q || q.type !== 'matching') return []
@@ -786,24 +917,28 @@ const matchingRightOptions = computed(() => {
 
                 <!-- Essay / Short Answer -->
                 <div v-else-if="currentQuestion.type === 'short_answer'" class="space-y-6">
-                   <div class="relative">
-                      <input
-                         v-model="currentTextAnswer"
-                         class="w-full p-6 rounded-2xl border-2 border-slate-100 bg-white focus:border-blue-500 outline-none transition-all shadow-inner text-lg font-medium text-slate-900"
-                         placeholder="Ketik jawaban isian singkat..."
-                         @blur="saveAnswer(currentQuestion)"
-                      />
-                   </div>
+                  <QuillEditor
+                    v-model="shortAnswerEditorHtml"
+                    :height="120"
+                    :enable-math="true"
+                    placeholder="Tulis jawaban isian singkat (bisa notasi matematika)..."
+                    @update:model-value="onShortAnswerEditorUpdate"
+                    @blur="queueSaveCurrentTextAnswer"
+                  />
+                  <div class="text-[11px] font-semibold text-slate-500">
+                    Gunakan tombol formula (`fx`) untuk notasi matematika. Jawaban isian singkat tetap disimpan sebagai teks agar auto-scoring tetap valid.
+                  </div>
                 </div>
 
                 <div v-else-if="currentQuestion.type === 'essay'" class="space-y-6">
-                   <textarea
-                      v-model="currentTextAnswer"
-                      class="w-full p-10 rounded-3xl border-2 border-slate-100 bg-white focus:border-blue-500 outline-none transition-all shadow-inner text-xl font-medium text-slate-800"
-                      rows="8"
-                      placeholder="Masukkan jawaban uraian secara detail..."
-                      @blur="saveAnswer(currentQuestion)"
-                   ></textarea>
+                  <QuillEditor
+                    v-model="essayEditorHtml"
+                    :height="260"
+                    :enable-math="true"
+                    placeholder="Masukkan jawaban uraian secara detail (termasuk notasi matematika)..."
+                    @update:model-value="onEssayEditorUpdate"
+                    @blur="queueSaveCurrentTextAnswer"
+                  />
                 </div>
                 </div>
              </div>
@@ -822,13 +957,7 @@ const matchingRightOptions = computed(() => {
 	                  :data-qnav-idx="idx"
 	                  type="button"
 	                  class="h-10 w-10 flex items-center justify-center rounded border font-semibold text-sm transition-colors"
-	                  :class="currentIndex === idx
-	                    ? 'border-[#0B7EA1] ring-1 ring-[#0B7EA1] text-[#0B7EA1] bg-white'
-	                    : (isFlagged(q.id)
-	                      ? 'bg-[#F4C20D] border-[#F4C20D] text-white'
-	                      : (isAnswered(q)
-	                        ? 'bg-emerald-500 border-emerald-500 text-white'
-	                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'))"
+	                  :class="navButtonClass(q, idx)"
 	                  @click="(e) => onNavClick(idx, e)"
 	                >
 	                  {{ idx + 1 }}
@@ -927,14 +1056,8 @@ const matchingRightOptions = computed(() => {
               :key="q.id"
               type="button"
               class="h-10 flex items-center justify-center rounded border font-semibold text-sm transition-colors"
-              :class="currentIndex === idx
-                ? 'border-[#0B7EA1] ring-1 ring-[#0B7EA1] text-[#0B7EA1] bg-white'
-                : (isFlagged(q.id)
-                  ? 'bg-[#F4C20D] border-[#F4C20D] text-white'
-                  : (isAnswered(q)
-                    ? 'bg-emerald-500 border-emerald-500 text-white'
-                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'))"
-              @click="(e) => { onNavClick(idx, e); showQuestionListModal = false }"
+              :class="navButtonClass(q, idx)"
+              @click="(e) => onNavClickAndClose(idx, e)"
             >
               {{ idx + 1 }}
             </button>
@@ -968,6 +1091,12 @@ const matchingRightOptions = computed(() => {
           </div>
           <h3 class="text-2xl font-black text-slate-800 text-center uppercase mb-4 tracking-tight">Konfirmasi Selesai</h3>
           <p class="text-slate-500 text-center mb-10 text-lg leading-relaxed">Apakah Anda yakin ingin mengakhiri ujian ini? Pastikan semua soal telah terjawab dengan benar.</p>
+          <p
+            v-if="unansweredCount > 0"
+            class="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm font-bold text-amber-700"
+          >
+            Masih ada {{ unansweredCount }} soal belum dijawab.
+          </p>
           <div class="flex flex-col gap-4">
              <button @click="submitExam" class="w-full bg-[#0D47A1] text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95">YA, SAYA YAKIN</button>
              <button @click="showSubmitModal = false" class="w-full bg-slate-100 text-slate-600 py-4 rounded-xl font-black uppercase tracking-widest transition-all hover:bg-slate-200">TIDAK, KEMBALI</button>

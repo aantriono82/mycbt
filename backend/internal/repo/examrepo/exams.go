@@ -49,6 +49,7 @@ type Exam struct {
 	DurationMinutes  *int    `json:"duration_minutes,omitempty"`
 	ShuffleQuestions bool    `json:"shuffle_questions"`
 	ShuffleOptions   bool    `json:"shuffle_options"`
+	ScoringMode      string  `json:"scoring_mode"`
 	Status           string  `json:"status"`
 }
 
@@ -70,13 +71,13 @@ WHERE ($1 = '' OR e.status = $1)
   AND ($3 = '' OR e.teacher_id::text = $3)`
 
 	rows, err := r.pool.Query(ctx, `
-SELECT e.id::text, e.subject_id::text, e.teacher_id::text, e.title,
-       to_char(e.starts_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
-       to_char(e.ends_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
-       e.duration_minutes, e.shuffle_questions, e.shuffle_options, e.status,
-       COALESCE(s.name,''), COALESCE(sess.id::text,''), COALESCE(sess.name,''),
-       COALESCE(to_char(sess.start_time, 'HH24:MI'), ''), COALESCE(to_char(sess.end_time, 'HH24:MI'), '')
-`+base+`
+	SELECT e.id::text, e.subject_id::text, e.teacher_id::text, e.title,
+	       to_char(e.starts_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+	       to_char(e.ends_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+	       e.duration_minutes, e.shuffle_questions, e.shuffle_options, e.scoring_mode, e.status,
+	       COALESCE(s.name,''), COALESCE(sess.id::text,''), COALESCE(sess.name,''),
+	       COALESCE(to_char(sess.start_time, 'HH24:MI'), ''), COALESCE(to_char(sess.end_time, 'HH24:MI'), '')
+	`+base+`
 ORDER BY e.starts_at DESC, e.created_at DESC
 LIMIT $4 OFFSET $5`, strings.TrimSpace(f.Status), strings.TrimSpace(f.Q), teacherID, f.Limit, f.Offset)
 	if err != nil {
@@ -88,7 +89,7 @@ LIMIT $4 OFFSET $5`, strings.TrimSpace(f.Status), strings.TrimSpace(f.Q), teache
 	for rows.Next() {
 		var it Exam
 		var sessID, sessName, sessStart, sessEnd string
-		if err := rows.Scan(&it.ID, &it.SubjectID, &it.TeacherID, &it.Title, &it.StartsAt, &it.EndsAt, &it.DurationMinutes, &it.ShuffleQuestions, &it.ShuffleOptions, &it.Status, &it.SubjectName, &sessID, &sessName, &sessStart, &sessEnd); err != nil {
+		if err := rows.Scan(&it.ID, &it.SubjectID, &it.TeacherID, &it.Title, &it.StartsAt, &it.EndsAt, &it.DurationMinutes, &it.ShuffleQuestions, &it.ShuffleOptions, &it.ScoringMode, &it.Status, &it.SubjectName, &sessID, &sessName, &sessStart, &sessEnd); err != nil {
 			return nil, 0, fmt.Errorf("scan: %w", err)
 		}
 		if sessID != "" {
@@ -122,20 +123,21 @@ type CreateInput struct {
 	DurationMinutes  *int
 	ShuffleQuestions bool
 	ShuffleOptions   bool
+	ScoringMode      string
 }
 
 func (r *Repo) Create(ctx context.Context, in CreateInput) (Exam, error) {
 	const q = `
-INSERT INTO exams (subject_id, teacher_id, session_id, title, starts_at, ends_at, duration_minutes, shuffle_questions, shuffle_options)
-VALUES ($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8,$9)
-RETURNING id::text, subject_id::text, teacher_id::text, title,
-       to_char(starts_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
-       to_char(ends_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
-       duration_minutes, shuffle_questions, shuffle_options, status, session_id::text`
+	INSERT INTO exams (subject_id, teacher_id, session_id, title, starts_at, ends_at, duration_minutes, shuffle_questions, shuffle_options, scoring_mode)
+	VALUES ($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8,$9,$10)
+	RETURNING id::text, subject_id::text, teacher_id::text, title,
+	       to_char(starts_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+	       to_char(ends_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+	       duration_minutes, shuffle_questions, shuffle_options, scoring_mode, status, session_id::text`
 	var it Exam
 	var sessID *string
-	if err := r.pool.QueryRow(ctx, q, in.SubjectID, in.TeacherID, in.SessionID, in.Title, in.StartsAt, in.EndsAt, in.DurationMinutes, in.ShuffleQuestions, in.ShuffleOptions).
-		Scan(&it.ID, &it.SubjectID, &it.TeacherID, &it.Title, &it.StartsAt, &it.EndsAt, &it.DurationMinutes, &it.ShuffleQuestions, &it.ShuffleOptions, &it.Status, &sessID); err != nil {
+	if err := r.pool.QueryRow(ctx, q, in.SubjectID, in.TeacherID, in.SessionID, in.Title, in.StartsAt, in.EndsAt, in.DurationMinutes, in.ShuffleQuestions, in.ShuffleOptions, in.ScoringMode).
+		Scan(&it.ID, &it.SubjectID, &it.TeacherID, &it.Title, &it.StartsAt, &it.EndsAt, &it.DurationMinutes, &it.ShuffleQuestions, &it.ShuffleOptions, &it.ScoringMode, &it.Status, &sessID); err != nil {
 		return Exam{}, fmt.Errorf("create exam: %w", err)
 	}
 	it.SessionID = sessID
@@ -144,12 +146,12 @@ RETURNING id::text, subject_id::text, teacher_id::text, title,
 
 func (r *Repo) Get(ctx context.Context, id string) (Exam, bool, error) {
 	const q = `
-SELECT e.id::text, e.subject_id::text, e.teacher_id::text, e.title,
-       to_char(e.starts_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
-       to_char(e.ends_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
-       e.duration_minutes, e.shuffle_questions, e.shuffle_options, e.status,
-       COALESCE(sess.id::text,''), COALESCE(sess.name,''),
-       COALESCE(to_char(sess.start_time, 'HH24:MI'), ''), COALESCE(to_char(sess.end_time, 'HH24:MI'), '')
+	SELECT e.id::text, e.subject_id::text, e.teacher_id::text, e.title,
+	       to_char(e.starts_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+	       to_char(e.ends_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+	       e.duration_minutes, e.shuffle_questions, e.shuffle_options, e.scoring_mode, e.status,
+	       COALESCE(sess.id::text,''), COALESCE(sess.name,''),
+	       COALESCE(to_char(sess.start_time, 'HH24:MI'), ''), COALESCE(to_char(sess.end_time, 'HH24:MI'), '')
 FROM exams e
 LEFT JOIN sessions sess ON e.session_id = sess.id
 WHERE e.id = $1
@@ -157,7 +159,7 @@ LIMIT 1`
 	var it Exam
 	var sessID, sessName, sessStart, sessEnd string
 	err := r.pool.QueryRow(ctx, q, id).
-		Scan(&it.ID, &it.SubjectID, &it.TeacherID, &it.Title, &it.StartsAt, &it.EndsAt, &it.DurationMinutes, &it.ShuffleQuestions, &it.ShuffleOptions, &it.Status, &sessID, &sessName, &sessStart, &sessEnd)
+		Scan(&it.ID, &it.SubjectID, &it.TeacherID, &it.Title, &it.StartsAt, &it.EndsAt, &it.DurationMinutes, &it.ShuffleQuestions, &it.ShuffleOptions, &it.ScoringMode, &it.Status, &sessID, &sessName, &sessStart, &sessEnd)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return Exam{}, false, nil
@@ -181,30 +183,32 @@ type UpdateInput struct {
 	DurationMinutes  *int
 	ShuffleQuestions bool
 	ShuffleOptions   bool
+	ScoringMode      string
 	Status           string
 }
 
 func (r *Repo) Update(ctx context.Context, id string, in UpdateInput) (Exam, bool, error) {
 	const q = `
 UPDATE exams
-SET title = $2,
-    starts_at = $3,
-    ends_at = $4,
-    duration_minutes = $5,
-    shuffle_questions = $6,
-    shuffle_options = $7,
-    status = $8,
-    session_id = $9::uuid,
-    updated_at = now()
+	SET title = $2,
+	    starts_at = $3,
+	    ends_at = $4,
+	    duration_minutes = $5,
+	    shuffle_questions = $6,
+	    shuffle_options = $7,
+	    status = $8,
+	    session_id = $9::uuid,
+	    scoring_mode = $10,
+	    updated_at = now()
 WHERE id = $1
 RETURNING id::text, subject_id::text, teacher_id::text, title,
-       to_char(starts_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
-       to_char(ends_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
-       duration_minutes, shuffle_questions, shuffle_options, status, session_id::text`
+	       to_char(starts_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+	       to_char(ends_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+	       duration_minutes, shuffle_questions, shuffle_options, scoring_mode, status, session_id::text`
 	var it Exam
 	var sessID *string
-	err := r.pool.QueryRow(ctx, q, id, in.Title, in.StartsAt, in.EndsAt, in.DurationMinutes, in.ShuffleQuestions, in.ShuffleOptions, in.Status, in.SessionID).
-		Scan(&it.ID, &it.SubjectID, &it.TeacherID, &it.Title, &it.StartsAt, &it.EndsAt, &it.DurationMinutes, &it.ShuffleQuestions, &it.ShuffleOptions, &it.Status, &sessID)
+	err := r.pool.QueryRow(ctx, q, id, in.Title, in.StartsAt, in.EndsAt, in.DurationMinutes, in.ShuffleQuestions, in.ShuffleOptions, in.Status, in.SessionID, in.ScoringMode).
+		Scan(&it.ID, &it.SubjectID, &it.TeacherID, &it.Title, &it.StartsAt, &it.EndsAt, &it.DurationMinutes, &it.ShuffleQuestions, &it.ShuffleOptions, &it.ScoringMode, &it.Status, &sessID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return Exam{}, false, nil
@@ -374,12 +378,12 @@ func (r *Repo) DeactivateAllTokens(ctx context.Context, examID string) (int, err
 }
 
 type RotateTokenInput struct {
-	ExamID            string
-	ValidFrom         *time.Time
-	ValidTo           *time.Time
-	CreatedByUserID   string
-	Length            int
-	DeactivateOthers  bool
+	ExamID           string
+	ValidFrom        *time.Time
+	ValidTo          *time.Time
+	CreatedByUserID  string
+	Length           int
+	DeactivateOthers bool
 }
 
 func (r *Repo) RotateToken(ctx context.Context, in RotateTokenInput) (ExamToken, error) {

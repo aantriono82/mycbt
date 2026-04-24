@@ -59,6 +59,44 @@ func TestIsCorrectMatching(t *testing.T) {
 	}
 }
 
+func TestScoreMCMultiplePartial(t *testing.T) {
+	correct := map[string]bool{"a": true, "c": true}
+	score, detail := scoreMCMultiple([]byte(`{"selected_option_ids":["a","d"]}`), correct, "partial")
+	if score != 0 {
+		t.Fatalf("expected mc_multiple partial score 0 (1 benar - 1 salah), got %d", score)
+	}
+	if detail.CorrectCount != 1 || detail.WrongCount != 2 {
+		t.Fatalf("unexpected detail: %+v", detail)
+	}
+
+	score2, _ := scoreMCMultiple([]byte(`{"selected_option_ids":["a"]}`), correct, "partial")
+	if score2 != 50 {
+		t.Fatalf("expected mc_multiple partial score 50, got %d", score2)
+	}
+}
+
+func TestScoreTrueFalsePartial(t *testing.T) {
+	keys := map[string]bool{"s1": true, "s2": false, "s3": true}
+	score, detail := scoreTrueFalse([]byte(`{"values":{"s1":true,"s2":false}}`), keys, "partial")
+	if score != 67 {
+		t.Fatalf("expected true_false partial score 67, got %d", score)
+	}
+	if detail.CorrectCount != 2 || detail.WrongCount != 1 {
+		t.Fatalf("unexpected detail: %+v", detail)
+	}
+}
+
+func TestScoreMatchingPartial(t *testing.T) {
+	pairs := []string{"p1", "p2", "p3"}
+	score, detail := scoreMatching([]byte(`{"pairs":{"p1:L":"p1:R","p2:L":"wrong","p3:L":"p3:R"}}`), pairs, "partial")
+	if score != 67 {
+		t.Fatalf("expected matching partial score 67, got %d", score)
+	}
+	if detail.CorrectCount != 2 || detail.WrongCount != 1 {
+		t.Fatalf("unexpected detail: %+v", detail)
+	}
+}
+
 func TestNormalizeText(t *testing.T) {
 	got := normalizeText("  Jakarta\t Pusat \n")
 	if got != "jakarta pusat" {

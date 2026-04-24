@@ -1,20 +1,19 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
-import { VueQueryPlugin } from '@tanstack/vue-query'
-
 import App from './App.vue'
 import router from './router'
 import { useAuthStore } from '@/stores/auth.js'
+import { createPersistedStatePlugin } from '@/stores/plugins/persistedstate.js'
 
 import './css/main.css'
-import 'katex/dist/katex.min.css'
 
 // Init Pinia
 const pinia = createPinia()
+pinia.use(createPersistedStatePlugin())
 
 // Create Vue app
-createApp(App).use(router).use(pinia).use(VueQueryPlugin).mount('#app')
+createApp(App).use(router).use(pinia).mount('#app')
 
 import { registerSW } from 'virtual:pwa-register'
 

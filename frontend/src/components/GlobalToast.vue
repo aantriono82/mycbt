@@ -1,17 +1,13 @@
 <script setup>
 import { useNotificationStore } from '@/stores/notification.js'
-import { mdiClose, mdiAlertCircle, mdiCheckCircle, mdiInformation, mdiAlert } from '@mdi/js'
-import BaseIcon from '@/components/BaseIcon.vue'
-import { computed } from 'vue'
 
 const store = useNotificationStore()
 
-const getIcon = (item) => {
-  if (item.icon) return item.icon
-  if (item.color === 'danger') return mdiAlertCircle
-  if (item.color === 'success') return mdiCheckCircle
-  if (item.color === 'warning') return mdiAlert
-  return mdiInformation
+const getIconText = (item) => {
+  if (item.color === 'danger') return '!'
+  if (item.color === 'success') return '✓'
+  if (item.color === 'warning') return '!'
+  return 'i'
 }
 
 const colorClasses = {
@@ -31,15 +27,17 @@ const colorClasses = {
         :class="colorClasses[item.color] || colorClasses.info"
         class="flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl border border-white/10 backdrop-blur-sm transition-all duration-300 pointer-events-auto"
       >
-        <BaseIcon :path="getIcon(item)" size="20" />
+        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/15 text-xs font-black">
+          {{ getIconText(item) }}
+        </span>
         <div class="flex-1 text-sm font-semibold leading-snug">
           {{ item.message }}
         </div>
         <button
           @click="store.remove(item.id)"
-          class="p-1 rounded-full hover:bg-black/10 transition-colors"
+          class="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-black hover:bg-black/10 transition-colors"
         >
-          <BaseIcon :path="mdiClose" size="16" />
+          ×
         </button>
       </div>
     </transition-group>

@@ -49,11 +49,10 @@ const systemSettings = ref({
 const smtpConfig = ref({
   host: '',
   port: 587,
-  username: '',
+  user: '',
   password: '',
-  from_name: '',
-  from_email: '',
-  encryption: 'tls',
+  from: '',
+  use_tls: true,
 })
 
 const whatsappConfig = ref({
@@ -77,7 +76,13 @@ const loadSettings = async () => {
     ])
     schoolIdentity.value = { ...schoolIdentity.value, ...(identityRes?.data?.data || {}) }
     systemSettings.value = { ...systemSettings.value, ...(systemRes?.data?.data || {}) }
-    smtpConfig.value = { ...smtpConfig.value, ...(smtpRes?.data?.data || {}) }
+    const smtpData = smtpRes?.data?.data || {}
+    smtpConfig.value = {
+      ...smtpConfig.value,
+      ...smtpData,
+      port: Number(smtpData.port || smtpConfig.value.port || 587),
+      use_tls: typeof smtpData.use_tls === 'boolean' ? smtpData.use_tls : smtpConfig.value.use_tls,
+    }
     whatsappConfig.value = { ...whatsappConfig.value, ...(waRes?.data?.data || {}) }
   } catch (error) {
     errorMessage.value = error?.response?.data?.error?.message || 'Gagal memuat settings'
@@ -93,8 +98,12 @@ const saveSMTP = async () => {
   successMessage.value = ''
   try {
     const payload = {
-      ...smtpConfig.value,
+      host: String(smtpConfig.value.host || '').trim(),
       port: Number(smtpConfig.value.port),
+      user: String(smtpConfig.value.user || '').trim(),
+      password: String(smtpConfig.value.password || ''),
+      from: String(smtpConfig.value.from || '').trim(),
+      use_tls: !!smtpConfig.value.use_tls,
     }
     await api.put('/api/v1/settings/smtp', payload)
     successMessage.value = 'Pengaturan SMTP berhasil disimpan.'
@@ -389,26 +398,19 @@ onMounted(loadSettings)
               <FormControl v-model="smtpConfig.port" type="number" placeholder="587" />
             </FormField>
             <FormField label="Username / Email">
-              <FormControl v-model="smtpConfig.username" placeholder="user@gmail.com" />
+              <FormControl v-model="smtpConfig.user" placeholder="user@gmail.com" />
             </FormField>
             <FormField label="Password / App Password">
               <FormControl v-model="smtpConfig.password" type="password" placeholder="••••••••" />
             </FormField>
-            <FormField label="From Name">
-              <FormControl v-model="smtpConfig.from_name" placeholder="AtigaCBT Notifikasi" />
-            </FormField>
             <FormField label="From Email">
-              <FormControl v-model="smtpConfig.from_email" placeholder="noreply@gmail.com" />
+              <FormControl v-model="smtpConfig.from" placeholder="noreply@gmail.com" />
             </FormField>
-            <FormField label="Encryption">
-              <FormControl
-                v-model="smtpConfig.encryption"
-                :options="[
-                  { value: 'tls', label: 'TLS (StartTLS/587)' },
-                  { value: 'ssl', label: 'SSL (Implicit/465)' },
-                  { value: 'none', label: 'None (25/8025)' },
-                ]"
-              />
+            <FormField label="Keamanan Koneksi">
+              <label class="flex items-center gap-3 text-sm dark:text-slate-300">
+                <input v-model="smtpConfig.use_tls" type="checkbox" />
+                Gunakan TLS/STARTTLS
+              </label>
             </FormField>
           </div>
           <div class="flex items-center gap-3 mt-4">

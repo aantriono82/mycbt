@@ -50,17 +50,17 @@ LIMIT 1`
 }
 
 type StudentExam struct {
-	ID              string `json:"id"`
-	SubjectID       string `json:"subject_id"`
-	SubjectName     string `json:"subject_name"`
-	TeacherID       string `json:"teacher_id"`
-	TeacherName     string `json:"teacher_name"`
-	Title           string `json:"title"`
-	StartsAt        string `json:"starts_at"`
-	EndsAt          string `json:"ends_at"`
-	DurationMinutes *int   `json:"duration_minutes,omitempty"`
-	Status          string `json:"status"`
-	CanJoin         bool   `json:"can_join"`
+	ID                string `json:"id"`
+	SubjectID         string `json:"subject_id"`
+	SubjectName       string `json:"subject_name"`
+	TeacherID         string `json:"teacher_id"`
+	TeacherName       string `json:"teacher_name"`
+	Title             string `json:"title"`
+	StartsAt          string `json:"starts_at"`
+	EndsAt            string `json:"ends_at"`
+	DurationMinutes   *int   `json:"duration_minutes,omitempty"`
+	Status            string `json:"status"`
+	CanJoin           bool   `json:"can_join"`
 	SessionID         string `json:"session_id,omitempty"`
 	SessionStatus     string `json:"session_status,omitempty"`
 	SessionFinished   string `json:"session_finished_at,omitempty"`
@@ -248,11 +248,11 @@ LIMIT 1`
 }
 
 var (
-	ErrExamNotFound    = errors.New("exam not found")
-	ErrExamNotJoinable = errors.New("exam not joinable")
-	ErrNotTargeted          = errors.New("student not targeted")
-	ErrNoQuestionSets       = errors.New("no question sets attached")
-	ErrSessionTimeMismatch  = errors.New("bukan sesi anda")
+	ErrExamNotFound        = errors.New("exam not found")
+	ErrExamNotJoinable     = errors.New("exam not joinable")
+	ErrNotTargeted         = errors.New("student not targeted")
+	ErrNoQuestionSets      = errors.New("no question sets attached")
+	ErrSessionTimeMismatch = errors.New("bukan sesi anda")
 )
 
 type ExamForJoin struct {
@@ -784,6 +784,14 @@ LIMIT 1`
 	return st, true, nil
 }
 
+func (r *Repo) SessionExists(ctx context.Context, sessionID string) (bool, error) {
+	var ok bool
+	if err := r.pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM exam_sessions WHERE id = $1)`, sessionID).Scan(&ok); err != nil {
+		return false, fmt.Errorf("session exists: %w", err)
+	}
+	return ok, nil
+}
+
 type StudentQuestion struct {
 	OrderNo int    `json:"order_no"`
 	ID      string `json:"id"`
@@ -1138,6 +1146,10 @@ VALUES ($1::uuid, 'submit', '{}'::jsonb)`, sessionID); err != nil {
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}
+
+	if err := r.updateSessionScore(ctx, sessionID, studentID); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1180,6 +1192,48 @@ VALUES ($1::uuid, 'force_submit', '{}'::jsonb)`, sessionID); err != nil {
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit: %w", err)
+	}
+
+	if err := r.updateSessionScoreAny(ctx, sessionID); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *Repo) updateSessionScore(ctx context.Context, sessionID, studentID string) error {
+	sum, err := r.ComputeAutoScore(ctx, sessionID, studentID, time.Now().UTC())
+	if err != nil {
+		return fmt.Errorf("compute score: %w", err)
+	}
+	score := sum.Score
+	gradingJSON, err := json.Marshal(sum.GradingDetails)
+	if err != nil {
+		return fmt.Errorf("marshal grading details: %w", err)
+	}
+	if _, err := r.pool.Exec(ctx, `
+	UPDATE exam_sessions
+	SET score = $1, grading_detail_json = $2::jsonb, updated_at = now()
+	WHERE id = $3 AND student_id = $4 AND status IN ('submitted','forced')`, score, string(gradingJSON), sessionID, studentID); err != nil {
+		return fmt.Errorf("save score: %w", err)
+	}
+	return nil
+}
+
+func (r *Repo) updateSessionScoreAny(ctx context.Context, sessionID string) error {
+	sum, err := r.ComputeAutoScoreAny(ctx, sessionID, time.Now().UTC())
+	if err != nil {
+		return fmt.Errorf("compute score: %w", err)
+	}
+	score := sum.Score
+	gradingJSON, err := json.Marshal(sum.GradingDetails)
+	if err != nil {
+		return fmt.Errorf("marshal grading details: %w", err)
+	}
+	if _, err := r.pool.Exec(ctx, `
+	UPDATE exam_sessions
+	SET score = $1, grading_detail_json = $2::jsonb, updated_at = now()
+	WHERE id = $3 AND status IN ('submitted','forced')`, score, string(gradingJSON), sessionID); err != nil {
+		return fmt.Errorf("save score: %w", err)
 	}
 	return nil
 }

@@ -43,4 +43,37 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+
+          if (
+            id.includes('/vue/') ||
+            id.includes('/vue-router/') ||
+            id.includes('/pinia/') ||
+            id.includes('/@tanstack/')
+          ) {
+            return 'framework'
+          }
+          if (id.includes('/@mdi/js/')) return 'icons'
+          if (id.includes('/katex/')) return 'katex'
+          if (id.includes('/chart.js/')) return 'charts'
+          if (
+            id.includes('/html5-qrcode/') ||
+            id.includes('/qrcode.vue/') ||
+            id.includes('/html-to-image/')
+          ) {
+            return 'media-tools'
+          }
+        },
+      },
+    },
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    clearMocks: true,
+  },
 })

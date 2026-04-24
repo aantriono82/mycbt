@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -16,12 +17,40 @@ import (
 	"mycbt/backend/internal/repo/studentexamrepo"
 )
 
-type StudentExamHandler struct {
-	repo     *studentexamrepo.Repo
-	settings *masterrepo.SettingsRepo
+type studentExamRepo interface {
+	StudentByUserID(ctx context.Context, userID string) (studentexamrepo.StudentInfo, bool, error)
+	ListAvailableForStudent(ctx context.Context, studentID, levelID, groupID string, f studentexamrepo.ListStudentExamsFilter) ([]studentexamrepo.StudentExam, int, error)
+	VerifyExamToken(ctx context.Context, examID, token string, nowUTC time.Time) error
+	GetExamForStudentJoin(ctx context.Context, examID, studentID, levelID, groupID string, nowUTC time.Time, loc *time.Location) (studentexamrepo.ExamForJoin, error)
+	GetSessionByExamStudent(ctx context.Context, examID, studentID string) (studentexamrepo.Session, bool, error)
+	CountInProgressSessionsByStudent(ctx context.Context, studentID string) (int, error)
+	GetOrCreateSession(ctx context.Context, examID, studentID string, clientIP net.IP, userAgent string) (studentexamrepo.Session, error)
+	EnsureSessionQuestions(ctx context.Context, sessionID, examID string, shuffleQuestions bool) (int, error)
+	GetSessionState(ctx context.Context, sessionID, studentID string, nowUTC time.Time) (studentexamrepo.SessionState, bool, error)
+	SessionExists(ctx context.Context, sessionID string) (bool, error)
+	ListSessionQuestions(ctx context.Context, sessionID, studentID string, shuffleOptions bool) ([]studentexamrepo.StudentQuestion, error)
+	ListSessionAnswers(ctx context.Context, sessionID, studentID string) ([]studentexamrepo.SessionAnswer, error)
+	UpsertAnswer(ctx context.Context, sessionID, studentID, questionID string, answerJSON json.RawMessage, nowUTC time.Time) error
+	SubmitSession(ctx context.Context, sessionID, studentID string) error
+	ComputeAutoScore(ctx context.Context, sessionID, studentID string, nowUTC time.Time) (studentexamrepo.AutoScoreSummary, error)
+	Heartbeat(ctx context.Context, sessionID, studentID string, payload json.RawMessage) error
+	ListStudentResults(ctx context.Context, studentID string, f studentexamrepo.ListStudentResultsFilter) ([]studentexamrepo.StudentResultSummary, int, error)
+	ListStudentAnnouncements(ctx context.Context, studentID, levelID, groupID string, f studentexamrepo.ListStudentAnnouncementsFilter) ([]studentexamrepo.StudentAnnouncement, int, error)
+	EnsureStudentCanAttendExam(ctx context.Context, examID, studentID, levelID, groupID string) (bool, error)
+	UpsertAttendance(ctx context.Context, examID, studentID, note string, clientIP net.IP, nowUTC time.Time, opts ...studentexamrepo.AttendanceOption) (studentexamrepo.AttendanceSubmission, error)
+	ListAttendanceHistory(ctx context.Context, studentID string, f studentexamrepo.ListAttendanceHistoryFilter) ([]studentexamrepo.AttendanceHistoryItem, int, error)
 }
 
-func NewStudentExamHandler(repo *studentexamrepo.Repo, settings *masterrepo.SettingsRepo) *StudentExamHandler {
+type systemSettingsRepo interface {
+	GetSystem(ctx context.Context) (masterrepo.SystemSettings, error)
+}
+
+type StudentExamHandler struct {
+	repo     studentExamRepo
+	settings systemSettingsRepo
+}
+
+func NewStudentExamHandler(repo studentExamRepo, settings systemSettingsRepo) *StudentExamHandler {
 	return &StudentExamHandler{repo: repo, settings: settings}
 }
 
@@ -71,6 +100,19 @@ func (h *StudentExamHandler) ListExams(c *gin.Context) {
 
 type joinReq struct {
 	Token string `json:"token"`
+}
+
+func (h *StudentExamHandler) respondSessionNotOwnedOrMissing(c *gin.Context, sessionID string) {
+	exists, err := h.repo.SessionExists(c.Request.Context(), sessionID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if exists {
+		c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "forbidden"}})
+		return
+	}
+	c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "not found"}})
 }
 
 func (h *StudentExamHandler) Join(c *gin.Context) {
@@ -218,6 +260,259 @@ func (h *StudentExamHandler) Join(c *gin.Context) {
 	c.JSON(200, gin.H{"data": gin.H{"session": sess, "session_id": sess.ID, "exam": gin.H{"id": ex.ID, "title": ex.Title}}})
 }
 
+// StartCompat provides compatibility with POST /api/v1/exams/:id/start.
+// Body may contain user_id but this handler relies on authenticated user context.
+func (h *StudentExamHandler) StartCompat(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+	nowUTC := time.Now().UTC()
+
+	st, ok, err := h.repo.StudentByUserID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if !ok {
+		c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "student not registered"}})
+		return
+	}
+	if !st.IsActive {
+		c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "user inactive"}})
+		return
+	}
+
+	// Best effort: accept legacy body payload { "user_id": ... } without enforcing it.
+	var _req map[string]any
+	_ = c.ShouldBindJSON(&_req)
+
+	examID := c.Param("id")
+	existing, exists, err := h.repo.GetSessionByExamStudent(c.Request.Context(), examID, st.StudentID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if exists && existing.Status == "in_progress" {
+		c.JSON(409, gin.H{"error": gin.H{"code": "conflict", "message": "session already active"}})
+		return
+	}
+
+	sys := masterrepo.SystemSettings{Timezone: "Asia/Jakarta"}
+	if h.settings != nil {
+		if stg, stgErr := h.settings.GetSystem(c.Request.Context()); stgErr == nil {
+			sys = stg
+		}
+	}
+	loc, _ := time.LoadLocation(sys.Timezone)
+
+	ex, err := h.repo.GetExamForStudentJoin(c.Request.Context(), examID, st.StudentID, st.LevelID, st.GroupID, nowUTC, loc)
+	if err != nil {
+		if err == studentexamrepo.ErrExamNotFound {
+			c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "not found"}})
+			return
+		}
+		if err == studentexamrepo.ErrExamNotJoinable {
+			c.JSON(409, gin.H{"error": gin.H{"code": "conflict", "message": "exam not joinable (outside schedule)"}})
+			return
+		}
+		if errors.Is(err, studentexamrepo.ErrSessionTimeMismatch) {
+			c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": err.Error()}})
+			return
+		}
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+
+	ip := net.ParseIP(c.ClientIP())
+	sess, err := h.repo.GetOrCreateSession(c.Request.Context(), examID, st.StudentID, ip, c.GetHeader("User-Agent"))
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if sess.Status != "in_progress" {
+		c.JSON(409, gin.H{"error": gin.H{"code": "conflict", "message": "session already finished"}})
+		return
+	}
+	if _, err := h.repo.EnsureSessionQuestions(c.Request.Context(), sess.ID, examID, ex.ShuffleQuestions); err != nil {
+		if errors.Is(err, studentexamrepo.ErrNoQuestionSets) {
+			c.JSON(409, gin.H{"error": gin.H{"code": "no_questions", "message": "Ujian ini belum memiliki bank soal. Silakan hubungi pengampu."}})
+			return
+		}
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+
+	state, ok, err := h.repo.GetSessionState(c.Request.Context(), sess.ID, st.StudentID, nowUTC)
+	if err != nil || !ok {
+		c.JSON(200, gin.H{"data": gin.H{"session_id": sess.ID, "session_token": sess.ID}})
+		return
+	}
+	c.JSON(200, gin.H{"data": gin.H{"session_id": sess.ID, "session_token": sess.ID, "expired_at": state.DeadlineAt}})
+}
+
+// GetQuestionsByExamCompat provides compatibility with GET /api/v1/exams/:id/questions.
+func (h *StudentExamHandler) GetQuestionsByExamCompat(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+	nowUTC := time.Now().UTC()
+
+	st, ok, err := h.repo.StudentByUserID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if !ok {
+		c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "student not registered"}})
+		return
+	}
+	if !st.IsActive {
+		c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "user inactive"}})
+		return
+	}
+
+	sess, ok, err := h.repo.GetSessionByExamStudent(c.Request.Context(), c.Param("id"), st.StudentID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if !ok {
+		c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "not found"}})
+		return
+	}
+	if sess.Status != "in_progress" {
+		c.JSON(409, gin.H{"error": gin.H{"code": "conflict", "message": "session not active"}})
+		return
+	}
+
+	state, ok, err := h.repo.GetSessionState(c.Request.Context(), sess.ID, st.StudentID, nowUTC)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if !ok {
+		c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "not found"}})
+		return
+	}
+
+	items, err := h.repo.ListSessionQuestions(c.Request.Context(), state.Session.ID, st.StudentID, state.Exam.ShuffleOptions)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+
+	limit := params.IntQuery(c, "limit", 50, 1, 500)
+	offset := params.IntQuery(c, "offset", 0, 0, 1_000_000)
+	total := len(items)
+	if offset > total {
+		offset = total
+	}
+	end := offset + limit
+	if end > total {
+		end = total
+	}
+
+	c.JSON(200, gin.H{
+		"data": items[offset:end],
+		"meta": gin.H{
+			"limit":  limit,
+			"offset": offset,
+			"total":  total,
+		},
+	})
+}
+
+// SaveAnswerCompat provides compatibility with POST /api/v1/sessions/:session_id/answers.
+func (h *StudentExamHandler) SaveAnswerCompat(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+	nowUTC := time.Now().UTC()
+
+	st, ok, err := h.repo.StudentByUserID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if !ok {
+		c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "student not registered"}})
+		return
+	}
+	if !st.IsActive {
+		c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "user inactive"}})
+		return
+	}
+
+	var req answerReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "invalid json"}})
+		return
+	}
+	req.QuestionID = strings.TrimSpace(req.QuestionID)
+	if req.QuestionID == "" || len(req.AnswerJSON) == 0 {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "question_id and answer_json required"}})
+		return
+	}
+
+	if err := h.repo.UpsertAnswer(c.Request.Context(), c.Param("session_id"), st.StudentID, req.QuestionID, req.AnswerJSON, nowUTC); err != nil {
+		switch err {
+		case studentexamrepo.ErrQuestionNotInSession:
+			c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "forbidden"}})
+		case studentexamrepo.ErrSessionNotActive:
+			c.JSON(422, gin.H{"error": gin.H{"code": "exam_time_expired", "message": "exam time expired"}})
+		default:
+			if strings.Contains(err.Error(), "invalid answer_json") {
+				c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "invalid answer_json"}})
+				return
+			}
+			c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		}
+		return
+	}
+	c.JSON(200, gin.H{"data": gin.H{"ok": true}})
+}
+
+// FinishCompat provides compatibility with POST /api/v1/sessions/:session_id/finish.
+func (h *StudentExamHandler) FinishCompat(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+	nowUTC := time.Now().UTC()
+
+	st, ok, err := h.repo.StudentByUserID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if !ok {
+		c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "student not registered"}})
+		return
+	}
+	if !st.IsActive {
+		c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "user inactive"}})
+		return
+	}
+
+	sessionID := c.Param("session_id")
+	if err := h.repo.SubmitSession(c.Request.Context(), sessionID, st.StudentID); err != nil {
+		switch err {
+		case studentexamrepo.ErrSessionNotFound:
+			c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "not found"}})
+		case studentexamrepo.ErrSessionNotActive:
+			c.JSON(409, gin.H{"error": gin.H{"code": "conflict", "message": "session not active"}})
+		default:
+			c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		}
+		return
+	}
+
+	sum, err := h.repo.ComputeAutoScore(c.Request.Context(), sessionID, st.StudentID, nowUTC)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	score := sum.Score
+
+	state, ok, err := h.repo.GetSessionState(c.Request.Context(), sessionID, st.StudentID, nowUTC)
+	if err != nil || !ok {
+		c.JSON(200, gin.H{"data": gin.H{"ok": true, "score": score}})
+		return
+	}
+	c.JSON(200, gin.H{"data": gin.H{"ok": true, "score": score, "finished_at": state.Session.FinishedAt}})
+}
+
 func (h *StudentExamHandler) GetActiveSessionByExam(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 
@@ -277,7 +572,7 @@ func (h *StudentExamHandler) GetSession(c *gin.Context) {
 		return
 	}
 	if !ok {
-		c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "not found"}})
+		h.respondSessionNotOwnedOrMissing(c, c.Param("id"))
 		return
 	}
 	c.JSON(200, gin.H{"data": state})
@@ -307,7 +602,7 @@ func (h *StudentExamHandler) GetQuestions(c *gin.Context) {
 		return
 	}
 	if !ok {
-		c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "not found"}})
+		h.respondSessionNotOwnedOrMissing(c, c.Param("id"))
 		return
 	}
 
@@ -321,6 +616,7 @@ func (h *StudentExamHandler) GetQuestions(c *gin.Context) {
 
 func (h *StudentExamHandler) GetAnswers(c *gin.Context) {
 	userID := middleware.GetUserID(c)
+	nowUTC := time.Now().UTC()
 
 	st, ok, err := h.repo.StudentByUserID(c.Request.Context(), userID)
 	if err != nil {
@@ -333,6 +629,15 @@ func (h *StudentExamHandler) GetAnswers(c *gin.Context) {
 	}
 	if !st.IsActive {
 		c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "user inactive"}})
+		return
+	}
+
+	// Ensure session belongs to this student; do not leak other users' sessions.
+	if _, ok, err := h.repo.GetSessionState(c.Request.Context(), c.Param("id"), st.StudentID, nowUTC); err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	} else if !ok {
+		h.respondSessionNotOwnedOrMissing(c, c.Param("id"))
 		return
 	}
 
@@ -389,7 +694,7 @@ func (h *StudentExamHandler) VerifyToken(c *gin.Context) {
 		return
 	}
 	if !ok {
-		c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "not found"}})
+		h.respondSessionNotOwnedOrMissing(c, c.Param("id"))
 		return
 	}
 	if state.Session.Status != "in_progress" {

@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"net/http"
+	httppprof "net/http/pprof"
 	"strings"
 	"time"
 
@@ -45,6 +46,22 @@ func NewHandler(deps Deps) http.Handler {
 	r.Use(gin.Recovery())
 	r.Use(middleware.RequestID())
 	r.Use(middleware.StructuredLogger())
+	r.Use(middleware.SecurityHeaders())
+	if cfg.Env == "debug" || cfg.Env == "" {
+		pp := r.Group("/debug/pprof")
+		pp.GET("/", gin.WrapF(httppprof.Index))
+		pp.GET("/cmdline", gin.WrapF(httppprof.Cmdline))
+		pp.GET("/profile", gin.WrapF(httppprof.Profile))
+		pp.POST("/symbol", gin.WrapF(httppprof.Symbol))
+		pp.GET("/symbol", gin.WrapF(httppprof.Symbol))
+		pp.GET("/trace", gin.WrapF(httppprof.Trace))
+		pp.GET("/allocs", gin.WrapH(httppprof.Handler("allocs")))
+		pp.GET("/block", gin.WrapH(httppprof.Handler("block")))
+		pp.GET("/goroutine", gin.WrapH(httppprof.Handler("goroutine")))
+		pp.GET("/heap", gin.WrapH(httppprof.Handler("heap")))
+		pp.GET("/mutex", gin.WrapH(httppprof.Handler("mutex")))
+		pp.GET("/threadcreate", gin.WrapH(httppprof.Handler("threadcreate")))
+	}
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"name":   "MyCBT API",
@@ -252,6 +269,14 @@ func NewHandler(deps Deps) http.Handler {
 		attendanceSessRepo := masterrepo.NewAttendanceSessions(deps.Pool)
 		qrH := handlers.NewAttendanceHandler(attendanceSessRepo, st, masterrepo.NewSettings(deps.Pool))
 		sg.POST("/attendance/scan", qrH.ScanAttendance)
+
+		// Compatibility endpoints for legacy CBT flow contracts.
+		compat := v1.Group("")
+		compat.Use(middleware.RequireAuth(deps.Auth), middleware.RequireRole("student"))
+		compat.POST("/exams/:id/start", middleware.RateLimit("student_join_exam", 20, time.Minute), h.StartCompat)
+		compat.GET("/exams/:id/questions", h.GetQuestionsByExamCompat)
+		compat.POST("/sessions/:session_id/answers", h.SaveAnswerCompat)
+		compat.POST("/sessions/:session_id/finish", h.FinishCompat)
 	}
 
 	// Lookups (admin/teacher)

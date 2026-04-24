@@ -1,9 +1,11 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { api } from '@/services/api.js'
 
 export const useExamStore = defineStore('exam', () => {
+    const PERSIST_KEY = 'mycbt:exam-store'
     const sessionId = ref(null)
+    const startTime = ref(null)
     const examTitle = ref('AtigaCBT Workspace')
     const questions = ref([])
     const answers = ref({})
@@ -15,6 +17,55 @@ export const useExamStore = defineStore('exam', () => {
 
     const currentQuestionIdx = ref(0)
     const currentQuestion = computed(() => questions.value[currentQuestionIdx.value])
+
+    const persistNow = () => {
+        try {
+            localStorage.setItem(PERSIST_KEY, JSON.stringify({
+                sessionId: sessionId.value,
+                startTime: startTime.value,
+                questions: questions.value,
+                answers: answers.value,
+                currentQuestionIdx: currentQuestionIdx.value,
+                examTitle: examTitle.value,
+                timeLeft: timeLeft.value,
+            }))
+        } catch {
+            // ignore storage errors
+        }
+    }
+
+    try {
+        const raw = localStorage.getItem(PERSIST_KEY)
+        if (raw) {
+            const persisted = JSON.parse(raw)
+            if (persisted && typeof persisted === 'object') {
+                sessionId.value = persisted.sessionId ?? null
+                startTime.value = persisted.startTime ?? null
+                questions.value = Array.isArray(persisted.questions) ? persisted.questions : []
+                answers.value = persisted.answers && typeof persisted.answers === 'object' ? persisted.answers : {}
+                currentQuestionIdx.value = Number.isInteger(persisted.currentQuestionIdx) ? persisted.currentQuestionIdx : 0
+                examTitle.value = persisted.examTitle || examTitle.value
+                timeLeft.value = Number.isFinite(persisted.timeLeft) ? persisted.timeLeft : 0
+            }
+        }
+    } catch {
+        // ignore malformed persisted payload
+    }
+
+    watch(
+        [sessionId, startTime, questions, answers, currentQuestionIdx, examTitle, timeLeft],
+        persistNow,
+        { deep: true },
+    )
+
+    const startExam = ({ sessionId: sid, startTime: startedAt, questions: qs = [] } = {}) => {
+        sessionId.value = sid || null
+        startTime.value = startedAt || new Date().toISOString()
+        questions.value = Array.isArray(qs) ? qs : []
+        if (!answers.value || typeof answers.value !== 'object') {
+            answers.value = {}
+        }
+    }
 
     const loadExamData = async (sid) => {
         if (!sid) return
@@ -90,13 +141,16 @@ export const useExamStore = defineStore('exam', () => {
         }
     }
 
-    const saveAnswer = async (questionId) => {
+    const saveAnswer = async (questionId, answer = undefined) => {
         if (!sessionId.value || !questionId) return
-        const answer = answers.value[questionId] ?? {}
+        if (answer !== undefined) {
+            answers.value[questionId] = answer
+        }
+        const payload = answers.value[questionId] ?? {}
         try {
             await api.post(`/api/v1/student/sessions/${sessionId.value}/answers`, {
                 question_id: questionId,
-                answer_json: JSON.stringify(answer)
+                answer_json: JSON.stringify(payload)
             })
         } catch (err) {
             console.error('Failed to save answer:', err)
@@ -120,6 +174,7 @@ export const useExamStore = defineStore('exam', () => {
     const reset = () => {
         stopTimer()
         sessionId.value = null
+        startTime.value = null
         questions.value = []
         answers.value = {}
         timeLeft.value = 0
@@ -128,8 +183,15 @@ export const useExamStore = defineStore('exam', () => {
         currentQuestionIdx.value = 0
     }
 
+    const finishExam = async () => {
+        if (!sessionId.value) return
+        await api.post(`/api/v1/student/sessions/${sessionId.value}/submit`)
+        reset()
+    }
+
     return {
         sessionId,
+        startTime,
         examTitle,
         questions,
         answers,
@@ -139,11 +201,18 @@ export const useExamStore = defineStore('exam', () => {
         submitDone,
         currentQuestion,
         currentQuestionIdx,
+        startExam,
         loadExamData,
         saveAnswer,
         submitExam,
+        finishExam,
         reset,
         startTimer,
         stopTimer
     }
+}, {
+    persist: {
+        key: 'mycbt:exam-store',
+        paths: ['sessionId', 'startTime', 'questions', 'answers', 'currentQuestionIdx', 'examTitle', 'timeLeft'],
+    },
 })

@@ -10,7 +10,11 @@ docker compose up -d
 
 echo "Starting Backend API..."
 cd backend
-../.tooling/go/bin/go run ./cmd/api &
+if [ -x ./api ]; then
+  ./api &
+else
+  ../.tooling/go/bin/go run ./cmd/api &
+fi
 BACKEND_PID=$!
 
 echo "Starting Frontend..."

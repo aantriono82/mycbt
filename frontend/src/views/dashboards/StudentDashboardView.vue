@@ -15,42 +15,37 @@ import BaseButton from '@/components/BaseButton.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
 import BaseSkeleton from '@/components/BaseSkeleton.vue'
 import { mdiContentCopy, mdiLockOutline } from '@mdi/js'
-import { useQuery } from '@tanstack/vue-query'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
 
 const authStore = useAuthStore()
 
-const { 
-  data: examsData, 
-  isLoading: isExamsLoading, 
-  isError: isExamsError,
-  error: examsError
-} = useQuery({
-  queryKey: ['student', 'exams'],
-  queryFn: async () => {
-    const { data } = await api.get('/api/v1/student/exams', { params: { limit: 50, offset: 0 } })
-    return data?.data || []
-  },
-  staleTime: 1000 * 60 * 2, // 2 minutes
-})
-
-const { 
-  data: resultsData, 
-  isLoading: isResultsLoading 
-} = useQuery({
-  queryKey: ['student', 'results'],
-  queryFn: async () => {
-    const { data } = await api.get('/api/v1/student/results', { params: { limit: 50, offset: 0 } })
-    return data?.data || []
-  },
-  staleTime: 1000 * 60 * 5, // 5 minutes
-})
+const exams = ref([])
+const results = ref([])
+const isExamsLoading = ref(false)
+const isResultsLoading = ref(false)
+const errorMessage = ref('')
 
 const isLoading = computed(() => isExamsLoading.value || isResultsLoading.value)
-const exams = computed(() => examsData.value || [])
-const results = computed(() => resultsData.value || [])
-const errorMessage = computed(() => isExamsError.value ? (examsError.value?.response?.data?.error?.message || 'Gagal memuat dashboard') : '')
+
+const loadDashboard = async () => {
+  isExamsLoading.value = true
+  isResultsLoading.value = true
+  errorMessage.value = ''
+  try {
+    const [examRes, resultRes] = await Promise.all([
+      api.get('/api/v1/student/exams', { params: { limit: 50, offset: 0 } }),
+      api.get('/api/v1/student/results', { params: { limit: 50, offset: 0 } }),
+    ])
+    exams.value = examRes?.data?.data || []
+    results.value = resultRes?.data?.data || []
+  } catch (err) {
+    errorMessage.value = err?.response?.data?.error?.message || 'Gagal memuat dashboard'
+  } finally {
+    isExamsLoading.value = false
+    isResultsLoading.value = false
+  }
+}
 
 const classifyStatus = (item) => {
   const endsAt = item?.ends_at ? new Date(item.ends_at) : null
@@ -100,6 +95,10 @@ const copyToken = (token) => {
   navigator.clipboard.writeText(token)
   alert('Token berhasil disalin: ' + token)
 }
+
+onMounted(() => {
+  loadDashboard()
+})
 </script>
 
 <template>

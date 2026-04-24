@@ -59,7 +59,7 @@ func (h *NotificationHandler) Stream(c *gin.Context) {
 			return
 		case <-ticker.C:
 			// 1. Check for new announcements
-			anns, _, err := h.ann.List(c.Request.Context(), masterrepo.AnnouncementsFilter{Limit: 1, Offset: 0})
+			anns, _, err := h.ann.List(c.Request.Context(), "", "true", 1, 0)
 			if err == nil && len(anns) > 0 {
 				currentAnnID := fmt.Sprintf("%v", anns[0].ID)
 				if lastAnnID != "" && currentAnnID != lastAnnID {
@@ -69,13 +69,21 @@ func (h *NotificationHandler) Stream(c *gin.Context) {
 			}
 
 			// 2. Check for new exams
-			exams, err := h.st.ListExams(c.Request.Context(), middleware.GetUserID(c), studentexamrepo.ExamsFilter{Limit: 1, Offset: 0})
-			if err == nil && len(exams) > 0 {
-				currentExamID := fmt.Sprintf("%v", exams[0].ID)
-				if lastExamID != "" && currentExamID != lastExamID {
-					_ = writeEvent("update", "exam")
+			userID := middleware.GetUserID(c)
+			st, ok, err := h.st.StudentByUserID(c.Request.Context(), userID)
+			if err == nil && ok && st.IsActive {
+				exams, _, err := h.st.ListAvailableForStudent(c.Request.Context(), st.StudentID, st.LevelID, st.GroupID, studentexamrepo.ListStudentExamsFilter{
+					Limit:  1,
+					Offset: 0,
+					NowUTC: time.Now().UTC(),
+				})
+				if err == nil && len(exams) > 0 {
+					currentExamID := fmt.Sprintf("%v", exams[0].ID)
+					if lastExamID != "" && currentExamID != lastExamID {
+						_ = writeEvent("update", "exam")
+					}
+					lastExamID = currentExamID
 				}
-				lastExamID = currentExamID
 			}
 
 			// Ping to keep connection alive
