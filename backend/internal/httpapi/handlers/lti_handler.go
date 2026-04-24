@@ -18,6 +18,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 
+	"mycbt/backend/internal/httpapi/pgerr"
 	"mycbt/backend/internal/model"
 	"mycbt/backend/internal/repo/ltirepo"
 	"mycbt/backend/internal/repo/userrepo"
@@ -374,9 +375,17 @@ func (h *LTIHandler) CreatePlatform(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "invalid payload"})
 		return
 	}
+	if strings.TrimSpace(p.Name) == "" || strings.TrimSpace(p.Issuer) == "" || strings.TrimSpace(p.ClientID) == "" {
+		c.JSON(400, gin.H{"error": "name, issuer, and client_id are required"})
+		return
+	}
 
 	res, err := h.lti.CreatePlatform(c.Request.Context(), p)
 	if err != nil {
+		if pgerr.Code(err) == pgerr.CodeUniqueViolation {
+			c.JSON(409, gin.H{"error": "platform issuer already exists"})
+			return
+		}
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
