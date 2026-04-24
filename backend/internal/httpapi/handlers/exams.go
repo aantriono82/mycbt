@@ -81,6 +81,7 @@ type createExamReq struct {
 	DurationMinutes  *int   `json:"duration_minutes"`
 	ShuffleQuestions bool   `json:"shuffle_questions"`
 	ShuffleOptions   bool   `json:"shuffle_options"`
+	ScoringMode      string `json:"scoring_mode"` // partial|absolute
 }
 
 func (h *ExamsHandler) Create(c *gin.Context) {
@@ -102,6 +103,14 @@ func (h *ExamsHandler) Create(c *gin.Context) {
 	}
 	if req.DurationMinutes != nil && *req.DurationMinutes <= 0 {
 		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "duration_minutes must be > 0"}})
+		return
+	}
+	scoringMode := strings.TrimSpace(strings.ToLower(req.ScoringMode))
+	if scoringMode == "" {
+		scoringMode = "partial"
+	}
+	if scoringMode != "partial" && scoringMode != "absolute" {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "invalid scoring_mode"}})
 		return
 	}
 
@@ -166,6 +175,7 @@ func (h *ExamsHandler) Create(c *gin.Context) {
 		DurationMinutes:  req.DurationMinutes,
 		ShuffleQuestions: req.ShuffleQuestions,
 		ShuffleOptions:   req.ShuffleOptions,
+		ScoringMode:      scoringMode,
 	})
 	if err != nil {
 		if pgerr.Code(err) == pgerr.CodeForeignKeyViolation {
@@ -215,7 +225,8 @@ type patchExamReq struct {
 	DurationMinutes  **int   `json:"duration_minutes"` // can set null
 	ShuffleQuestions *bool   `json:"shuffle_questions"`
 	ShuffleOptions   *bool   `json:"shuffle_options"`
-	Status           *string `json:"status"` // draft|published|archived
+	ScoringMode      *string `json:"scoring_mode"` // partial|absolute
+	Status           *string `json:"status"`       // draft|published|archived
 }
 
 func (h *ExamsHandler) Patch(c *gin.Context) {
@@ -307,6 +318,17 @@ func (h *ExamsHandler) Patch(c *gin.Context) {
 	if req.ShuffleOptions != nil {
 		shO = *req.ShuffleOptions
 	}
+	scoringMode := cur.ScoringMode
+	if scoringMode == "" {
+		scoringMode = "partial"
+	}
+	if req.ScoringMode != nil {
+		scoringMode = strings.TrimSpace(strings.ToLower(*req.ScoringMode))
+	}
+	if scoringMode != "partial" && scoringMode != "absolute" {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "invalid scoring_mode"}})
+		return
+	}
 	status := cur.Status
 	if req.Status != nil {
 		status = strings.TrimSpace(*req.Status)
@@ -337,6 +359,7 @@ func (h *ExamsHandler) Patch(c *gin.Context) {
 		DurationMinutes:  dur,
 		ShuffleQuestions: shQ,
 		ShuffleOptions:   shO,
+		ScoringMode:      scoringMode,
 		Status:           status,
 	})
 	if err != nil {

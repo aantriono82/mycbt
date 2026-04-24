@@ -1,7 +1,6 @@
 <script setup>
-import { mdiForwardburger, mdiBackburger, mdiMenu, mdiAccountCircleOutline, mdiBellOutline, mdiClipboardTextClockOutline, mdiSchoolOutline } from '@mdi/js'
-import { computed, onMounted, ref, watch, onUnmounted } from 'vue'
-import { useQuery, useQueryClient } from '@tanstack/vue-query'
+import { mdiForwardburger, mdiBackburger, mdiMenu, mdiAccountCircleOutline, mdiBellOutline, mdiClipboardTextClockOutline } from '@mdi/js'
+import { computed, onMounted, ref, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getMenuAsideMain, menuAsideBottom } from '@/menuAside.js'
 import { getMenuNavBar } from '@/menuNavBar.js'
@@ -34,65 +33,120 @@ router.beforeEach(() => {
 const menuAsideMain = computed(() => getMenuAsideMain(authStore.role))
 const menuNavBar = computed(() => getMenuNavBar(authStore.role, authStore.userDisplayName))
 
-
-
-const queryClient = useQueryClient()
 const announcements = ref([])
 const exams = ref([])
 const isNotificationsExpanded = ref(false)
 const showBadge = ref(false)
+const isLoadingAnnouncements = ref(false)
+const notificationsFingerprint = ref('')
+const lastSeenNotificationsFingerprint = ref('')
+const NOTIF_READ_KEY_PREFIX = 'mycbt:last_seen_notifications:'
+let notificationsPollTimer = null
+let notificationsEventSource = null
 
 const notificationsCount = computed(() => announcements.value.length + exams.value.length)
+const notificationsReadStorageKey = computed(() => {
+  const userId = String(authStore.user?.id || authStore.user?.username || 'anon')
+  return `${NOTIF_READ_KEY_PREFIX}${userId}`
+})
+
+const buildNotificationsFingerprint = (newAnns = [], newExams = []) => {
+  const annKeys = (newAnns || []).map((item) =>
+    `ann:${String(item?.id || '')}:${String(item?.updated_at || item?.published_at || '')}`,
+  )
+  const examKeys = (newExams || []).map((item) =>
+    `exam:${String(item?.id || '')}:${String(item?.updated_at || item?.starts_at || '')}`,
+  )
+  return [...annKeys, ...examKeys].join('|')
+}
 
 const markNotificationsAsRead = () => {
+  lastSeenNotificationsFingerprint.value = notificationsFingerprint.value
+  try {
+    localStorage.setItem(notificationsReadStorageKey.value, lastSeenNotificationsFingerprint.value || '')
+  } catch {
+    // ignore storage errors
+  }
   showBadge.value = false
 }
 
-// Real-time listener
-onMounted(() => {
-  if (authStore.role === 'student') {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    const token = localStorage.getItem('mycbt_token')
-    const es = new EventSource(`${baseUrl}/api/v1/student/notifications/stream?token=${token}`)
-    
-    es.addEventListener('update', () => {
-      queryClient.invalidateQueries({ queryKey: ['student', 'notifications'] })
-    })
-
-    onUnmounted(() => {
-      es.close()
-    })
+const loadNotifications = async ({ silent = false } = {}) => {
+  if (authStore.role !== 'student') {
+    announcements.value = []
+    exams.value = []
+    return
   }
+
+  if (!silent) {
+    isLoadingAnnouncements.value = true
+  }
+  try {
+    const [annResp, examResp] = await Promise.all([
+      api.get('/api/v1/student/announcements', { params: { limit: 5, offset: 0 } }),
+      api.get('/api/v1/student/exams', { params: { limit: 5, offset: 0 } }),
+    ])
+
+    const newAnns = annResp.data?.data || []
+    const newExams = examResp.data?.data || []
+    announcements.value = newAnns
+    exams.value = newExams
+    notificationsFingerprint.value = buildNotificationsFingerprint(newAnns, newExams)
+
+    if (!notificationsFingerprint.value) {
+      showBadge.value = false
+      lastSeenNotificationsFingerprint.value = ''
+    } else if (!lastSeenNotificationsFingerprint.value) {
+      showBadge.value = true
+    } else {
+      showBadge.value = notificationsFingerprint.value !== lastSeenNotificationsFingerprint.value
+    }
+
+    if (isNotificationsExpanded.value && notificationsFingerprint.value) {
+      markNotificationsAsRead()
+    }
+  } catch (e) {
+    console.error('Failed to fetch notifications:', e)
+    announcements.value = []
+    exams.value = []
+  } finally {
+    isLoadingAnnouncements.value = false
+  }
+}
+
+const stopNotificationsSync = () => {
+  if (notificationsPollTimer) {
+    clearInterval(notificationsPollTimer)
+    notificationsPollTimer = null
+  }
+  if (notificationsEventSource) {
+    notificationsEventSource.close()
+    notificationsEventSource = null
+  }
+}
+
+onMounted(() => {
+  if (authStore.role !== 'student') return
+  try {
+    lastSeenNotificationsFingerprint.value = localStorage.getItem(notificationsReadStorageKey.value) || ''
+  } catch {
+    lastSeenNotificationsFingerprint.value = ''
+  }
+  loadNotifications()
+
+  notificationsPollTimer = setInterval(() => {
+    loadNotifications({ silent: true })
+  }, 60000)
+
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const token = localStorage.getItem('mycbt_token')
+  notificationsEventSource = new EventSource(`${baseUrl}/api/v1/student/notifications/stream?token=${token}`)
+  notificationsEventSource.addEventListener('update', () => {
+    loadNotifications({ silent: true })
+  })
 })
 
-const { isLoading: isLoadingAnnouncements } = useQuery({
-  queryKey: ['student', 'notifications'],
-  queryFn: async () => {
-    if (authStore.role !== 'student') return { announcements: [], exams: [] }
-    try {
-      const [annResp, examResp] = await Promise.all([
-        api.get('/api/v1/student/announcements', { params: { limit: 5, offset: 0 } }),
-        api.get('/api/v1/student/exams', { params: { limit: 5, offset: 0 } })
-      ])
-      
-      const newAnns = annResp.data?.data || []
-      const newExams = examResp.data?.data || []
-      
-      announcements.value = newAnns
-      exams.value = newExams
-      
-      if (newAnns.length > 0 || newExams.length > 0) {
-        showBadge.value = true
-      }
-      
-      return { announcements: newAnns, exams: newExams }
-    } catch (e) {
-      console.error('Failed to fetch notifications:', e)
-      return { announcements: [], exams: [] }
-    }
-  },
-  refetchInterval: 60000,
-  enabled: computed(() => authStore.role === 'student'),
+onUnmounted(() => {
+  stopNotificationsSync()
 })
 
 const menuClick = (event, item) => {

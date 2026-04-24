@@ -19,12 +19,12 @@ type StudentResultSummary struct {
 	SessionStatus string `json:"session_status"`
 	SubmittedAt   string `json:"submitted_at,omitempty"`
 
-	TotalQuestions    int `json:"total_questions"`
-	AnsweredQuestions int `json:"answered_questions"`
-	AutoScorable      int `json:"auto_scorable_questions"`
-	CorrectCount      int `json:"correct_count"`
-	Score             int `json:"score"`
-	ManualScoredCount int `json:"manual_scored_count"`
+	TotalQuestions      int `json:"total_questions"`
+	AnsweredQuestions   int `json:"answered_questions"`
+	AutoScorable        int `json:"auto_scorable_questions"`
+	CorrectCount        int `json:"correct_count"`
+	Score               int `json:"score"`
+	ManualScoredCount   int `json:"manual_scored_count"`
 	PendingGradingCount int `json:"pending_grading_count"`
 }
 
@@ -95,15 +95,28 @@ WHERE student_id = $1 AND status <> 'in_progress'`, studentID).Scan(&total); err
 }
 
 type AutoScoreSummary struct {
-	TotalQuestions    int `json:"total_questions"`
-	AnsweredQuestions int `json:"answered_questions"`
-	AutoScorable      int `json:"auto_scorable_questions"`
-	CorrectCount      int `json:"correct_count"`
-	Score             int `json:"score"`
-	ManualScored      int `json:"manual_scored_count"`
-	PendingGrading    int `json:"pending_grading_count"`
-	TotalMaxScore     int `json:"total_max_score"`
-	TotalActualScore  int `json:"total_actual_score"`
+	TotalQuestions    int                 `json:"total_questions"`
+	AnsweredQuestions int                 `json:"answered_questions"`
+	AutoScorable      int                 `json:"auto_scorable_questions"`
+	CorrectCount      int                 `json:"correct_count"`
+	Score             int                 `json:"score"`
+	ManualScored      int                 `json:"manual_scored_count"`
+	PendingGrading    int                 `json:"pending_grading_count"`
+	TotalMaxScore     int                 `json:"total_max_score"`
+	TotalActualScore  int                 `json:"total_actual_score"`
+	GradingDetails    []ItemGradingDetail `json:"grading_details,omitempty"`
+}
+
+type ItemGradingDetail struct {
+	QuestionID   string `json:"question_id"`
+	QuestionType string `json:"question_type"`
+	ScoringMode  string `json:"scoring_mode"`
+	CorrectCount int    `json:"correct_count"`
+	WrongCount   int    `json:"wrong_count"`
+	Penalty      int    `json:"penalty"`
+	MaxScore     int    `json:"max_score"`
+	ActualScore  int    `json:"actual_score"`
+	FullyCorrect bool   `json:"fully_correct"`
 }
 
 type qinfo struct {
@@ -182,6 +195,16 @@ ORDER BY sq.order_no ASC`, sessionID)
 }
 
 func (r *Repo) computeAutoScoreFromQuestions(ctx context.Context, sessionID string, qs []qinfo) (AutoScoreSummary, error) {
+	scoringMode := "partial"
+	if err := r.pool.QueryRow(ctx, `
+SELECT COALESCE(e.scoring_mode, 'partial')
+FROM exam_sessions s
+JOIN exams e ON e.id = s.exam_id
+WHERE s.id = $1`, sessionID).Scan(&scoringMode); err != nil {
+		return AutoScoreSummary{}, fmt.Errorf("load exam scoring mode: %w", err)
+	}
+	scoringMode = normalizeScoringMode(scoringMode)
+
 	attempts := map[string]struct {
 		Answer      json.RawMessage
 		ManualScore *int
@@ -374,6 +397,7 @@ WHERE question_id::text = ANY($1::text[])`, essayIDs)
 	totalActual := 0
 	manualScored := 0
 	pendingGrading := 0
+	details := make([]ItemGradingDetail, 0, len(qs))
 
 	for _, q := range qs {
 		att, ok := attempts[q.ID]
@@ -381,43 +405,97 @@ WHERE question_id::text = ANY($1::text[])`, essayIDs)
 		switch q.Type {
 		case "mc_single":
 			autoTotal++
-			totalMax += 100 // Scale to 100 per question internally
-			if ok && isCorrectMCSingle(raw, mcCorrect[q.ID]) {
-				correct++
-				totalActual += 100
+			score := 0
+			correctCount := 0
+			if ok {
+				if isCorrectMCSingle(raw, mcCorrect[q.ID]) {
+					score = 100
+					correctCount = 1
+				}
 			}
+			totalMax += 100 // Scale to 100 per question internally
+			totalActual += score
+			if score == 100 {
+				correct++
+			}
+			details = append(details, ItemGradingDetail{
+				QuestionID:   q.ID,
+				QuestionType: q.Type,
+				ScoringMode:  "absolute",
+				CorrectCount: correctCount,
+				WrongCount:   1 - correctCount,
+				Penalty:      0,
+				MaxScore:     100,
+				ActualScore:  score,
+				FullyCorrect: score == 100,
+			})
 
 		case "mc_multiple":
 			autoTotal++
+			score, detail := scoreMCMultiple(raw, mcCorrect[q.ID], scoringMode)
 			totalMax += 100
-			if ok && isCorrectMCMultiple(raw, mcCorrect[q.ID]) {
-				correct++
-				totalActual += 100
+			if ok {
+				totalActual += score
 			}
+			if score == 100 {
+				correct++
+			}
+			detail.QuestionID = q.ID
+			detail.QuestionType = q.Type
+			details = append(details, detail)
 
 		case "true_false":
 			autoTotal++
+			score, detail := scoreTrueFalse(raw, tfCorrect[q.ID], scoringMode)
 			totalMax += 100
-			if ok && isCorrectTrueFalse(raw, tfCorrect[q.ID]) {
-				correct++
-				totalActual += 100
+			if ok {
+				totalActual += score
 			}
+			if score == 100 {
+				correct++
+			}
+			detail.QuestionID = q.ID
+			detail.QuestionType = q.Type
+			details = append(details, detail)
 
 		case "short_answer":
 			autoTotal++
-			totalMax += 100
+			score := 0
+			correctCount := 0
 			if ok && isCorrectShortAnswer(raw, saCorrect[q.ID]) {
-				correct++
-				totalActual += 100
+				score = 100
+				correctCount = 1
 			}
+			totalMax += 100
+			totalActual += score
+			if score == 100 {
+				correct++
+			}
+			details = append(details, ItemGradingDetail{
+				QuestionID:   q.ID,
+				QuestionType: q.Type,
+				ScoringMode:  "absolute",
+				CorrectCount: correctCount,
+				WrongCount:   1 - correctCount,
+				Penalty:      0,
+				MaxScore:     100,
+				ActualScore:  score,
+				FullyCorrect: score == 100,
+			})
 
 		case "matching":
 			autoTotal++
+			score, detail := scoreMatching(raw, matchPairs[q.ID], scoringMode)
 			totalMax += 100
-			if ok && isCorrectMatching(raw, matchPairs[q.ID]) {
-				correct++
-				totalActual += 100
+			if ok {
+				totalActual += score
 			}
+			if score == 100 {
+				correct++
+			}
+			detail.QuestionID = q.ID
+			detail.QuestionType = q.Type
+			details = append(details, detail)
 
 		case "essay":
 			maxS := essayMaxScores[q.ID]
@@ -429,11 +507,44 @@ WHERE question_id::text = ANY($1::text[])`, essayIDs)
 				if att.ManualScore != nil {
 					totalActual += *att.ManualScore
 					manualScored++
+					details = append(details, ItemGradingDetail{
+						QuestionID:   q.ID,
+						QuestionType: q.Type,
+						ScoringMode:  "manual",
+						CorrectCount: 0,
+						WrongCount:   0,
+						Penalty:      0,
+						MaxScore:     maxS,
+						ActualScore:  *att.ManualScore,
+						FullyCorrect: *att.ManualScore >= maxS,
+					})
 				} else {
 					pendingGrading++
+					details = append(details, ItemGradingDetail{
+						QuestionID:   q.ID,
+						QuestionType: q.Type,
+						ScoringMode:  "manual",
+						CorrectCount: 0,
+						WrongCount:   0,
+						Penalty:      0,
+						MaxScore:     maxS,
+						ActualScore:  0,
+						FullyCorrect: false,
+					})
 				}
 			} else {
 				// not answered, 0 points
+				details = append(details, ItemGradingDetail{
+					QuestionID:   q.ID,
+					QuestionType: q.Type,
+					ScoringMode:  "manual",
+					CorrectCount: 0,
+					WrongCount:   0,
+					Penalty:      0,
+					MaxScore:     maxS,
+					ActualScore:  0,
+					FullyCorrect: false,
+				})
 			}
 
 		default:
@@ -456,6 +567,7 @@ WHERE question_id::text = ANY($1::text[])`, essayIDs)
 		PendingGrading:    pendingGrading,
 		TotalMaxScore:     totalMax,
 		TotalActualScore:  totalActual,
+		GradingDetails:    details,
 	}, nil
 }
 
@@ -464,6 +576,15 @@ func normalizeText(s string) string {
 	// collapse whitespace
 	parts := strings.Fields(s)
 	return strings.Join(parts, " ")
+}
+
+func normalizeScoringMode(mode string) string {
+	switch strings.TrimSpace(strings.ToLower(mode)) {
+	case "absolute":
+		return "absolute"
+	default:
+		return "partial"
+	}
 }
 
 func keys(m map[string]bool) []string {
@@ -499,63 +620,148 @@ func isCorrectMCSingle(raw json.RawMessage, correctOptions map[string]bool) bool
 	return selected != "" && correctOptions[selected]
 }
 
-func isCorrectMCMultiple(raw json.RawMessage, correctOptions map[string]bool) bool {
+func scoreMCMultiple(raw json.RawMessage, correctOptions map[string]bool, mode string) (int, ItemGradingDetail) {
+	mode = normalizeScoringMode(mode)
 	var req struct {
 		SelectedOptionIDs []string `json:"selected_option_ids"`
 	}
 	if json.Unmarshal(raw, &req) != nil {
-		return false
+		req.SelectedOptionIDs = nil
 	}
-	want := keys(correctOptions)
-	got := make([]string, 0, len(req.SelectedOptionIDs))
-	seen := map[string]bool{}
+
+	correctTotal := len(keys(correctOptions))
+	selected := make(map[string]bool, len(req.SelectedOptionIDs))
 	for _, id := range req.SelectedOptionIDs {
 		id = strings.TrimSpace(id)
-		if id == "" || seen[id] {
+		if id == "" {
 			continue
 		}
-		seen[id] = true
-		got = append(got, id)
+		selected[id] = true
 	}
-	sort.Strings(want)
-	sort.Strings(got)
-	return equalStrings(want, got)
+
+	correctSelected := 0
+	incorrectSelected := 0
+	for id := range selected {
+		if correctOptions[id] {
+			correctSelected++
+		} else {
+			incorrectSelected++
+		}
+	}
+	missingCorrect := 0
+	if correctTotal > correctSelected {
+		missingCorrect = correctTotal - correctSelected
+	}
+
+	full := correctTotal > 0 && missingCorrect == 0 && incorrectSelected == 0
+	score := 0
+	penalty := incorrectSelected
+	if mode == "absolute" {
+		if full {
+			score = 100
+		}
+	} else if correctTotal > 0 {
+		rawPoints := correctSelected - incorrectSelected
+		if rawPoints < 0 {
+			rawPoints = 0
+		}
+		score = int(math.Round(float64(rawPoints) / float64(correctTotal) * 100))
+	}
+
+	return score, ItemGradingDetail{
+		ScoringMode:  mode,
+		CorrectCount: correctSelected,
+		WrongCount:   missingCorrect + incorrectSelected,
+		Penalty:      penalty,
+		MaxScore:     100,
+		ActualScore:  score,
+		FullyCorrect: full,
+	}
 }
 
-func isCorrectTrueFalse(raw json.RawMessage, correctLabels map[string]bool) bool {
+func isCorrectMCMultiple(raw json.RawMessage, correctOptions map[string]bool) bool {
+	score, _ := scoreMCMultiple(raw, correctOptions, "absolute")
+	return score == 100
+}
+
+func scoreTrueFalse(raw json.RawMessage, correctLabels map[string]bool, mode string) (int, ItemGradingDetail) {
+	mode = normalizeScoringMode(mode)
 	var req struct {
 		Value  *bool           `json:"value"`  // legacy
 		Values map[string]bool `json:"values"` // new multi-statement
 	}
-	if err := json.Unmarshal(raw, &req); err != nil {
-		return false
+	if json.Unmarshal(raw, &req) != nil {
+		req.Value = nil
+		req.Values = nil
 	}
 
-	// Legacy single-toggle check
-	if req.Value != nil {
-		if want, ok := correctLabels["legacy"]; ok {
-			return *req.Value == want
+	if want, ok := correctLabels["legacy"]; ok {
+		correct := 0
+		if req.Value != nil && *req.Value == want {
+			correct = 1
+		}
+		score := 0
+		if correct == 1 {
+			score = 100
+		}
+		return score, ItemGradingDetail{
+			ScoringMode:  "absolute",
+			CorrectCount: correct,
+			WrongCount:   1 - correct,
+			Penalty:      0,
+			MaxScore:     100,
+			ActualScore:  score,
+			FullyCorrect: correct == 1,
 		}
 	}
 
-	// Multi-statement check: All statements must be correct
-	if len(correctLabels) == 0 {
-		return false
-	}
-	if len(req.Values) == 0 && len(correctLabels) > 0 {
-		return false
-	}
-
+	total := 0
+	correctCount := 0
 	for stid, correctVal := range correctLabels {
 		if stid == "legacy" {
 			continue
 		}
+		total++
 		got, ok := req.Values[stid]
-		if !ok || got != correctVal {
-			return false
+		if ok && got == correctVal {
+			correctCount++
 		}
 	}
-	return true
+	if total == 0 {
+		return 0, ItemGradingDetail{
+			ScoringMode:  mode,
+			CorrectCount: 0,
+			WrongCount:   0,
+			Penalty:      0,
+			MaxScore:     100,
+			ActualScore:  0,
+			FullyCorrect: false,
+		}
+	}
+	wrongCount := total - correctCount
+	full := correctCount == total
+	score := 0
+	if mode == "absolute" {
+		if full {
+			score = 100
+		}
+	} else {
+		score = int(math.Round(float64(correctCount) / float64(total) * 100))
+	}
+	return score, ItemGradingDetail{
+		ScoringMode:  mode,
+		CorrectCount: correctCount,
+		WrongCount:   wrongCount,
+		Penalty:      0,
+		MaxScore:     100,
+		ActualScore:  score,
+		FullyCorrect: full,
+	}
+}
+
+func isCorrectTrueFalse(raw json.RawMessage, correctLabels map[string]bool) bool {
+	score, _ := scoreTrueFalse(raw, correctLabels, "absolute")
+	return score == 100
 }
 
 func isCorrectShortAnswer(raw json.RawMessage, acceptable []string) bool {
@@ -577,20 +783,59 @@ func isCorrectShortAnswer(raw json.RawMessage, acceptable []string) bool {
 	return false
 }
 
-func isCorrectMatching(raw json.RawMessage, pairIDs []string) bool {
+func scoreMatching(raw json.RawMessage, pairIDs []string, mode string) (int, ItemGradingDetail) {
+	mode = normalizeScoringMode(mode)
 	var req struct {
 		Pairs map[string]string `json:"pairs"`
 	}
-	if json.Unmarshal(raw, &req) != nil || len(req.Pairs) == 0 || len(pairIDs) == 0 {
-		return false
+	if json.Unmarshal(raw, &req) != nil {
+		req.Pairs = nil
 	}
+
+	total := len(pairIDs)
+	if total == 0 {
+		return 0, ItemGradingDetail{
+			ScoringMode:  mode,
+			CorrectCount: 0,
+			WrongCount:   0,
+			Penalty:      0,
+			MaxScore:     100,
+			ActualScore:  0,
+			FullyCorrect: false,
+		}
+	}
+
+	correctCount := 0
 	for _, pid := range pairIDs {
 		left := pid + ":L"
 		rightWant := pid + ":R"
 		got := strings.TrimSpace(req.Pairs[left])
-		if got != rightWant {
-			return false
+		if got == rightWant {
+			correctCount++
 		}
 	}
-	return true
+	wrongCount := total - correctCount
+	full := correctCount == total
+	score := 0
+	if mode == "absolute" {
+		if full {
+			score = 100
+		}
+	} else {
+		score = int(math.Round(float64(correctCount) / float64(total) * 100))
+	}
+	return score, ItemGradingDetail{
+		ScoringMode:  mode,
+		CorrectCount: correctCount,
+		WrongCount:   wrongCount,
+		Penalty:      0,
+		MaxScore:     100,
+		ActualScore:  score,
+		FullyCorrect: full,
+	}
+}
+
+func isCorrectMatching(raw json.RawMessage, pairIDs []string) bool {
+	score, _ := scoreMatching(raw, pairIDs, "absolute")
+	return score == 100
 }

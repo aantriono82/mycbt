@@ -1,36 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { homeRouteForRole, routeAllowedForRole, useAuthStore } from '@/stores/auth.js'
-import Placeholder from '@/views/PlaceholderView.vue'
-
-import {
-  mdiHomeOutline,
-  mdiFolderOutline,
-  mdiAccountTie,
-  mdiAccountSchool,
-  mdiAccountCheckOutline,
-  mdiBullhornOutline,
-  mdiSchoolOutline,
-  mdiLayersTripleOutline,
-  mdiAccountGroupOutline,
-  mdiBookEducationOutline,
-  mdiBookOpenVariant,
-  mdiFileDocumentOutline,
-  mdiClipboardTextOutline,
-  mdiCalendarClockOutline,
-  mdiKeyVariant,
-  mdiMonitorEye,
-  mdiAccountSearchOutline,
-  mdiCalendarCheckOutline,
-  mdiAccountSwitchOutline,
-  mdiChartBoxOutline,
-  mdiPrinterOutline,
-  mdiCogOutline,
-  mdiDatabaseExportOutline,
-  mdiChartLine,
-  mdiLinkVariant,
-  mdiHistory,
-  mdiClipboardTextSearchOutline,
-} from '@mdi/js'
 
 const routes = [
   {
@@ -63,7 +32,7 @@ const routes = [
     },
     path: '/dashboard',
     name: 'dashboard',
-    component: Placeholder,
+    component: () => import('@/views/PlaceholderView.vue'),
   },
   {
     meta: {
@@ -76,7 +45,6 @@ const routes = [
   {
     meta: {
       title: 'Log Aktivitas',
-      icon: mdiHistory,
     },
     path: '/admin/settings/activity-log',
     name: 'admin-activity-log',
@@ -85,7 +53,6 @@ const routes = [
   {
     meta: {
       title: 'Audit Log',
-      icon: mdiClipboardTextSearchOutline,
     },
     path: '/admin/settings/audit-log',
     name: 'admin-audit-log',
@@ -94,7 +61,6 @@ const routes = [
   {
     meta: {
       title: 'Master Data',
-      icon: mdiFolderOutline,
     },
     path: '/admin/master-data',
     alias: '/admin/master-data/',
@@ -104,7 +70,6 @@ const routes = [
   {
     meta: {
       title: 'Guru',
-      icon: mdiAccountTie,
     },
     path: '/admin/master-data/guru',
     name: 'admin-master-guru',
@@ -113,7 +78,6 @@ const routes = [
   {
     meta: {
       title: 'Siswa',
-      icon: mdiAccountSchool,
     },
     path: '/admin/master-data/siswa',
     name: 'admin-master-siswa',
@@ -122,7 +86,6 @@ const routes = [
   {
     meta: {
       title: 'Verifikasi Pendaftaran',
-      icon: mdiAccountCheckOutline,
     },
     path: '/admin/master-data/verifikasi-pendaftaran',
     name: 'admin-master-verifikasi-pendaftaran',
@@ -131,7 +94,6 @@ const routes = [
   {
     meta: {
       title: 'Pengumuman',
-      icon: mdiBullhornOutline,
     },
     path: '/admin/pengumuman',
     name: 'admin-announcements',
@@ -139,9 +101,7 @@ const routes = [
   },
   {
     meta: {
-      title: 'Program',
-      icon: mdiSchoolOutline,
-      resourceConfig: {
+      title: 'Program',resourceConfig: {
         endpoint: '/api/v1/admin/programs',
         itemLabel: 'Program',
         fields: [
@@ -156,9 +116,7 @@ const routes = [
   },
   {
     meta: {
-      title: 'Level',
-      icon: mdiLayersTripleOutline,
-      resourceConfig: {
+      title: 'Level',resourceConfig: {
         endpoint: '/api/v1/admin/levels',
         itemLabel: 'Level',
         fields: [
@@ -192,9 +150,7 @@ const routes = [
   },
   {
     meta: {
-      title: 'Group',
-      icon: mdiAccountGroupOutline,
-      resourceConfig: {
+      title: 'Group',resourceConfig: {
         endpoint: '/api/v1/admin/groups',
         itemLabel: 'Group',
         fields: [{ key: 'name', label: 'Nama', placeholder: 'X IPA 1' }],
@@ -206,9 +162,7 @@ const routes = [
   },
   {
     meta: {
-      title: 'Mata Pelajaran',
-      icon: mdiBookEducationOutline,
-      resourceConfig: {
+      title: 'Mata Pelajaran',resourceConfig: {
         endpoint: '/api/v1/admin/subjects',
         itemLabel: 'Mata Pelajaran',
         fields: [
@@ -223,9 +177,7 @@ const routes = [
   },
   {
     meta: {
-      title: 'Sesi',
-      icon: mdiCalendarClockOutline,
-      resourceConfig: {
+      title: 'Sesi',resourceConfig: {
         endpoint: '/api/v1/admin/sessions',
         itemLabel: 'Sesi',
         fields: [
@@ -242,7 +194,6 @@ const routes = [
   {
     meta: {
       title: 'Semua Bank Soal',
-      icon: mdiBookOpenVariant,
     },
     path: '/admin/bank-soal',
     name: 'admin-bank-soal',
@@ -252,14 +203,13 @@ const routes = [
     meta: {
       title: 'Buat Bank Soal',
     },
-    path: '/admin/bank-soal/new',
+    path: '/admin/bank-soal/new/:editorType?',
     name: 'admin-bank-soal-new',
     component: () => import('@/views/QuestionBankNewView.vue'),
   },
   {
     meta: {
       title: 'Impor Soal',
-      icon: mdiFileDocumentOutline,
     },
     path: '/admin/bank-soal/import',
     name: 'admin-bank-soal-import',
@@ -274,7 +224,6 @@ const routes = [
   {
     meta: {
       title: 'Jadwal Ujian',
-      icon: mdiCalendarClockOutline,
     },
     path: '/admin/ujian/jadwal',
     name: 'admin-ujian-jadwal',
@@ -283,7 +232,6 @@ const routes = [
   {
     meta: {
       title: 'Token',
-      icon: mdiKeyVariant,
     },
     path: '/admin/ujian/token',
     name: 'admin-ujian-token',
@@ -292,7 +240,6 @@ const routes = [
   {
     meta: {
       title: 'Monitor Ujian',
-      icon: mdiMonitorEye,
     },
     path: '/admin/ujian/monitor-ujian',
     name: 'admin-ujian-monitor',
@@ -301,7 +248,6 @@ const routes = [
   {
     meta: {
       title: 'Monitor Peserta',
-      icon: mdiAccountSearchOutline,
     },
     path: '/admin/ujian/monitor-peserta',
     name: 'admin-ujian-monitor-peserta',
@@ -310,7 +256,6 @@ const routes = [
   {
     meta: {
       title: 'Absensi Peserta',
-      icon: mdiCalendarCheckOutline,
     },
     path: '/admin/ujian/absensi',
     name: 'admin-ujian-absensi',
@@ -325,7 +270,6 @@ const routes = [
   {
     meta: {
       title: 'Reset Login',
-      icon: mdiAccountSwitchOutline,
     },
     path: '/admin/ujian/reset-login',
     name: 'admin-ujian-reset-login',
@@ -334,7 +278,6 @@ const routes = [
   {
     meta: {
       title: 'Evaluasi / Hasil Nilai',
-      icon: mdiChartBoxOutline,
     },
     path: '/admin/evaluasi',
     name: 'admin-evaluasi',
@@ -343,7 +286,6 @@ const routes = [
   {
     meta: {
       title: 'Advanced Analytics',
-      icon: mdiChartLine,
     },
     path: '/admin/analytics',
     name: 'admin-analytics',
@@ -352,7 +294,6 @@ const routes = [
   {
     meta: {
       title: 'Cetak',
-      icon: mdiPrinterOutline,
     },
     path: '/admin/cetak',
     name: 'admin-cetak',
@@ -361,7 +302,6 @@ const routes = [
   {
     meta: {
       title: 'Config / Settings',
-      icon: mdiCogOutline,
     },
     path: '/admin/settings',
     name: 'admin-settings',
@@ -370,7 +310,6 @@ const routes = [
   {
     meta: {
       title: 'Integrasi LMS',
-      icon: mdiDatabaseExportOutline,
     },
     path: '/admin/lms',
     name: 'admin-lms',
@@ -379,7 +318,6 @@ const routes = [
   {
     meta: {
       title: 'LTI Platforms',
-      icon: mdiLinkVariant,
     },
     path: '/admin/lti',
     name: 'admin-lti',
@@ -388,25 +326,25 @@ const routes = [
 
   // Teacher
   {
-    meta: { title: 'Dashboard Guru', icon: mdiHomeOutline },
+    meta: { title: 'Dashboard Guru'},
     path: '/teacher/dashboard',
     name: 'teacher-dashboard',
     component: () => import('@/views/dashboards/TeacherDashboardView.vue'),
   },
   {
-    meta: { title: 'Semua Bank Soal', icon: mdiBookOpenVariant },
+    meta: { title: 'Semua Bank Soal'},
     path: '/teacher/bank-soal',
     name: 'teacher-bank-soal',
     component: () => import('@/views/QuestionBankView.vue'),
   },
   {
     meta: { title: 'Buat Bank Soal' },
-    path: '/teacher/bank-soal/new',
+    path: '/teacher/bank-soal/new/:editorType?',
     name: 'teacher-bank-soal-new',
     component: () => import('@/views/QuestionBankNewView.vue'),
   },
   {
-    meta: { title: 'Impor Soal', icon: mdiFileDocumentOutline },
+    meta: { title: 'Impor Soal'},
     path: '/teacher/bank-soal/import',
     name: 'teacher-bank-soal-import',
     component: () => import('@/views/QuestionBankImportView.vue'),
@@ -418,31 +356,31 @@ const routes = [
     component: () => import('@/views/QuestionPreviewView.vue'),
   },
   {
-    meta: { title: 'Jadwal Ujian', icon: mdiCalendarClockOutline },
+    meta: { title: 'Jadwal Ujian'},
     path: '/teacher/ujian/jadwal',
     name: 'teacher-ujian-jadwal',
     component: () => import('@/views/ExamsView.vue'),
   },
   {
-    meta: { title: 'Token', icon: mdiKeyVariant },
+    meta: { title: 'Token'},
     path: '/teacher/ujian/token',
     name: 'teacher-ujian-token',
     component: () => import('@/views/ExamTokensView.vue'),
   },
   {
-    meta: { title: 'Monitor Ujian', icon: mdiMonitorEye },
+    meta: { title: 'Monitor Ujian'},
     path: '/teacher/ujian/monitor-ujian',
     name: 'teacher-ujian-monitor',
     component: () => import('@/views/monitor/ExamMonitorView.vue'),
   },
   {
-    meta: { title: 'Monitor Peserta', icon: mdiAccountSearchOutline },
+    meta: { title: 'Monitor Peserta'},
     path: '/teacher/ujian/monitor-peserta',
     name: 'teacher-ujian-monitor-peserta',
     component: () => import('@/views/monitor/ParticipantMonitorView.vue'),
   },
   {
-    meta: { title: 'Absensi Peserta', icon: mdiCalendarCheckOutline },
+    meta: { title: 'Absensi Peserta'},
     path: '/teacher/ujian/absensi',
     name: 'teacher-ujian-absensi',
     component: () => import('@/views/monitor/AttendanceMonitorView.vue'),
@@ -454,19 +392,19 @@ const routes = [
     component: () => import('@/views/monitor/AttendanceQRView.vue'),
   },
   {
-    meta: { title: 'Reset Login', icon: mdiAccountSwitchOutline },
+    meta: { title: 'Reset Login'},
     path: '/teacher/ujian/reset-login',
     name: 'teacher-ujian-reset-login',
     component: () => import('@/views/ResetLoginView.vue'),
   },
   {
-    meta: { title: 'Evaluasi', icon: mdiChartBoxOutline },
+    meta: { title: 'Evaluasi'},
     path: '/teacher/evaluasi',
     name: 'teacher-evaluasi',
     component: () => import('@/views/EvaluationView.vue'),
   },
   {
-    meta: { title: 'Profil', icon: mdiAccountTie },
+    meta: { title: 'Profil'},
     path: '/teacher/profil',
     name: 'teacher-profil',
     component: () => import('@/views/ProfileView.vue'),
@@ -480,43 +418,43 @@ const routes = [
 
   // Student
   {
-    meta: { title: 'Dashboard Siswa', icon: mdiHomeOutline },
+    meta: { title: 'Dashboard Siswa'},
     path: '/student/dashboard',
     name: 'student-dashboard',
     component: () => import('@/views/dashboards/StudentDashboardView.vue'),
   },
   {
-    meta: { title: 'Daftar Ujian', icon: mdiClipboardTextOutline },
+    meta: { title: 'Daftar Ujian'},
     path: '/student/ujian',
     name: 'student-ujian',
     component: () => import('@/views/student/StudentExamsView.vue'),
   },
   {
-    meta: { title: 'Kerjakan Ujian', icon: mdiClipboardTextOutline },
+    meta: { title: 'Kerjakan Ujian'},
     path: '/student/kerjakan',
     name: 'student-kerjakan-home',
     redirect: '/student/ujian',
   },
   {
-    meta: { title: 'Kerjakan Ujian', icon: mdiClipboardTextOutline },
+    meta: { title: 'Kerjakan Ujian'},
     path: '/student/workspace/:sessionId',
     name: 'student-workspace',
     component: () => import('@/views/student/StudentExamWorkspaceView.vue'),
   },
   {
-    meta: { title: 'Hasil Ujian', icon: mdiChartBoxOutline },
+    meta: { title: 'Hasil Ujian'},
     path: '/student/hasil',
     name: 'student-hasil',
     component: () => import('@/views/ResultsView.vue'),
   },
   {
-    meta: { title: 'Pengumuman', icon: mdiBullhornOutline },
+    meta: { title: 'Pengumuman'},
     path: '/student/pengumuman',
     name: 'student-pengumuman',
     component: () => import('@/views/student/StudentAnnouncementsView.vue'),
   },
   {
-    meta: { title: 'Profil', icon: mdiAccountSchool },
+    meta: { title: 'Profil'},
     path: '/student/profil',
     name: 'student-profil',
     component: () => import('@/views/ProfileView.vue'),

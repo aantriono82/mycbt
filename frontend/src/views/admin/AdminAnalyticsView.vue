@@ -18,9 +18,32 @@ import BaseIcon from '@/components/BaseIcon.vue'
 import DashboardCard from '@/components/DashboardCard.vue'
 import { api } from '@/services/api.js'
 
-// IMPORTANT: We use Chart.js directly
-import { Chart, registerables } from 'chart.js'
-Chart.register(...registerables)
+import {
+  BarController,
+  BarElement,
+  CategoryScale,
+  Chart,
+  Filler,
+  Legend,
+  LineController,
+  LineElement,
+  LinearScale,
+  PointElement,
+  Tooltip,
+} from 'chart.js'
+
+Chart.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  LineController,
+  BarController,
+  Tooltip,
+  Legend,
+  Filler,
+)
 
 const isLoading = ref(false)
 const errorMessage = ref('')

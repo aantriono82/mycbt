@@ -1,7 +1,6 @@
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { api } from '@/services/api.js'
-import katex from 'katex'
 
 const props = defineProps({
   modelValue: {
@@ -66,7 +65,11 @@ const uploadImageFile = async (file) => {
 const buildMathHtml = (latex, displayMode) => {
   const clean = String(latex || '').trim()
   if (!clean) throw new Error('LaTeX kosong')
-  const rendered = katex.renderToString(clean, {
+  const katexLib = window.katex
+  if (!katexLib || typeof katexLib.renderToString !== 'function') {
+    throw new Error('KaTeX belum siap. Muat ulang halaman lalu coba lagi.')
+  }
+  const rendered = katexLib.renderToString(clean, {
     throwOnError: true,
     displayMode: !!displayMode,
     // Render as native MathML to avoid dependency on KaTeX webfonts inside TinyMCE iframe.

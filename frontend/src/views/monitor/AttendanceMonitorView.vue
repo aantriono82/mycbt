@@ -210,7 +210,7 @@ onMounted(async () => {
         <BaseButton :icon="mdiRefresh" color="info" label="Refresh" @click="loadExams(); loadAttendance()" />
         <BaseButton
           :icon="mdiCalendarCheckOutline"
-          color="warning"
+          color="purple"
           label="Generate QR"
           :disabled="!selectedExamId"
           :to="`${authStore.role === 'admin' ? '/admin' : '/teacher'}/ujian/absensi/qr/${selectedExamId}`"

@@ -227,13 +227,16 @@
 
                 <!-- Short Answer -->
                 <div v-else-if="currentQuestion.type === 'short_answer'" class="space-y-6">
-                   <div class="relative">
-                      <input 
-                         v-model="answers[currentQuestion.id]" 
-                         class="w-full p-6 rounded-2xl border-2 border-slate-100 bg-white focus:border-blue-500 outline-none transition-all shadow-inner text-lg font-medium text-slate-900" 
-                         placeholder="Ketik jawaban isian singkat..."
-                      />
-                   </div>
+                  <QuillEditor
+                    v-model="shortAnswerEditorHtml"
+                    :height="120"
+                    :enable-math="true"
+                    placeholder="Ketik jawaban isian singkat..."
+                    @update:model-value="onShortAnswerEditorUpdate"
+                  />
+                  <div class="text-[11px] font-semibold text-slate-500">
+                    Preview admin/guru: formula ditulis via tombol `fx`, lalu disimpan sebagai teks jawaban singkat.
+                  </div>
                    <div v-if="showCorrect" class="p-8 rounded-2xl bg-emerald-50 border-2 border-emerald-100">
                       <div class="text-[10px] font-black uppercase text-emerald-600 tracking-widest mb-3">Kunci Jawaban (Diterima):</div>
                       <div class="space-y-2">
@@ -247,12 +250,13 @@
 
                 <!-- Essay -->
                 <div v-else-if="currentQuestion.type === 'essay'" class="space-y-6">
-                   <textarea 
-                      v-model="answers[currentQuestion.id]" 
-                      class="w-full p-10 rounded-3xl border-2 border-slate-100 bg-white focus:border-blue-500 outline-none transition-all shadow-inner text-xl font-medium text-slate-800" 
-                      rows="8" 
-                      placeholder="Masukkan jawaban uraian secara detail..."
-                   ></textarea>
+                  <QuillEditor
+                    v-model="essayEditorHtml"
+                    :height="260"
+                    :enable-math="true"
+                    placeholder="Masukkan jawaban uraian secara detail..."
+                    @update:model-value="onEssayEditorUpdate"
+                  />
                    <div v-if="showCorrect && (currentQuestion.essay?.rubric_text || currentQuestion.essay?.max_score != null)" class="p-8 rounded-2xl bg-emerald-50 border-2 border-emerald-100">
                       <div class="text-[10px] font-black uppercase text-emerald-600 tracking-widest mb-3">Rubrik Penilaian</div>
                       <div v-if="currentQuestion.essay?.rubric_text" class="text-slate-800 font-semibold leading-relaxed" v-html="renderHtml(currentQuestion.essay.rubric_text)"></div>
@@ -409,6 +413,7 @@ import {
   mdiAlert
 } from '@mdi/js'
 import BaseIcon from '@/components/BaseIcon.vue'
+import QuillEditor from '@/components/QuillEditor.vue'
 import { api } from '@/services/api.js'
 
 const route = useRoute()
@@ -445,6 +450,8 @@ const startTimer = () => {
 
 const currentQuestion = computed(() => questions.value[currentIndex.value] || null)
 const cardScrollEl = ref(null)
+const shortAnswerEditorHtml = ref('')
+const essayEditorHtml = ref('')
 
 const stripHtml = (html) => String(html || '').replace(/<[^>]*>/g, '').trim()
 const escapeHtml = (value) =>
@@ -493,6 +500,65 @@ const renderAcceptedAnswerHtml = (value) => {
   if (!text) return '<span class="italic text-slate-400">(Kunci kosong)</span>'
   if (looksLikeLatex(text)) return `\\(${escapeHtml(fixCommonLatexCommands(text))}\\)`
   return escapeHtml(text)
+}
+
+const textToQuillHtml = (text) => {
+  const raw = String(text || '')
+  if (!raw.trim()) return ''
+  return `<p>${escapeHtml(raw)}</p>`
+}
+
+const quillHtmlToPlainText = (html) => {
+  const raw = String(html || '')
+  if (!raw.trim()) return ''
+  try {
+    const doc = new DOMParser().parseFromString(raw, 'text/html')
+    doc.querySelectorAll('.ql-formula[data-value]').forEach((node) => {
+      const latex = String(node.getAttribute('data-value') || '').trim()
+      node.replaceWith(doc.createTextNode(latex))
+    })
+    const text = String(doc.body.textContent || '')
+    return text.replace(/\s+/g, ' ').trim()
+  } catch {
+    return stripHtml(raw)
+  }
+}
+
+const syncPreviewEditorModel = () => {
+  const q = currentQuestion.value
+  if (!q?.id) {
+    shortAnswerEditorHtml.value = ''
+    essayEditorHtml.value = ''
+    return
+  }
+  const qid = String(q.id || '')
+  const value = answers[qid]
+  if (q.type === 'short_answer') {
+    shortAnswerEditorHtml.value = textToQuillHtml(String(value || ''))
+    essayEditorHtml.value = ''
+    return
+  }
+  if (q.type === 'essay') {
+    essayEditorHtml.value = String(value || '')
+    shortAnswerEditorHtml.value = ''
+    return
+  }
+  shortAnswerEditorHtml.value = ''
+  essayEditorHtml.value = ''
+}
+
+const onShortAnswerEditorUpdate = (html) => {
+  shortAnswerEditorHtml.value = String(html || '')
+  const q = currentQuestion.value
+  if (!q?.id) return
+  answers[String(q.id || '')] = quillHtmlToPlainText(shortAnswerEditorHtml.value)
+}
+
+const onEssayEditorUpdate = (html) => {
+  essayEditorHtml.value = String(html || '')
+  const q = currentQuestion.value
+  if (!q?.id) return
+  answers[String(q.id || '')] = essayEditorHtml.value
 }
 
 const matchingRightOptions = computed(() => {
@@ -549,9 +615,16 @@ const toggleFlagged = () => {
 }
 
 const isAnswered = (qid) => {
-  const v = answers[String(qid || '')]
+  const id = String(qid || '')
+  const v = answers[id]
   if (v === undefined || v === null) return false
-  if (typeof v === 'string') return v.trim() !== ''
+  if (typeof v === 'string') {
+    const q = questions.value.find((item) => String(item?.id || '') === id)
+    const t = String(q?.type || '')
+    if (t === 'essay') return stripHtml(v).trim() !== ''
+    if (t === 'short_answer') return quillHtmlToPlainText(textToQuillHtml(v)).trim() !== ''
+    return v.trim() !== ''
+  }
   if (typeof v === 'boolean') return true
   if (Array.isArray(v)) return v.length > 0
   if (typeof v === 'object') return Object.keys(v).length > 0
@@ -622,6 +695,7 @@ const scheduleRenderMath = async () => {
 }
 
 watch(currentIndex, () => {
+  syncPreviewEditorModel()
   scheduleRenderMath()
   if (cardScrollEl.value && typeof cardScrollEl.value.scrollTo === 'function') {
     cardScrollEl.value.scrollTo({ top: 0, behavior: 'smooth' })
@@ -636,6 +710,14 @@ watch(currentIndex, () => {
     }
   }, 50)
 }, { flush: 'post' })
+
+watch(
+  () => currentQuestion.value?.id,
+  () => {
+    syncPreviewEditorModel()
+  },
+  { immediate: true },
+)
 
 watch(showCorrect, () => {
   scheduleRenderMath()

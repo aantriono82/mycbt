@@ -27,10 +27,15 @@ func main() {
 
 	users := userrepo.New(d.Pool)
 
-	if _, ok, err := users.GetByUsername(ctx, cfg.AdminUsername); err != nil {
+	u, ok, err := users.GetByUsername(ctx, cfg.AdminUsername)
+	if err != nil {
 		log.Fatalf("check user: %v", err)
 	} else if ok {
-		log.Printf("user %q already exists; nothing to do", cfg.AdminUsername)
+		log.Printf("user %q already exists; resetting password", cfg.AdminUsername)
+		hash, _ := authsvc.HashPassword(cfg.AdminPassword)
+		if err := users.UpdatePassword(ctx, u.ID, hash); err != nil {
+			log.Fatalf("reset password: %v", err)
+		}
 		return
 	}
 

@@ -65,6 +65,7 @@ const formErrors = reactive({
 
 const selectedExamId = ref('')
 const selectedExamSessionId = ref('')
+const selectedExamScoringMode = ref('partial')
 const selectedExam = computed(() => exams.value.find((x) => x.id === selectedExamId.value) || null)
 
 const form = reactive({
@@ -77,6 +78,7 @@ const form = reactive({
   duration_minutes: 60,
   shuffle_questions: true,
   shuffle_options: true,
+  scoring_mode: 'partial',
 })
 
 const scheduleForm = reactive({
@@ -424,6 +426,21 @@ const updateExamSession = async () => {
   }
 }
 
+const updateExamScoringMode = async () => {
+  if (!selectedExamId.value) return
+  errorMessage.value = ''
+  successMessage.value = ''
+  try {
+    await api.patch(`/api/v1/exams/${selectedExamId.value}`, {
+      scoring_mode: selectedExamScoringMode.value,
+    })
+    successMessage.value = 'Mode penilaian berhasil diperbarui'
+    await loadExams()
+  } catch (error) {
+    errorMessage.value = error?.response?.data?.error?.message || 'Gagal memperbarui mode penilaian'
+  }
+}
+
 const createExam = async () => {
   successMessage.value = ''
   errorMessage.value = ''
@@ -442,6 +459,7 @@ const createExam = async () => {
     duration_minutes: Number(form.duration_minutes),
     shuffle_questions: form.shuffle_questions,
     shuffle_options: form.shuffle_options,
+    scoring_mode: String(form.scoring_mode || 'partial').trim() || 'partial',
   }
   if (!isTeacherArea.value) {
     payload.teacher_id = form.teacher_id
@@ -462,6 +480,7 @@ const createExam = async () => {
     scheduleForm.ends_hour = ''
     scheduleForm.ends_minute = ''
     form.duration_minutes = 60
+    form.scoring_mode = 'partial'
     await loadExams()
     selectedExamId.value = data?.data?.id || selectedExamId.value
   } catch (error) {
@@ -545,8 +564,10 @@ watch(selectedExamId, (newId) => {
   loadSelectedExamDetails()
   if (selectedExam.value) {
     selectedExamSessionId.value = selectedExam.value.session_id || ''
+    selectedExamScoringMode.value = selectedExam.value.scoring_mode || 'partial'
   } else {
     selectedExamSessionId.value = ''
+    selectedExamScoringMode.value = 'partial'
   }
 })
 
@@ -635,6 +656,15 @@ onMounted(async () => {
                 ]"
               />
             </FormField>
+            <FormField label="Mode Penilaian">
+              <FormControl
+                v-model="form.scoring_mode"
+                :options="[
+                  { id: 'partial', label: 'Parsial (nilai proporsional)' },
+                  { id: 'absolute', label: 'Absolut (harus tepat penuh)' },
+                ]"
+              />
+            </FormField>
             <BaseButton :icon="mdiPlus" color="info" label="Tambah Jadwal" @click="createExam" />
           </div>
         </CardBox>
@@ -689,6 +719,22 @@ onMounted(async () => {
                       <BaseButton color="info" label="Update Sesi" small @click="updateExamSession" />
                     </div>
                   </div>
+                  <div class="mt-4 border-t dark:border-slate-800 pt-3">
+                    <div class="text-slate-500 dark:text-slate-400 font-medium text-xs mb-2">PENGATURAN PENILAIAN</div>
+                    <div class="flex items-center gap-3">
+                      <div class="flex-1">
+                        <FormControl
+                          v-model="selectedExamScoringMode"
+                          :options="[
+                            { id: 'partial', label: 'Partial' },
+                            { id: 'absolute', label: 'Absolute' },
+                          ]"
+                          small
+                        />
+                      </div>
+                      <BaseButton color="info" label="Update Mode" small @click="updateExamScoringMode" />
+                    </div>
+                  </div>
 	              </div>
 	              <div class="flex flex-wrap gap-2">
 	                <BaseButton
@@ -700,7 +746,7 @@ onMounted(async () => {
 	                  @click="setExamStatus('published')"
 	                />
 	                <BaseButton
-	                  color="warning"
+	                  color="purple"
 	                  small
 	                  label="Draft"
 	                  :disabled="selectedExam?.status === 'draft'"
@@ -742,6 +788,7 @@ onMounted(async () => {
                   <th class="px-3 py-3">Judul</th>
                   <th class="px-3 py-3">Mata Pelajaran</th>
                   <th class="px-3 py-3">Sesi</th>
+                  <th class="px-3 py-3 text-center">Mode</th>
                   <th class="px-3 py-3">Mulai (WIB/WITA/WIT)</th>
                   <th class="px-3 py-3">Selesai (WIB/WITA/WIT)</th>
                   <th class="px-3 py-3 text-center">Status</th>
@@ -767,6 +814,14 @@ onMounted(async () => {
                     </div>
                     <span v-else class="text-slate-400 italic">N/A</span>
                   </td>
+                  <td class="px-3 py-3 text-center">
+                    <span
+                      class="rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-tight"
+                      :class="exam.scoring_mode === 'absolute' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'"
+                    >
+                      {{ exam.scoring_mode || 'partial' }}
+                    </span>
+                  </td>
                   <td class="px-3 py-3 text-xs text-slate-500 dark:text-slate-400">{{ formatDateIndonesian(exam.starts_at) }}</td>
                   <td class="px-3 py-3 text-xs text-slate-500 dark:text-slate-400">{{ formatDateIndonesian(exam.ends_at) }}</td>
                   <td class="px-3 py-3 text-center">
@@ -779,7 +834,7 @@ onMounted(async () => {
                   </td>
                 </tr>
                 <tr v-if="!exams.length && !isLoading">
-                  <td colspan="5" class="px-3 py-10 text-center text-slate-400 dark:text-slate-500 italic">Belum ada jadwal ujian.</td>
+                  <td colspan="7" class="px-3 py-10 text-center text-slate-400 dark:text-slate-500 italic">Belum ada jadwal ujian.</td>
                 </tr>
               </tbody>
             </table>

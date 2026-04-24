@@ -9,6 +9,7 @@ import BaseButton from '@/components/BaseButton.vue'
 import BaseButtons from '@/components/BaseButtons.vue'
 import FormField from '@/components/FormField.vue'
 import FormControl from '@/components/FormControl.vue'
+import QuillEditor from '@/components/QuillEditor.vue'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
 
@@ -265,6 +266,8 @@ const targetLabel = (item) => {
   return 'Broadcast'
 }
 
+const stripHtml = (value) => String(value || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+
 onMounted(async () => {
   await loadLookups()
   await loadAnnouncements()
@@ -288,7 +291,7 @@ onMounted(async () => {
               <FormControl v-model="form.title" placeholder="Contoh: Jadwal Ujian Diperbarui" />
             </FormField>
             <FormField label="Isi Pengumuman">
-              <FormControl v-model="form.body" type="textarea" placeholder="Isi pengumuman..." />
+              <QuillEditor v-model="form.body" :height="170" placeholder="Isi pengumuman..." />
             </FormField>
             <FormField label="Kategori">
               <FormControl v-model="form.category" :options="categoryOptions" />
@@ -391,7 +394,7 @@ onMounted(async () => {
                 <tr v-for="item in announcements" :key="item.id" class="border-b dark:border-slate-800 last:border-b-0 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors">
                   <td class="px-3 py-3">
                     <div class="font-medium dark:text-slate-200">{{ item.title }}</div>
-                    <div class="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{{ item.body }}</div>
+                    <div class="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{{ stripHtml(item.body) }}</div>
                   </td>
                   <td class="px-3 py-3 text-center">
                     <span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded text-[10px] uppercase font-bold">{{ item.category || '-' }}</span>
