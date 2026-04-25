@@ -232,7 +232,7 @@ onMounted(() => {
         <CardBox>
           <div class="mb-6 flex items-center justify-between">
             <h3 class="text-lg font-bold dark:text-slate-100 uppercase tracking-tight">Info Peserta</h3>
-            <BaseButton to="/student/hasil" color="whiteDark" outline label="Lihat Hasil" small />
+            <BaseButton to="/student/hasil" color="purple" label="Lihat Hasil" small />
           </div>
           <div class="space-y-4 text-[13px] leading-relaxed text-slate-600 dark:text-slate-400 font-medium">
             <p class="flex items-start gap-2">
