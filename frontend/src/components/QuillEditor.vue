@@ -8,6 +8,8 @@ import Italic from 'quill/formats/italic'
 import Underline from 'quill/formats/underline'
 import Link from 'quill/formats/link'
 import Formula from 'quill/formats/formula'
+import { AlignClass, AlignStyle } from 'quill/formats/align'
+import { DirectionClass, DirectionStyle } from 'quill/formats/direction'
 import 'quill/dist/quill.snow.css'
 
 const props = defineProps({
@@ -53,6 +55,10 @@ onMounted(() => {
         'formats/underline': Underline,
         'formats/link': Link,
         'formats/formula': Formula,
+        'attributors/class/align': AlignClass,
+        'attributors/style/align': AlignStyle,
+        'attributors/class/direction': DirectionClass,
+        'attributors/style/direction': DirectionStyle,
       },
       true,
     )
@@ -66,10 +72,12 @@ onMounted(() => {
       toolbar: props.enableMath
         ? [
             ['bold', 'italic', 'underline'],
+            [{ align: [] }, { direction: 'rtl' }],
             ['formula', 'link', 'clean'],
           ]
         : [
             ['bold', 'italic', 'underline'],
+            [{ align: [] }, { direction: 'rtl' }],
             ['link', 'clean'],
           ],
     },
@@ -77,6 +85,7 @@ onMounted(() => {
 
   const editor = quillInstance.root
   editor.style.minHeight = `${props.height}px`
+  editor.style.fontFamily = 'Arial, "Noto Naskh Arabic", "Amiri", sans-serif'
   editor.innerHTML = getNormalizedHtml(props.modelValue)
 
   textChangeHandler = () => {

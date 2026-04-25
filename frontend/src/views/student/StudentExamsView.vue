@@ -12,6 +12,7 @@ import {
   mdiBookOpenVariant,
   mdiMagnify,
   mdiContentCopy,
+  mdiDeleteOutline,
 } from '@mdi/js'
 import BaseIcon from '@/components/BaseIcon.vue'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
@@ -27,6 +28,7 @@ const search = ref('')
 const isLoading = ref(false)
 const errorMessage = ref('')
 const backendExams = ref([])
+const deletingExamId = ref('')
 
 let nowInterval = null
 const nowMs = ref(Date.now())
@@ -143,6 +145,23 @@ const joinExam = async (exam) => {
     errorMessage.value = error?.response?.data?.error?.message || 'Gagal masuk ruang ujian. Pastikan token benar dan waktu masih tersedia.'
   } finally {
     isLoading.value = false
+  }
+}
+
+const dismissCompletedExam = async (exam) => {
+  if (!exam?.id) return
+  if (exam._ui_status !== 'completed') return
+  if (!confirm(`Hapus kartu ujian "${exam.title}" dari daftar?`)) return
+
+  deletingExamId.value = exam.id
+  errorMessage.value = ''
+  try {
+    await api.delete(`/api/v1/student/exams/${exam.id}/dismiss`)
+    backendExams.value = backendExams.value.filter((item) => item.id !== exam.id)
+  } catch (error) {
+    errorMessage.value = error?.response?.data?.error?.message || 'Gagal menghapus kartu ujian'
+  } finally {
+    deletingExamId.value = ''
   }
 }
 
@@ -456,6 +475,17 @@ onBeforeUnmount(() => {
                 </svg>
                 Lihat Hasil
               </RouterLink>
+
+              <button
+                v-if="exam._ui_status === 'completed'"
+                type="button"
+                class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-red-600 transition-all hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300"
+                :disabled="deletingExamId === exam.id"
+                @click="dismissCompletedExam(exam)"
+              >
+                <BaseIcon :path="mdiDeleteOutline" size="16" />
+                {{ deletingExamId === exam.id ? 'Menghapus...' : 'Hapus Kartu' }}
+              </button>
             </div>
           </div>
         </div>

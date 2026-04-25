@@ -28,8 +28,8 @@ type mockStudentExamRepo struct {
 	examForJoin    studentexamrepo.ExamForJoin
 	examForJoinErr error
 
-	sessionByExam   map[string]studentexamrepo.Session
-	sessionByExamOK map[string]bool
+	sessionByExam    map[string]studentexamrepo.Session
+	sessionByExamOK  map[string]bool
 	sessionByExamErr error
 
 	createdSession studentexamrepo.Session
@@ -50,6 +50,9 @@ type mockStudentExamRepo struct {
 	submitCalls     map[string]int
 	submitErrFirst  error
 	submitErrSecond error
+
+	dismissCalls map[string]int
+	dismissErr   error
 }
 
 func (m *mockStudentExamRepo) StudentByUserID(ctx context.Context, userID string) (studentexamrepo.StudentInfo, bool, error) {
@@ -62,6 +65,16 @@ func (m *mockStudentExamRepo) ListAvailableForStudent(ctx context.Context, stude
 
 func (m *mockStudentExamRepo) VerifyExamToken(ctx context.Context, examID, token string, nowUTC time.Time) error {
 	return nil
+}
+
+func (m *mockStudentExamRepo) DismissExamCard(ctx context.Context, examID, studentID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.dismissCalls == nil {
+		m.dismissCalls = map[string]int{}
+	}
+	m.dismissCalls[examID]++
+	return m.dismissErr
 }
 
 func (m *mockStudentExamRepo) GetExamForStudentJoin(ctx context.Context, examID, studentID, levelID, groupID string, nowUTC time.Time, loc *time.Location) (studentexamrepo.ExamForJoin, error) {
@@ -96,6 +109,10 @@ func (m *mockStudentExamRepo) EnsureSessionQuestions(ctx context.Context, sessio
 func (m *mockStudentExamRepo) GetSessionState(ctx context.Context, sessionID, studentID string, nowUTC time.Time) (studentexamrepo.SessionState, bool, error) {
 	st, ok := m.sessionStateByID[sessionID]
 	return st, m.sessionStateOK[sessionID] && ok, nil
+}
+
+func (m *mockStudentExamRepo) SessionExists(ctx context.Context, sessionID string) (bool, error) {
+	return false, nil
 }
 
 func (m *mockStudentExamRepo) ListSessionQuestions(ctx context.Context, sessionID, studentID string, shuffleOptions bool) ([]studentexamrepo.StudentQuestion, error) {
@@ -177,10 +194,10 @@ func TestStudentExamHandler_Join_CreateSessionAndConflict(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockRepo := &mockStudentExamRepo{
-		studentInfo: studentexamrepo.StudentInfo{StudentID: "stu-1", LevelID: "lvl-1", GroupID: "grp-1", IsActive: true},
-		studentOK:   true,
-		examForJoin: studentexamrepo.ExamForJoin{ID: "exam-1", Title: "Math", ShuffleQuestions: true},
-		sessionByExam: map[string]studentexamrepo.Session{},
+		studentInfo:     studentexamrepo.StudentInfo{StudentID: "stu-1", LevelID: "lvl-1", GroupID: "grp-1", IsActive: true},
+		studentOK:       true,
+		examForJoin:     studentexamrepo.ExamForJoin{ID: "exam-1", Title: "Math", ShuffleQuestions: true},
+		sessionByExam:   map[string]studentexamrepo.Session{},
 		sessionByExamOK: map[string]bool{},
 		createdSession: studentexamrepo.Session{
 			ID:        "sess-1",
@@ -278,6 +295,33 @@ func TestStudentExamHandler_GetQuestions_NoAnswerKeyAndSessionVariation(t *testi
 	}
 }
 
+func TestStudentExamHandler_DismissExamCard(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	mockRepo := &mockStudentExamRepo{
+		studentInfo: studentexamrepo.StudentInfo{StudentID: "stu-1", IsActive: true},
+		studentOK:   true,
+	}
+	h := NewStudentExamHandler(mockRepo, &mockSettingsRepo{sys: masterrepo.SystemSettings{Timezone: "Asia/Jakarta"}})
+
+	r := gin.New()
+	r.Use(withAuthUser())
+	r.DELETE("/api/v1/student/exams/:id/dismiss", h.DismissExamCard)
+
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodDelete, "/api/v1/student/exams/exam-1/dismiss", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	mockRepo.dismissErr = studentexamrepo.ErrExamNotDismissible
+	rec2 := httptest.NewRecorder()
+	r.ServeHTTP(rec2, httptest.NewRequest(http.MethodDelete, "/api/v1/student/exams/exam-2/dismiss", nil))
+	if rec2.Code != http.StatusConflict {
+		t.Fatalf("expected 409 got %d body=%s", rec2.Code, rec2.Body.String())
+	}
+}
+
 func TestStudentExamHandler_SaveAnswer_ValidAndUpsertAndForbiddenishCases(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -326,10 +370,10 @@ func TestStudentExamHandler_Submit_IdempotentSecondCallConflict(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockRepo := &mockStudentExamRepo{
-		studentInfo:      studentexamrepo.StudentInfo{StudentID: "stu-1", IsActive: true},
-		studentOK:        true,
-		submitErrFirst:   nil,
-		submitErrSecond:  studentexamrepo.ErrSessionNotActive,
+		studentInfo:     studentexamrepo.StudentInfo{StudentID: "stu-1", IsActive: true},
+		studentOK:       true,
+		submitErrFirst:  nil,
+		submitErrSecond: studentexamrepo.ErrSessionNotActive,
 	}
 	h := NewStudentExamHandler(mockRepo, &mockSettingsRepo{sys: masterrepo.SystemSettings{Timezone: "Asia/Jakarta"}})
 	r := gin.New()
@@ -369,10 +413,10 @@ func TestStudentExamHandler_CompatStartQuestionsAnswersFinish(t *testing.T) {
 	state.Exam.ShuffleOptions = true
 
 	mockRepo := &mockStudentExamRepo{
-		studentInfo: studentexamrepo.StudentInfo{StudentID: "stu-1", LevelID: "lvl-1", GroupID: "grp-1", IsActive: true},
-		studentOK:   true,
-		examForJoin: studentexamrepo.ExamForJoin{ID: "exam-compat", Title: "Math", ShuffleQuestions: true},
-		sessionByExam: map[string]studentexamrepo.Session{},
+		studentInfo:     studentexamrepo.StudentInfo{StudentID: "stu-1", LevelID: "lvl-1", GroupID: "grp-1", IsActive: true},
+		studentOK:       true,
+		examForJoin:     studentexamrepo.ExamForJoin{ID: "exam-compat", Title: "Math", ShuffleQuestions: true},
+		sessionByExam:   map[string]studentexamrepo.Session{},
 		sessionByExamOK: map[string]bool{},
 		createdSession: studentexamrepo.Session{
 			ID:        "sess-compat",
