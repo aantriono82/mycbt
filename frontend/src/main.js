@@ -6,6 +6,12 @@ import router from './router'
 import { useAuthStore } from '@/stores/auth.js'
 import { createPersistedStatePlugin } from '@/stores/plugins/persistedstate.js'
 
+import '@fontsource/plus-jakarta-sans/200.css'
+import '@fontsource/plus-jakarta-sans/400.css'
+import '@fontsource/plus-jakarta-sans/500.css'
+import '@fontsource/plus-jakarta-sans/600.css'
+import '@fontsource/plus-jakarta-sans/700.css'
+import '@fontsource/plus-jakarta-sans/800.css'
 import './css/main.css'
 
 // Init Pinia

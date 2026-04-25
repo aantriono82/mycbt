@@ -64,10 +64,11 @@ onMounted(async () => {
 
 <template>
   <LayoutGuest>
-    <SectionFullScreen v-slot="{ cardClass }" bg="white">
-      <div class="w-full max-w-md mx-auto">
+    <SectionFullScreen v-slot="{ cardClass }" class="bg-slate-50 dark:bg-slate-950">
+      <div class="absolute inset-0 bg-gradient-to-tr from-blue-50 via-transparent to-indigo-50 dark:from-blue-900/10 dark:to-transparent opacity-60"></div>
+      <div class="w-full max-w-md mx-auto relative z-10 animate-fade-in">
         <form 
-          class="bg-white/90 dark:bg-slate-900/80 backdrop-blur-2xl rounded-[3rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.1)] p-6 md:p-10 relative overflow-hidden border border-white/60 dark:border-white/5"
+          class="bg-white/95 dark:bg-slate-900/90 backdrop-blur-3xl rounded-[3rem] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.3)] p-8 md:p-12 relative overflow-hidden border border-white/40 dark:border-white/5"
           @submit.prevent="submit"
         >
           <!-- Logo Section -->
@@ -205,9 +206,9 @@ onMounted(async () => {
           </div>
         </form>
         
-        <div class="mt-6 text-center">
-            <p class="text-sm text-slate-400 dark:text-slate-500 font-medium">
-              Butuh bantuan? <a href="mailto:aantriono82@gmail.com" class="text-blue-600 font-bold hover:underline transition-colors">Hubungi Admin</a>
+        <div class="mt-8 text-center">
+            <p class="text-sm text-slate-400 dark:text-slate-500 font-medium tracking-wide">
+              Butuh bantuan? <a href="mailto:aantriono82@gmail.com" class="text-blue-600 dark:text-blue-400 font-bold hover:underline transition-all">Hubungi Admin</a>
             </p>
         </div>
       </div>

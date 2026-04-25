@@ -38,6 +38,8 @@ const stats = ref({
   totalNilai: 0,
 })
 
+
+
 const canLoad = computed(() => authStore.isAuthenticated)
 
 const loadStats = async () => {
@@ -125,7 +127,7 @@ onMounted(loadStats)
           label="Bank Soal" 
           :number="stats.bankSoal" 
           :icon="mdiBookOpenVariant" 
-          color="purple" 
+          color="cyan" 
           :loading="isLoading"
         />
         <DashboardCard 
@@ -143,6 +145,8 @@ onMounted(loadStats)
           :loading="isLoading"
         />
       </div>
+
+
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Main Menu Section -->
@@ -202,6 +206,14 @@ onMounted(loadStats)
 
         <!-- Quick Start Section -->
         <div>
+          <!-- Spacer to align with "Menu Utama" title on the left -->
+          <div class="hidden lg:flex items-center mb-6 invisible">
+            <div class="p-1.5 rounded-lg mr-3">
+              <BaseIcon :path="mdiViewGridOutline" size="20" />
+            </div>
+            <h2 class="text-2xl font-bold">Spacer</h2>
+          </div>
+
           <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm p-6">
             <div class="flex items-center mb-6">
               <BaseIcon :path="mdiRocketLaunchOutline" size="24" class="text-orange-500 mr-2" />

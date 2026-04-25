@@ -1,13 +1,13 @@
 @theme {
-  --scrollbar-track-light: var(--color-gray-100);
-  --scrollbar-thumb-light: var(--color-gray-300);
+  --scrollbar-track-light: var(--color-purple-100);
+  --scrollbar-thumb-light: var(--color-purple-300);
   --scrollbar-light: var(--scrollbar-thumb-light) var(--scrollbar-track-light);
 }
 
 @utility style-white {
   &:not(.dark) {
     .aside {
-      @apply bg-white;
+      @apply bg-purple-100/70 backdrop-blur-xl;
     }
 
     .aside-scrollbar {
@@ -15,15 +15,15 @@
     }
 
     .aside-menu-item {
-      @apply text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-colors;
+      @apply text-slate-700/80 hover:text-blue-600 hover:bg-blue-50 transition-colors;
     }
 
     .aside-menu-item-active {
-      @apply text-white bg-gradient-to-r from-blue-600 to-indigo-600 font-bold shadow-lg shadow-blue-500/30;
+      @apply text-white bg-gradient-to-r from-blue-600 to-indigo-700 font-bold shadow-lg shadow-blue-500/30;
     }
 
     .aside-menu-dropdown {
-      @apply bg-gray-100/75;
+      @apply bg-slate-100;
     }
 
     .navbar-item-label {

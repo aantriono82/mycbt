@@ -40,6 +40,7 @@ const flagged = ref({})
 const participantName = computed(() => authStore.userDisplayName)
 
 const isFullscreen = ref(false)
+const sidebarHidden = ref(false)
 const toggleFullscreen = () => {
   if (!document.fullscreenElement) {
     document.documentElement.requestFullscreen().catch(err => {
@@ -348,10 +349,10 @@ const navStatusById = computed(() => {
 const navButtonClass = (q, idx) => {
   const id = String(q?.id ?? '')
   const status = navStatusById.value[id] || (idx === currentIndex.value ? 'current' : 'unanswered')
-  if (status === 'current') return 'border-[#0B7EA1] ring-1 ring-[#0B7EA1] text-[#0B7EA1] bg-white'
-  if (status === 'flagged') return 'bg-[#F4C20D] border-[#F4C20D] text-white'
+  if (status === 'current') return 'border-blue-600 ring-2 ring-blue-500/20 text-blue-700 bg-blue-50 shadow-sm'
+  if (status === 'flagged') return 'bg-amber-400 border-amber-400 text-white shadow-md shadow-amber-500/20'
   if (status === 'answered') return 'bg-emerald-500 border-emerald-500 text-white'
-  return 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+  return 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-800 text-slate-400 hover:border-blue-300 dark:hover:border-blue-800 transition-all font-medium'
 }
 
 const goPrev = () => setIndex(currentIndex.value - 1)
@@ -591,22 +592,30 @@ const matchingRightOptions = computed(() => {
 <template>
   <div class="tka-theme min-h-screen bg-slate-100">
     <!-- TOP NAVBAR -->
-    <header class="tka-topbar text-white px-6 py-3 flex items-center justify-between shadow sticky top-0 z-50">
-      <div class="font-bold tracking-tight text-sm md:text-base uppercase select-none">
-        {{ examTitle }}
+    <header class="bg-blue-600 dark:bg-slate-900 border-b border-blue-700 dark:border-slate-800 text-white px-6 py-4 flex items-center justify-between shadow-lg sticky top-0 z-50">
+      <div class="flex items-center gap-3">
+         <div class="p-2 bg-white/10 rounded-lg hidden sm:block">
+            <BaseIcon :path="mdiInformationOutline" size="20" />
+         </div>
+         <div class="font-black tracking-tighter text-sm md:text-lg uppercase select-none">
+           {{ examTitle }}
+         </div>
       </div>
-      <div class="flex items-center gap-4">
-        <div class="hidden sm:block text-right leading-tight">
-          <div class="text-xs font-semibold uppercase opacity-90">Peserta</div>
-          <div class="text-sm font-black">{{ participantName }}</div>
+      <div class="flex items-center gap-3 md:gap-6">
+        <div class="hidden md:block text-right leading-tight">
+          <div class="text-[10px] font-black uppercase opacity-70 tracking-widest">Peserta</div>
+          <div class="text-xs font-bold">{{ participantName }}</div>
         </div>
-        <div class="tka-timer bg-white text-slate-900 px-4 py-1.5 rounded-full font-semibold flex items-center gap-2">
-          <span class="text-xs">SISA WAKTU:</span>
-          <span class="font-mono">{{ formatTime(timeLeft) }}</span>
+        <div :class="[
+          'px-4 py-2 rounded-2xl font-black flex items-center gap-2 transition-all duration-500 shadow-inner',
+          timeLeft < 300 ? 'bg-red-500 text-white animate-pulse' : 'bg-blue-700/50 text-white border border-blue-400/20'
+        ]">
+          <span class="text-[10px] hidden sm:inline tracking-widest">SISA WAKTU:</span>
+          <span class="font-mono text-sm md:text-base">{{ formatTime(timeLeft) }}</span>
         </div>
         <button
           type="button"
-          class="hidden sm:flex items-center justify-center p-2 rounded-full hover:bg-white/10 transition-colors"
+          class="hidden sm:flex items-center justify-center p-2.5 rounded-xl bg-white/10 hover:bg-white/20 transition-all active:scale-95"
           title="Toggle Fullscreen"
           @click="toggleFullscreen"
         >
@@ -614,10 +623,18 @@ const matchingRightOptions = computed(() => {
         </button>
         <button
           type="button"
-          class="lg:hidden bg-white/10 border border-white/20 hover:bg-white/15 active:bg-white/20 px-3 py-2 rounded font-black uppercase text-[11px] tracking-widest"
+          class="hidden lg:flex items-center justify-center p-2.5 rounded-xl bg-white/10 hover:bg-white/20 transition-all active:scale-95"
+          :title="sidebarHidden ? 'Show Sidebar' : 'Hide Sidebar (Focus Mode)'"
+          @click="sidebarHidden = !sidebarHidden"
+        >
+          <BaseIcon :path="mdiViewGridOutline" size="20" :class="{ 'opacity-50': sidebarHidden }" />
+        </button>
+        <button
+          type="button"
+          class="lg:hidden bg-white/15 border border-white/20 hover:bg-white/25 active:scale-95 px-4 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all"
           @click="showQuestionListModal = true"
         >
-          Daftar Soal
+          Menu
         </button>
       </div>
     </header>
@@ -690,11 +707,11 @@ const matchingRightOptions = computed(() => {
 
     <!-- MAIN EXAM AREA -->
     <Transition name="qswap" mode="out-in">
-    <main v-if="sessionId && !submitDone && currentQuestion" :key="currentQuestion.id" class="max-w-[1500px] mx-auto px-6 py-6 pb-24">
-       <div class="grid lg:grid-cols-[1fr_340px] gap-6 items-start">
+    <main v-if="sessionId && !submitDone && currentQuestion" :key="currentQuestion.id" class="max-w-[1600px] mx-auto px-4 md:px-6 py-6 pb-28">
+       <div class="flex flex-col lg:flex-row gap-6 items-start">
           
           <!-- LEFT COLUMN: Main Card -->
-	          <div class="bg-white rounded-lg border border-slate-200 shadow-sm min-h-[75vh] max-h-[calc(100vh-180px)] flex flex-col">
+	          <div :class="['bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl flex-1 flex flex-col transition-all duration-500', sidebarHidden ? 'w-full' : 'lg:w-3/4']">
 	             <!-- Card Header -->
 	             <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-white">
 	                <span class="text-[#0B7EA1] font-bold uppercase text-sm tracking-wide">SOAL NOMOR: {{ currentIndex + 1 }}</span>
@@ -727,13 +744,13 @@ const matchingRightOptions = computed(() => {
 	                </div>
 	             </div>
 
-		               <div ref="cardScrollEl" class="flex-1 overflow-auto" :class="fontClass">
+		               <div ref="cardScrollEl" class="flex-1 overflow-auto scrollbar-styled-light dark:scrollbar-styled-dark" :class="fontClass">
 	                <!-- STIMULUS / CONTENT -->
-	                <div class="p-6 prose prose-slate max-w-none text-base leading-relaxed text-slate-900">
-	                   <div class="flex justify-between items-start mb-4">
-	                      <div class="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">STIMULUS / SOAL UTAMA</div>
+	                <div class="p-6 md:p-10 prose prose-slate dark:prose-invert max-w-none text-base leading-relaxed text-slate-800 dark:text-slate-200">
+	                   <div class="flex justify-between items-start mb-6">
+	                      <div class="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[10px] font-black uppercase text-slate-500 tracking-[0.2em]">STIMULUS / SOAL UTAMA</div>
 	                   </div>
-	                   <div v-html="renderHtml(currentQuestion.stem)"></div>
+	                   <div class="tka-question-content" v-html="renderHtml(currentQuestion.stem)"></div>
 	                </div>
 
 	                <!-- INTERACTION / ANSWERS -->
@@ -746,86 +763,100 @@ const matchingRightOptions = computed(() => {
 	                </div>
 
                 <!-- MC Single -->
-                <div v-if="currentQuestion.type === 'mc_single'" class="space-y-4">
+                <div v-if="currentQuestion.type === 'mc_single'" class="grid grid-cols-1 gap-3">
                    <label
-                     v-for="opt in currentQuestion.options" 
+                     v-for="(opt, idx) in currentQuestion.options" 
                      :key="opt.id"
-                     class="flex items-center gap-4 p-4 rounded border transition-colors cursor-pointer bg-white text-left w-full"
-                     :class="answers[currentQuestion.id]?.selected_option_id === String(opt.id) ? 'border-[#0B7EA1] bg-[#0B7EA1]/[0.03]' : 'border-slate-200 hover:border-slate-300'"
+                     class="group flex items-center gap-5 p-5 rounded-2xl border-2 transition-all cursor-pointer bg-white dark:bg-slate-800 text-left w-full hover:shadow-md active:scale-[0.99]"
+                     :class="answers[currentQuestion.id]?.selected_option_id === String(opt.id) ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-900/20' : 'border-slate-100 dark:border-slate-800 hover:border-blue-200'"
                    >
+                      <div class="flex-none h-8 w-8 rounded-xl border-2 flex items-center justify-center font-black text-sm transition-all"
+                        :class="answers[currentQuestion.id]?.selected_option_id === String(opt.id) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 group-hover:border-blue-400 group-hover:text-blue-600'"
+                      >
+                         {{ String.fromCharCode(65 + idx) }}
+                      </div>
                       <input
                         type="radio"
                         :name="'mc-'+currentQuestion.id"
-                        class="h-4 w-4 accent-slate-600"
+                        class="hidden"
                         :checked="answers[currentQuestion.id]?.selected_option_id === String(opt.id)"
                         @change="() => { answers[currentQuestion.id] = { selected_option_id: String(opt.id) }; saveAnswer(currentQuestion) }"
                       />
-	                      <div class="text-slate-800 font-medium text-sm leading-relaxed tka-option-text" v-html="renderHtml(opt.content)"></div>
+	                      <div class="grow text-slate-700 dark:text-slate-300 font-medium text-sm md:text-base leading-relaxed tka-option-text" v-html="renderHtml(opt.content)"></div>
 	                   </label>
 	                </div>
 
                 <!-- MC Multiple (PG Kompleks) -->
-                <div v-else-if="currentQuestion.type === 'mc_multiple'" class="space-y-4">
+                <div v-else-if="currentQuestion.type === 'mc_multiple'" class="grid grid-cols-1 gap-3">
                    <button
                      type="button"
-                     v-for="opt in currentQuestion.options" 
+                     v-for="(opt, idx) in currentQuestion.options" 
                      :key="opt.id"
                      @click="toggleMulti(currentQuestion.id, opt.id)"
-                     class="flex items-start gap-4 p-4 rounded border transition-colors cursor-pointer bg-white text-left w-full"
+                     class="group flex items-center gap-5 p-5 rounded-2xl border-2 transition-all cursor-pointer bg-white dark:bg-slate-800 text-left w-full hover:shadow-md active:scale-[0.99]"
                      :aria-pressed="answers[currentQuestion.id]?.selected_option_ids?.includes(String(opt.id)) ? 'true' : 'false'"
-                     :class="answers[currentQuestion.id]?.selected_option_ids?.includes(String(opt.id)) ? 'border-[#0B7EA1] bg-[#0B7EA1]/[0.03]' : 'border-slate-200 hover:border-slate-300'"
+                     :class="answers[currentQuestion.id]?.selected_option_ids?.includes(String(opt.id)) ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-900/20' : 'border-slate-100 dark:border-slate-800 hover:border-blue-200'"
                    >
-                      <div class="pt-0.5">
-                        <div
-                          class="h-5 w-5 rounded border flex items-center justify-center"
-                          :class="answers[currentQuestion.id]?.selected_option_ids?.includes(String(opt.id)) ? 'bg-[#0B7EA1] border-[#0B7EA1] text-white' : 'bg-white border-slate-300 text-transparent'"
-                        >
-                          <span class="text-xs font-black leading-none">✓</span>
-                        </div>
+                      <div class="flex-none h-8 w-8 rounded-xl border-2 flex items-center justify-center font-black text-sm transition-all"
+                        :class="answers[currentQuestion.id]?.selected_option_ids?.includes(String(opt.id)) ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 group-hover:border-blue-400 group-hover:text-blue-600'"
+                      >
+                         {{ String.fromCharCode(65 + idx) }}
                       </div>
-	                      <div class="text-slate-800 font-medium text-sm leading-relaxed tka-option-text" v-html="renderHtml(opt.content)"></div>
+	                      <div class="grow text-slate-700 dark:text-slate-300 font-medium text-sm md:text-base leading-relaxed tka-option-text" v-html="renderHtml(opt.content)"></div>
+                       <div class="flex-none">
+                          <div
+                            class="h-5 w-5 rounded-lg border-2 flex items-center justify-center transition-all"
+                            :class="answers[currentQuestion.id]?.selected_option_ids?.includes(String(opt.id)) ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-200 dark:border-slate-700'"
+                          >
+                            <span v-if="answers[currentQuestion.id]?.selected_option_ids?.includes(String(opt.id))" class="text-[10px] font-black leading-none">✓</span>
+                          </div>
+                      </div>
 	                   </button>
 	                </div>
 
                 <!-- True/False (ANBK-style) + Legacy Fallback -->
                 <div v-else-if="currentQuestion.type === 'true_false'" class="space-y-4">
-                   <div v-if="currentQuestion.statements?.length" class="bg-white rounded-2xl border-2 border-slate-200 overflow-hidden shadow-sm">
-                      <table class="w-full table-fixed border-collapse text-sm border-2 border-slate-300">
+                   <div v-if="currentQuestion.statements?.length" class="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 overflow-hidden shadow-xl">
+                      <table class="w-full table-fixed border-collapse text-sm">
                          <colgroup>
-                           <col class="w-[76%]" />
-                           <col class="w-[12%]" />
-                           <col class="w-[12%]" />
+                           <col class="w-[70%]" />
+                           <col class="w-[15%]" />
+                           <col class="w-[15%]" />
                          </colgroup>
-                         <thead class="bg-slate-50/80 font-black text-[10px] text-slate-500 uppercase tracking-widest">
+                         <thead class="bg-slate-50/80 dark:bg-slate-800/80 font-black text-[10px] text-slate-500 uppercase tracking-widest">
                             <tr>
-                               <th class="py-4 px-6 text-left border-2 border-slate-300">Pernyataan / Pertanyaan</th>
-                               <th class="py-4 px-3 text-center border-2 border-slate-300">Benar</th>
-                               <th class="py-4 px-3 text-center border-2 border-slate-300">Salah</th>
+                               <th class="py-5 px-6 text-left border-b border-slate-100 dark:border-slate-800">Pernyataan / Pertanyaan</th>
+                               <th class="py-5 px-3 text-center border-b border-slate-100 dark:border-slate-800">Benar</th>
+                               <th class="py-5 px-3 text-center border-b border-slate-100 dark:border-slate-800">Salah</th>
                             </tr>
                          </thead>
-                         <tbody>
-                            <tr v-for="st in currentQuestion.statements" :key="st.id" class="hover:bg-slate-50/30 transition-colors">
-                               <td class="py-6 px-6 text-slate-900 font-medium align-middle border-2 border-slate-300 leading-relaxed" v-html="renderHtml(st.content)"></td>
-                               <td class="py-6 px-3 text-center align-middle border-2 border-slate-300">
-                                  <input
-                                    type="radio"
-                                    :name="'st-'+st.id"
-                                    :checked="answers[currentQuestion.id]?.values?.[st.id] === true"
-                                    @change="() => setTrueFalseStatement(st.id, true)"
-                                    class="h-6 w-6 accent-[#0B7EA1]"
-                                  />
-                               </td>
-                               <td class="py-6 px-3 text-center align-middle border-2 border-slate-300">
-                                  <input
-                                    type="radio"
-                                    :name="'st-'+st.id"
-                                    :checked="answers[currentQuestion.id]?.values?.[st.id] === false"
-                                    @change="() => setTrueFalseStatement(st.id, false)"
-                                    class="h-6 w-6 accent-[#0B7EA1]"
-                                  />
-                               </td>
-                            </tr>
-                         </tbody>
+                          <tbody class="divide-y divide-slate-50 dark:divide-slate-800">
+                             <tr v-for="st in currentQuestion.statements" :key="st.id" class="group hover:bg-blue-50/30 transition-colors">
+                                <td class="py-6 px-6 text-slate-700 dark:text-slate-300 font-medium align-middle leading-relaxed" v-html="renderHtml(st.content)"></td>
+                                <td class="py-6 px-3 text-center align-middle">
+                                   <div class="flex justify-center">
+                                     <input
+                                       type="radio"
+                                       :name="'st-'+st.id"
+                                       :checked="answers[currentQuestion.id]?.values?.[st.id] === true"
+                                       @change="() => setTrueFalseStatement(st.id, true)"
+                                       class="h-6 w-6 cursor-pointer accent-blue-600"
+                                     />
+                                   </div>
+                                </td>
+                                <td class="py-6 px-3 text-center align-middle">
+                                   <div class="flex justify-center">
+                                     <input
+                                       type="radio"
+                                       :name="'st-'+st.id"
+                                       :checked="answers[currentQuestion.id]?.values?.[st.id] === false"
+                                       @change="() => setTrueFalseStatement(st.id, false)"
+                                       class="h-6 w-6 cursor-pointer accent-red-500"
+                                     />
+                                   </div>
+                                </td>
+                             </tr>
+                          </tbody>
                       </table>
                    </div>
 
@@ -945,18 +976,18 @@ const matchingRightOptions = computed(() => {
           </div>
 
           <!-- RIGHT COLUMN: Sidebar -->
-	          <aside class="hidden lg:flex bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden sticky top-[74px] max-h-[calc(100vh-96px)] flex-col">
-	            <div class="px-6 py-4 border-b border-slate-200 bg-white shrink-0">
-	              <span class="text-slate-800 font-bold uppercase text-sm tracking-wide select-none">DAFTAR SOAL</span>
+	          <aside v-if="!sidebarHidden" class="hidden lg:flex bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden sticky top-[90px] max-h-[calc(100vh-120px)] flex-col w-[340px] animate-fade-in">
+	            <div class="px-8 py-5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+	              <span class="text-slate-800 dark:text-slate-200 font-black uppercase text-xs tracking-[0.2em] select-none">Navigasi Soal</span>
 	            </div>
-	            <div class="p-5 overflow-auto">
-	              <div class="grid grid-cols-5 gap-2">
+	            <div class="p-6 overflow-auto scrollbar-styled-light dark:scrollbar-styled-dark">
+	              <div class="grid grid-cols-5 gap-3">
 	                <button
 	                  v-for="(q, idx) in questions"
 	                  :key="q.id"
 	                  :data-qnav-idx="idx"
 	                  type="button"
-	                  class="h-10 w-10 flex items-center justify-center rounded border font-semibold text-sm transition-colors"
+	                  class="h-10 w-10 flex items-center justify-center rounded-xl border-2 font-bold text-xs transition-all active:scale-90"
 	                  :class="navButtonClass(q, idx)"
 	                  @click="(e) => onNavClick(idx, e)"
 	                >
@@ -964,17 +995,25 @@ const matchingRightOptions = computed(() => {
 	                </button>
 	              </div>
 
-              <div class="mt-6 pt-4 border-t border-slate-200 grid grid-cols-2 gap-3 text-xs text-slate-600">
-                <div class="flex items-center gap-2"><span class="h-3 w-3 bg-emerald-500 rounded-sm"></span>Sudah</div>
-                <div class="flex items-center gap-2"><span class="h-3 w-3 bg-[#F4C20D] rounded-sm"></span>Ragu</div>
-                <div class="flex items-center gap-2"><span class="h-3 w-3 border-2 border-[#0B7EA1] rounded-sm"></span>Dibuka</div>
-                <div class="flex items-center gap-2"><span class="h-3 w-3 border border-slate-300 rounded-sm bg-white"></span>Belum</div>
+              <div class="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                <div class="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                   <span class="h-3 w-3 bg-emerald-500 rounded-full"></span> Terjawab
+                </div>
+                <div class="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                   <span class="h-3 w-3 bg-amber-400 rounded-full"></span> Ragu-Ragu
+                </div>
+                <div class="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                   <span class="h-3 w-3 border-2 border-blue-600 rounded-full"></span> Aktif
+                </div>
+                 <div class="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                   <span class="h-3 w-3 border-2 border-slate-200 dark:border-slate-700 rounded-full"></span> Belum
+                </div>
               </div>
 
-              <div class="mt-6 pt-6 border-t border-slate-200">
+              <div class="mt-8">
                 <button
                   type="button"
-                  class="w-full bg-[#0D47A1] text-white py-3 rounded font-black uppercase tracking-widest text-xs shadow-sm hover:brightness-95 active:scale-[0.99] transition-all"
+                  class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
                   @click="showSubmitModal = true"
                 >
                   Selesai Ujian
@@ -1002,32 +1041,36 @@ const matchingRightOptions = computed(() => {
     </div>
 
     <!-- NAVIGATION FOOTER -->
-    <footer v-if="sessionId && !submitDone" class="bg-white border-t border-slate-200 p-4 fixed bottom-0 left-0 right-0 z-[100] shadow-[0_-12px_30px_-18px_rgba(0,0,0,0.3)]">
-       <div class="max-w-[1500px] mx-auto w-full flex items-center justify-between">
+    <footer v-if="sessionId && !submitDone" class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-5 px-6 fixed bottom-0 left-0 right-0 z-[100] shadow-[0_-12px_40px_-15px_rgba(0,0,0,0.1)]">
+       <div class="max-w-[1600px] mx-auto w-full flex items-center justify-between">
           <button 
-             class="bg-[#E74C3C] text-white px-8 py-2.5 rounded font-bold uppercase text-xs shadow-sm hover:brightness-95 active:scale-[0.99] transition-all disabled:opacity-50"
+             class="group flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-8 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-sm hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
              :disabled="currentIndex === 0"
              @click="goPrev()"
           >
+             <span class="group-hover:-translate-x-1 transition-transform">←</span>
              Soal Sebelumnya
           </button>
 
           <button
             type="button"
-            class="flex items-center gap-3 bg-[#F4C20D] text-white px-10 py-2.5 rounded font-bold uppercase text-xs shadow-sm hover:brightness-95 active:scale-[0.99] transition-all"
+            class="hidden sm:flex items-center gap-3 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 px-10 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest border border-amber-200 dark:border-amber-700/50 hover:bg-amber-100 transition-all active:scale-95"
             @click="toggleFlagged"
           >
-            <span class="h-4 w-4 rounded border border-white/70 bg-white/10 flex items-center justify-center">
+            <div class="h-5 w-5 rounded-lg border-2 flex items-center justify-center transition-all"
+              :class="isFlagged(currentQuestion?.id) ? 'bg-amber-400 border-amber-400 text-white' : 'border-amber-400/50'"
+            >
               <span v-if="isFlagged(currentQuestion?.id)" class="text-[10px] font-black leading-none">✓</span>
-            </span>
+            </div>
             Ragu-Ragu
           </button>
 
           <button 
-             class="bg-[#0B7EA1] text-white px-8 py-2.5 rounded font-bold uppercase text-xs shadow-sm hover:brightness-95 active:scale-[0.99] transition-all"
+             class="group flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition-all"
              @click="currentIndex === questions.length - 1 ? (showSubmitModal = true) : goNext()"
           >
              {{ currentIndex === questions.length - 1 ? 'Selesai' : 'Soal Berikutnya' }}
+             <span v-if="currentIndex !== questions.length - 1" class="group-hover:translate-x-1 transition-transform">→</span>
           </button>
        </div>
     </footer>

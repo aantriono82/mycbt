@@ -36,8 +36,10 @@ const form = reactive({
   body: '',
   category: 'pengumuman',
   is_active: true,
-  published_at: '',
-  expires_at: '',
+  published_date: '',
+  published_time: '',
+  expires_date: '',
+  expires_time: '',
   target_type: 'all',
   target_id: '',
 })
@@ -79,19 +81,43 @@ const targetOptions = computed(() => {
   return [{ value: '', label: 'Tidak ada target khusus' }]
 })
 
-const toDatetimeLocal = (value) => {
+const pad2 = (value) => String(value).padStart(2, '0')
+
+const toDatetimeInput = (value) => {
   if (!value) return ''
   const parsed = new Date(value)
   if (Number.isNaN(parsed.getTime())) return ''
-  const local = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000)
-  return local.toISOString().slice(0, 16)
+  return `${parsed.getFullYear()}-${pad2(parsed.getMonth() + 1)}-${pad2(parsed.getDate())} ${pad2(parsed.getHours())}:${pad2(parsed.getMinutes())}`
 }
 
 const toRFC3339 = (value) => {
   if (!value) return ''
+  const normalized = String(value).trim().replace('T', ' ')
+  const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})$/)
+  if (match) {
+    const [, y, m, d, hh, mm] = match
+    const parsed = new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), 0)
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString()
+  }
   const parsed = new Date(value)
   if (Number.isNaN(parsed.getTime())) return ''
   return parsed.toISOString()
+}
+
+const splitDateTimeParts = (value) => {
+  const text = toDatetimeInput(value)
+  if (!text) return { date: '', time: '' }
+  const [date = '', time = ''] = text.split(' ')
+  return { date, time }
+}
+
+const combineDateTimeParts = (date, time) => {
+  const d = String(date || '').trim()
+  const t = String(time || '').trim()
+  if (!d) return ''
+  if (!t) return `${d} 00:00`
+  if (!/^\d{2}:\d{2}$/.test(t)) return ''
+  return `${d} ${t}`
 }
 
 const formatDateTime = (value) => {
@@ -118,8 +144,10 @@ const resetForm = () => {
   form.body = ''
   form.category = 'pengumuman'
   form.is_active = true
-  form.published_at = ''
-  form.expires_at = ''
+  form.published_date = ''
+  form.published_time = ''
+  form.expires_date = ''
+  form.expires_time = ''
   form.target_type = 'all'
   form.target_id = ''
 }
@@ -170,8 +198,8 @@ const buildPayload = () => {
     body: form.body,
     category: form.category,
     is_active: form.is_active,
-    published_at: toRFC3339(form.published_at),
-    expires_at: toRFC3339(form.expires_at),
+    published_at: toRFC3339(combineDateTimeParts(form.published_date, form.published_time)),
+    expires_at: toRFC3339(combineDateTimeParts(form.expires_date, form.expires_time)),
     target_level_id: '',
     target_group_id: '',
     target_student_id: '',
@@ -210,8 +238,16 @@ const startEdit = (item) => {
   form.body = item.body || ''
   form.category = item.category || 'pengumuman'
   form.is_active = !!item.is_active
-  form.published_at = toDatetimeLocal(item.published_at)
-  form.expires_at = toDatetimeLocal(item.expires_at)
+  {
+    const published = splitDateTimeParts(item.published_at)
+    form.published_date = published.date
+    form.published_time = published.time
+  }
+  {
+    const expires = splitDateTimeParts(item.expires_at)
+    form.expires_date = expires.date
+    form.expires_time = expires.time
+  }
   if (item.target_level_id) {
     form.target_type = 'level'
     form.target_id = item.target_level_id
@@ -306,10 +342,16 @@ onMounted(async () => {
               />
             </FormField>
             <FormField label="Publikasi (opsional)">
-              <FormControl v-model="form.published_at" type="datetime-local" />
+              <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+                <FormControl v-model="form.published_date" type="date" />
+                <FormControl v-model="form.published_time" type="text" placeholder="HH:mm (24 jam)" />
+              </div>
             </FormField>
             <FormField label="Kedaluwarsa (opsional)">
-              <FormControl v-model="form.expires_at" type="datetime-local" />
+              <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+                <FormControl v-model="form.expires_date" type="date" />
+                <FormControl v-model="form.expires_time" type="text" placeholder="HH:mm (24 jam)" />
+              </div>
             </FormField>
             <FormField label="Target Pengumuman">
               <FormControl

@@ -5,7 +5,8 @@ import {
   mdiBookOpenVariant, 
   mdiCalendarClockOutline, 
   mdiKeyVariant, 
-  mdiMonitorEye 
+  mdiMonitorEye,
+  mdiClose 
 } from '@mdi/js'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
@@ -15,6 +16,7 @@ import DashboardCard from '@/components/DashboardCard.vue'
 import QuickMenuCard from '@/components/QuickMenuCard.vue'
 import { useAuthStore } from '@/stores/auth.js'
 import { api } from '@/services/api.js'
+import BaseChart from '@/components/Charts/BaseChart.vue'
 
 const authStore = useAuthStore()
 const isLoading = ref(false)
@@ -24,6 +26,47 @@ const stats = ref({
   tokens: 0,
   onlineStudents: 0
 })
+const showGradeChart = ref(true)
+
+const avgScoreData = ref({
+  labels: ['Kelas 10', 'Kelas 11', 'Kelas 12'],
+  datasets: [
+    {
+      label: 'Rata-rata Nilai',
+      data: [78, 85, 82],
+      backgroundColor: [
+        'rgba(59, 130, 246, 0.6)',
+        'rgba(16, 185, 129, 0.6)',
+        'rgba(99, 102, 241, 0.6)'
+      ],
+      borderRadius: 8,
+      borderWidth: 0
+    }
+  ]
+})
+
+const chartOptions = {
+  indexAxis: 'y',
+  scales: {
+    x: {
+      beginAtZero: true,
+      max: 100,
+      grid: {
+        display: false
+      }
+    },
+    y: {
+      grid: {
+        display: false
+      }
+    }
+  },
+  plugins: {
+    legend: {
+      display: false
+    }
+  }
+}
 const assignments = ref({
   levels: [],
   groups: [],
@@ -157,13 +200,35 @@ onMounted(() => {
         />
       </div>
 
-      <CardBox class="mt-6">
-        <div class="text-center py-10">
-          <p class="text-sm font-semibold text-slate-400 dark:text-slate-500">
-            Ringkasan aktivitas mengajar Anda akan muncul di sini.
-          </p>
+      <CardBox v-if="showGradeChart" class="mt-6 p-6 animate-fade-in relative">
+        <button 
+          @click="showGradeChart = false"
+          class="absolute top-6 right-6 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 transition-colors"
+          title="Sembunyikan Panel"
+        >
+          <BaseIcon :path="mdiClose" size="18" />
+        </button>
+        <div class="flex items-center mb-6">
+          <div class="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl mr-3">
+            <BaseIcon :path="mdiBookOpenVariant" size="24" class="text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">Ringkasan Nilai per Jenjang</h3>
+            <p class="text-xs text-slate-500">Performa rata-rata siswa di kelas Anda</p>
+          </div>
+        </div>
+        <div class="h-64 w-full">
+          <BaseChart type="bar" :data="avgScoreData" :options="chartOptions" />
         </div>
       </CardBox>
+      <div v-else class="mt-4 flex justify-end">
+         <button 
+            @click="showGradeChart = true"
+            class="text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:underline"
+         >
+            + Tampilkan Statistik Nilai
+         </button>
+      </div>
     </SectionMain>
   </LayoutAuthenticated>
 </template>

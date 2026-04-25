@@ -39,13 +39,13 @@ const colorClasses = computed(() => {
       cardBorder: 'border-emerald-200/50 dark:border-emerald-700/50',
       icon: 'text-emerald-600 dark:text-emerald-400'
     },
-    purple: {
+    cyan: {
       text: 'text-slate-900 dark:text-white',
-      label: 'text-purple-600 dark:text-purple-400',
-      bg: 'bg-purple-100/50 dark:bg-purple-900/30',
-      cardBg: 'bg-purple-400/10 dark:bg-purple-500/10 backdrop-blur-md',
-      cardBorder: 'border-purple-200/50 dark:border-purple-700/50',
-      icon: 'text-purple-600 dark:text-purple-400'
+      label: 'text-cyan-600 dark:text-cyan-400',
+      bg: 'bg-cyan-100/50 dark:bg-cyan-900/30',
+      cardBg: 'bg-cyan-400/10 dark:bg-cyan-500/10 backdrop-blur-md',
+      cardBorder: 'border-cyan-200/50 dark:border-cyan-700/50',
+      icon: 'text-cyan-600 dark:text-cyan-400'
     },
     orange: {
       text: 'text-slate-900 dark:text-white',
@@ -86,8 +86,8 @@ const colorClasses = computed(() => {
 
 <template>
   <div :class="[
-    'rounded-2xl shadow-sm border flex flex-col justify-between transition-all hover:shadow-md relative overflow-hidden group',
-    small ? 'h-28 p-4' : 'h-36 p-5',
+    'rounded-[2rem] shadow-sm border flex flex-col justify-between transition-all hover:shadow-xl hover:-translate-y-1 active:scale-95 relative overflow-hidden group cursor-pointer',
+    small ? 'h-32 p-5' : 'h-40 p-6',
     colorClasses.cardBg,
     colorClasses.cardBorder
   ]">

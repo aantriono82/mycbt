@@ -58,10 +58,10 @@ const componentClass = computed(() => {
     'items-center',
     'whitespace-nowrap',
     'focus:outline-hidden',
-    useDarkModeStore().isInProgress ? '' : 'transition-colors',
+    useDarkModeStore().isInProgress ? '' : 'transition-all duration-300',
     'focus:ring-3',
     'border',
-    props.disabled ? 'cursor-not-allowed' : 'cursor-pointer',
+    props.disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:shadow-md active:scale-95 hover:-translate-y-0.5',
     props.roundedFull ? 'rounded-full' : 'rounded-xl',
     getButtonColor(props.color, props.outline, !props.disabled, props.active),
   ]

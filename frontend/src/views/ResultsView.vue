@@ -5,7 +5,8 @@ import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
 import CardBox from '@/components/CardBox.vue'
-import CardBoxWidget from '@/components/CardBoxWidget.vue'
+import DashboardCard from '@/components/DashboardCard.vue'
+import BaseIcon from '@/components/BaseIcon.vue'
 import { api } from '@/services/api.js'
 
 import { useResultStore } from '@/stores/result.js'
@@ -48,71 +49,95 @@ const statusLabel = (value) => {
     <SectionMain>
       <SectionTitleLineWithButton :icon="mdiChartBar" title="Hasil Ujian" main />
 
-      <div class="mb-6 grid gap-6 md:grid-cols-2">
-        <CardBoxWidget
+      <div class="mb-8 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <DashboardCard
           :icon="mdiTrophyOutline"
-          color="text-amber-500"
+          color="amber"
           label="Rata-rata Nilai"
           :number="averageScore"
+          :loading="isLoading"
         />
-        <CardBoxWidget
+        <DashboardCard
           :icon="mdiChartBar"
-          color="text-sky-500"
-          label="Riwayat Ujian"
+          color="blue"
+          label="Total Ujian"
           :number="totalExams"
+          :loading="isLoading"
+        />
+        <DashboardCard
+          v-if="results.length"
+          :icon="mdiChartBar"
+          color="emerald"
+          label="Nilai Tertinggi"
+          :number="Math.max(...results.map(r => r.score || 0))"
+          small
+        />
+        <DashboardCard
+          v-if="results.length"
+          :icon="mdiChartBar"
+          color="indigo"
+          label="Ujian Terakhir"
+          :number="results[0]?.score || 0"
+          small
         />
       </div>
 
-      <CardBox>
-        <div v-if="isLoading" class="mb-4 text-sm text-slate-500 dark:text-slate-400 italic">Memuat hasil ujian...</div>
-        <div v-else-if="errorMessage" class="mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400 border border-red-100 dark:border-red-900/40">{{ errorMessage }}</div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-sm">
-            <thead class="border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 uppercase text-xs tracking-wider font-bold">
-              <tr>
-                <th class="px-3 py-3">Ujian</th>
-                <th class="px-3 py-3">Mapel</th>
-                <th class="px-3 py-3">Dikumpulkan</th>
-                <th class="px-3 py-3 text-center">Nilai</th>
-                <th class="px-3 py-3 text-center">Benar</th>
-                <th class="px-3 py-3 text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in results" :key="item.session_id || item.id" class="border-b dark:border-slate-800 last:border-b-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                <td class="px-3 py-3 font-medium dark:text-slate-100">{{ item.exam_title }}</td>
-                <td class="px-3 py-3 text-slate-500 dark:text-slate-400">{{ item.subject }}</td>
-                <td class="px-3 py-3 text-xs text-slate-500 dark:text-slate-400 font-mono italic">{{ formatDateTime(item.submitted_at) }}</td>
-                <td class="px-3 py-3 text-center font-bold text-lg text-info dark:text-sky-400">
-                  {{ item.score }}
-                </td>
-                <td class="px-3 py-3 text-center text-slate-600 dark:text-slate-300 font-mono">
-                  {{ item.correct_count }}/{{ item.auto_scorable_questions ?? item.total_questions }}
-                </td>
-                <td class="px-3 py-3 text-center flex flex-col items-center gap-1 justify-center">
-                  <span
-                    class="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight"
-                    :class="
-                      String(item.session_status || item.status) === 'submitted' || item.status === 'Tuntas'
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                    "
-                  >
-                    {{ statusLabel(item.session_status || item.status) }}
-                  </span>
-                  <span v-if="item.pending_grading_count > 0" class="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-tighter animate-pulse">
-                    Proses Koreksi
-                  </span>
-                </td>
-              </tr>
-              <tr v-if="!results.length">
-                <td colspan="6" class="px-3 py-10 text-center text-slate-400 dark:text-slate-500 italic">Belum ada hasil ujian.</td>
-              </tr>
-            </tbody>
-          </table>
+      <div class="space-y-4">
+        <div v-if="isLoading" class="flex flex-col items-center py-20">
+           <div class="h-10 w-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+           <p class="text-slate-400 font-bold uppercase tracking-widest text-xs">Memuat Hasil...</p>
         </div>
-      </CardBox>
+        <div v-else-if="errorMessage" class="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700 border border-red-100">{{ errorMessage }}</div>
+
+        <div v-for="item in results" :key="item.session_id || item.id" class="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-lg transition-all p-6 flex flex-col md:flex-row md:items-center gap-6 group">
+           <!-- Score Circle -->
+           <div class="flex-none h-20 w-20 rounded-full flex items-center justify-center relative shadow-inner overflow-hidden"
+             :class="item.score >= 75 ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'"
+           >
+              <!-- Decorative background flare -->
+              <div class="absolute inset-0 bg-white/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <span class="text-2xl font-black relative z-10">{{ item.score }}</span>
+           </div>
+
+           <!-- Info -->
+           <div class="grow">
+              <div class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">{{ item.subject }}</div>
+              <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-2">{{ item.exam_title }}</h3>
+              <div class="flex flex-wrap gap-4 text-xs font-bold text-slate-500">
+                 <div class="flex items-center">
+                    <span class="h-1.5 w-1.5 rounded-full bg-slate-300 mr-2"></span>
+                    {{ formatDateTime(item.submitted_at) }}
+                 </div>
+                 <div class="flex items-center">
+                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 mr-2"></span>
+                    Benar: {{ item.correct_count }}/{{ item.auto_scorable_questions ?? item.total_questions }}
+                 </div>
+              </div>
+           </div>
+
+           <!-- Status Badge & Action -->
+           <div class="flex-none flex flex-col items-end gap-3">
+              <span
+                class="rounded-xl px-4 py-1.5 text-[10px] font-black uppercase tracking-widest"
+                :class="
+                  String(item.session_status || item.status) === 'submitted' || item.status === 'Tuntas'
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200/50'
+                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200/50'
+                "
+              >
+                {{ statusLabel(item.session_status || item.status) }}
+              </span>
+              <div v-if="item.pending_grading_count > 0" class="text-[9px] font-black text-amber-500 dark:text-amber-400 uppercase tracking-widest animate-pulse">
+                Menunggu Koreksi Guru
+              </div>
+           </div>
+        </div>
+
+        <div v-if="!results.length && !isLoading" class="bg-white rounded-[2rem] border border-dashed border-slate-200 p-20 text-center">
+           <BaseIcon :path="mdiTrophyOutline" size="48" class="text-slate-200 mb-4 mx-auto" />
+           <p class="text-slate-400 font-bold italic">Belum ada hasil ujian yang tersedia.</p>
+        </div>
+      </div>
     </SectionMain>
   </LayoutAuthenticated>
 </template>
