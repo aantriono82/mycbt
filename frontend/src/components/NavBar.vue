@@ -40,7 +40,9 @@ const isMenuNavBarActive = ref(false)
         :class="[isMenuNavBarActive ? 'block' : 'hidden']"
       >
         <slot name="right" />
-        <NavBarMenuList :menu="menu" @menu-click="menuClick" />
+        <div class="lg:mr-12 lg:flex lg:items-stretch">
+          <NavBarMenuList :menu="menu" @menu-click="menuClick" />
+        </div>
       </div>
     </div>
   </nav>

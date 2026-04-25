@@ -545,7 +545,7 @@ onMounted(async () => {
       <SectionTitleLineWithButton :icon="mdiFileDocumentOutline" title="Impor Soal" main>
         <div class="flex items-center gap-2">
           <BaseButton :icon="mdiRefresh" color="info" label="Refresh" @click="loadLookups" />
-          <BaseButton :icon="mdiPencil" color="whiteDark" outline label="Buka Editor" :disabled="!selectedSetId" @click="goToEditor" />
+          <BaseButton :icon="mdiPencil" color="purple" label="Buka Editor" :disabled="!selectedSetId" @click="goToEditor" />
         </div>
       </SectionTitleLineWithButton>
 
@@ -588,7 +588,7 @@ onMounted(async () => {
                 </div>
                 <BaseButton
                   :icon="mdiPlus"
-                  color="warning"
+                  color="success"
                   :label="isCreatingSet ? 'Membuat...' : 'Buat Set'"
                   :disabled="!canCreateSet"
                   @click="createQuestionSet"

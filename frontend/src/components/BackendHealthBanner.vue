@@ -55,6 +55,17 @@ onMounted(() => {
         'status-loading': health.state === 'loading' || health.state === 'idle'
       }"
     >
+      <!-- Ping ring overlay (only when online) -->
+      <div
+        v-if="health.state === 'ok'"
+        class="absolute inset-0 rounded-full bg-emerald-400/30 animate-ping pointer-events-none"
+      ></div>
+      <!-- Error ping overlay -->
+      <div
+        v-else-if="health.state === 'error'"
+        class="absolute inset-0 rounded-full bg-red-400/30 animate-ping pointer-events-none"
+      ></div>
+
       <div class="radio-outer">
         <div class="radio-inner"></div>
       </div>
@@ -64,7 +75,7 @@ onMounted(() => {
     <div class="pointer-events-none absolute left-full ml-2 hidden w-max group-hover:block">
       <div class="rounded bg-slate-800 px-2 py-1 text-[10px] text-white shadow-lg dark:bg-slate-700">
         <div class="font-bold flex items-center">
-          <div class="h-1.5 w-1.5 rounded-full mr-1.5" :class="health.state === 'ok' ? 'bg-purple-400' : 'bg-red-400'"></div>
+          <div class="h-1.5 w-1.5 rounded-full mr-1.5" :class="health.state === 'ok' ? 'bg-emerald-400' : 'bg-red-400'"></div>
           {{ health.state === 'ok' ? 'BACKEND ONLINE' : health.state === 'error' ? 'BACKEND OFFLINE' : 'CHECKING...' }}
         </div>
         <div v-if="health.state === 'ok'" class="opacity-70 mt-0.5">
@@ -82,6 +93,7 @@ onMounted(() => {
   justify-content: center;
   cursor: help;
   padding: 4px;
+  position: relative;
 }
 
 .radio-outer {
@@ -104,23 +116,25 @@ onMounted(() => {
   transition: all 0.3s ease;
 }
 
-/* OK Status (Purple Glow) */
+/* OK Status (Emerald Green Glow) */
 .status-ok {
-  color: #9333ea;
+  color: #10b981;
+  filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.6));
+  animation: drop-glow-green 1.8s infinite alternate ease-in-out;
 }
 
 :global(.dark) .status-ok {
-  color: #a855f7;
+  color: #34d399;
 }
 
 .status-ok .radio-outer {
-  box-shadow: 0 0 8px rgba(168, 85, 247, 0.3);
-  animation: glow-pulse-purple 2s infinite alternate ease-in-out;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5), 0 0 20px rgba(16, 185, 129, 0.25);
+  animation: glow-pulse-green 1.8s infinite alternate ease-in-out;
 }
 
 .status-ok .radio-inner {
-  box-shadow: 0 0 10px #a855f7;
-  animation: radio-pulse 1.5s infinite ease-in-out;
+  box-shadow: 0 0 12px #10b981, 0 0 24px rgba(16, 185, 129, 0.5);
+  animation: radio-pulse 1.4s infinite ease-in-out;
 }
 
 /* Error Status (Red Glow) */
@@ -151,9 +165,14 @@ onMounted(() => {
   opacity: 0.5;
 }
 
-@keyframes glow-pulse-purple {
-  from { box-shadow: 0 0 4px rgba(168, 85, 247, 0.2); }
-  to { box-shadow: 0 0 12px rgba(168, 85, 247, 0.6); }
+@keyframes glow-pulse-green {
+  from { box-shadow: 0 0 6px rgba(16, 185, 129, 0.3), 0 0 12px rgba(16, 185, 129, 0.15); }
+  to   { box-shadow: 0 0 16px rgba(16, 185, 129, 0.7), 0 0 30px rgba(16, 185, 129, 0.35); }
+}
+
+@keyframes drop-glow-green {
+  from { filter: drop-shadow(0 0 3px rgba(16, 185, 129, 0.4)); }
+  to   { filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.8)); }
 }
 
 @keyframes glow-pulse-red {

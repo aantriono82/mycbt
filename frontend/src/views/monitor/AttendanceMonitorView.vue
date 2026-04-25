@@ -217,7 +217,7 @@ onMounted(async () => {
         />
         <BaseButton
           :icon="mdiFilePdfBox"
-          color="contrast"
+          color="success"
           label="Export PDF"
           :disabled="!attendanceRows.length || isLoadingAttendance"
           @click="exportPdf"

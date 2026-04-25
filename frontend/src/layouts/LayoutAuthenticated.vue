@@ -43,6 +43,18 @@ const lastSeenNotificationsFingerprint = ref('')
 const NOTIF_READ_KEY_PREFIX = 'mycbt:last_seen_notifications:'
 let notificationsPollTimer = null
 let notificationsEventSource = null
+let clockTimer = null
+const digitalClock = ref('')
+
+const updateDigitalClock = () => {
+  const now = new Date()
+  digitalClock.value = now.toLocaleTimeString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).replace(/\./g, ':')
+}
 
 const notificationsCount = computed(() => announcements.value.length + exams.value.length)
 const notificationsReadStorageKey = computed(() => {
@@ -125,6 +137,9 @@ const stopNotificationsSync = () => {
 }
 
 onMounted(() => {
+  updateDigitalClock()
+  clockTimer = setInterval(updateDigitalClock, 1000)
+
   if (authStore.role !== 'student') return
   try {
     lastSeenNotificationsFingerprint.value = localStorage.getItem(notificationsReadStorageKey.value) || ''
@@ -146,6 +161,10 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (clockTimer) {
+    clearInterval(clockTimer)
+    clockTimer = null
+  }
   stopNotificationsSync()
 })
 
@@ -169,7 +188,7 @@ const menuClick = (event, item) => {
   >
     <div
       :class="[layoutAsidePadding, { 'ml-60 lg:ml-0': isAsideMobileExpanded }]"
-      class="min-h-screen w-screen bg-slate-50 pt-14 transition-(--transition-position) lg:w-auto dark:bg-slate-950 dark:text-slate-100 pb-24 lg:pb-0"
+      class="min-h-screen w-screen bg-gradient-to-br from-purple-50 via-violet-50/60 to-indigo-50 pt-14 transition-(--transition-position) lg:w-auto dark:bg-slate-950 dark:text-slate-100 pb-24 lg:pb-0"
     >
       <NavBar
         :menu="menuNavBar"
@@ -186,8 +205,8 @@ const menuClick = (event, item) => {
           <BaseIcon :path="mdiMenu" size="24" />
         </NavBarItemPlain>
 
-        <template #right v-if="authStore.role === 'student'">
-          <div class="relative flex items-center h-14 mr-4">
+        <template #right>
+          <div v-if="authStore.role === 'student'" class="relative flex items-center h-14 mr-4">
             <NavBarItemPlain 
               @click.prevent="isNotificationsExpanded = !isNotificationsExpanded; markNotificationsAsRead()"
               class="relative"
@@ -293,6 +312,12 @@ const menuClick = (event, item) => {
         </button>
         <span class="mx-3 text-slate-300 dark:text-slate-700">|</span>
         <BackendHealthBanner />
+        <span class="ml-auto mr-3 lg:mr-12 flex items-center">
+          <span class="mx-3 text-slate-300 dark:text-slate-700">|</span>
+          <span class="font-mono font-black tracking-widest text-slate-700 dark:text-slate-100">
+            {{ digitalClock }}
+          </span>
+        </span>
       </div>
       <slot />
       <FooterBar>

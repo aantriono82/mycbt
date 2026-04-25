@@ -753,7 +753,7 @@ onMounted(async () => {
 	                  @click="setExamStatus('draft')"
 	                />
 	                <BaseButton
-	                  color="contrast"
+	                  color="success"
 	                  small
 	                  label="Archive"
 	                  :disabled="selectedExam?.status === 'archived'"
@@ -792,6 +792,7 @@ onMounted(async () => {
                   <th class="px-3 py-3">Mulai (WIB/WITA/WIT)</th>
                   <th class="px-3 py-3">Selesai (WIB/WITA/WIT)</th>
                   <th class="px-3 py-3 text-center">Status</th>
+                  <th class="px-3 py-3 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody>
@@ -832,9 +833,17 @@ onMounted(async () => {
                       {{ exam.status }}
                     </span>
                   </td>
+                  <td class="px-3 py-3 text-right" @click.stop>
+                    <BaseButton
+                      :icon="mdiDelete"
+                      color="danger"
+                      small
+                      @click="selectedExamId = exam.id; deleteExam()"
+                    />
+                  </td>
                 </tr>
                 <tr v-if="!exams.length && !isLoading">
-                  <td colspan="7" class="px-3 py-10 text-center text-slate-400 dark:text-slate-500 italic">Belum ada jadwal ujian.</td>
+                  <td colspan="8" class="px-3 py-10 text-center text-slate-400 dark:text-slate-500 italic">Belum ada jadwal ujian.</td>
                 </tr>
               </tbody>
             </table>

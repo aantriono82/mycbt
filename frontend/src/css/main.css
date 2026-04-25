@@ -7,8 +7,8 @@
 
 @theme {
   --transition-position: right, left, top, bottom, margin, padding;
-  --font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
-  --font-heading: 'Outfit', sans-serif;
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Plus Jakarta Sans', sans-serif;
   --shadow-premium: 0 20px 50px rgba(8, 112, 184, 0.05);
 }
 
@@ -37,7 +37,7 @@
   }
 
   body {
-    @apply bg-slate-50/50 text-slate-700 dark:bg-[#0b1120] dark:text-slate-300 transition-colors duration-300 font-medium;
+    @apply bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/30 text-slate-700 dark:bg-[#0b1120] dark:text-slate-300 transition-colors duration-300 font-medium;
   }
 
   h1,

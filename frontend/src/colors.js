@@ -10,8 +10,8 @@ export const colorsBgLight = {
   success: 'bg-emerald-600 border-emerald-600 text-white dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20',
   danger: 'bg-red-600 border-red-600 text-white dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20',
   warning: 'bg-amber-500 border-amber-500 text-white dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20',
-  info: 'bg-blue-600 border-blue-600 text-white dark:bg-cyan-500/10 dark:text-cyan-400 dark:border-cyan-500/20',
-  purple: 'bg-purple-600 border-purple-600 text-white dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-500/20',
+  info: 'bg-blue-600 border-blue-600 text-white dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20',
+  purple: 'bg-indigo-600 border-indigo-600 text-white dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/20',
 }
 
 export const colorsText = {
@@ -22,7 +22,7 @@ export const colorsText = {
   danger: 'text-red-700 dark:text-red-400 font-bold',
   warning: 'text-amber-700 dark:text-amber-400 font-bold',
   info: 'text-blue-700 dark:text-blue-400 font-bold',
-  purple: 'text-purple-700 dark:text-purple-400 font-bold',
+  purple: 'text-indigo-700 dark:text-indigo-400 font-bold',
 }
 
 export const colorsOutline = {
@@ -47,7 +47,7 @@ export const getButtonColor = (color, isOutlined, hasHover, isActive = false) =>
       danger: 'ring-red-300 dark:ring-red-700',
       warning: 'ring-yellow-300 dark:ring-yellow-700',
       info: 'ring-blue-300 dark:ring-blue-700',
-      purple: 'ring-purple-300 dark:ring-purple-700',
+      purple: 'ring-indigo-300 dark:ring-indigo-700',
     },
     active: {
       white: 'bg-gray-100',
@@ -94,7 +94,7 @@ export const getButtonColor = (color, isOutlined, hasHover, isActive = false) =>
       danger: 'border-red-600 dark:border-red-500',
       warning: 'border-yellow-600 dark:border-yellow-500',
       info: 'border-blue-600 dark:border-blue-500',
-      purple: 'border-purple-600 dark:border-purple-500',
+      purple: 'border-indigo-600 dark:border-indigo-500',
     },
     text: {
       contrast: 'dark:text-slate-100',

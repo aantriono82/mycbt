@@ -58,6 +58,8 @@ const errorMessage = ref('')
 const isBlastingResults = ref(false)
 const isSyncingLTI = ref(false)
 const blastChannels = ref(['email', 'whatsapp'])
+const showScoreDistribution = ref(true)
+const showItemAnalysis = ref(true)
 
 const isEssayModalActive = ref(false)
 const selectedSessionForEssay = ref(null)
@@ -74,6 +76,17 @@ const stats = computed(() => {
   return { total, submitted, expired, avg }
 })
 
+const filteredExamsForSelect = computed(() => {
+  const now = new Date()
+  return exams.value
+    .filter((ex) => {
+      const startsAt = new Date(ex.starts_at)
+      // Only show exams that have started and are not drafts
+      return startsAt <= now && ex.status !== 'draft'
+    })
+    .map((item) => ({ id: item.id, label: item.title }))
+})
+
 const loadExams = async () => {
   if (!canLoad.value) return
   isLoadingExams.value = true
@@ -81,7 +94,9 @@ const loadExams = async () => {
   try {
     const { data } = await api.get('/api/v1/exams', { params: { limit: 200, offset: 0 } })
     exams.value = data?.data || []
-    if (!selectedExamId.value && exams.value.length) selectedExamId.value = exams.value[0].id
+    if (!selectedExamId.value && filteredExamsForSelect.value.length) {
+      selectedExamId.value = filteredExamsForSelect.value[0].id
+    }
   } catch (error) {
     exams.value = []
     errorMessage.value = error?.response?.data?.error?.message || 'Gagal memuat daftar ujian'
@@ -361,7 +376,7 @@ onMounted(async () => {
             <label class="block mb-1 text-sm font-semibold text-slate-600 dark:text-slate-300">Pilih Ujian</label>
             <FormControl
               v-model="selectedExamId"
-              :options="exams.map((item) => ({ id: item.id, label: item.title }))"
+              :options="filteredExamsForSelect"
             />
           </div>
           <div class="flex-1">
@@ -468,8 +483,17 @@ onMounted(async () => {
         </div>
       </CardBox>
 
-      <CardBox class="mt-6">
-        <h3 class="mb-4 text-lg font-semibold dark:text-slate-100">Distribusi Nilai</h3>
+      <CardBox class="mt-6" v-if="showScoreDistribution">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold dark:text-slate-100">Distribusi Nilai</h3>
+          <BaseButton 
+            :icon="mdiClose" 
+            color="whiteDark" 
+            small 
+            rounded-full
+            @click="showScoreDistribution = false" 
+          />
+        </div>
         <div v-if="scoreDistribution" class="mb-6 grid gap-4 md:grid-cols-4">
           <CardBox class="text-center bg-slate-50/50 dark:bg-slate-800/30">
             <div class="text-[10px] uppercase font-bold text-slate-400">Min</div>
@@ -507,12 +531,26 @@ onMounted(async () => {
         <div v-else-if="isLoadingDistribution" class="mb-4 text-sm text-slate-500 dark:text-slate-400 italic">Memuat distribusi nilai...</div>
         <div v-else class="mb-4 text-sm text-slate-400 dark:text-slate-500 italic">Belum ada data distribusi nilai untuk ujian ini.</div>
       </CardBox>
+      <div v-else class="mt-4 flex justify-end">
+        <button @click="showScoreDistribution = true" class="text-xs font-bold text-blue-600 hover:underline">
+          + Tampilkan Distribusi Nilai
+        </button>
+      </div>
 
-      <CardBox class="mt-6">
-        <h3 class="mb-4 text-lg font-semibold dark:text-slate-100 flex items-center gap-2">
-          Analisis Butir Soal
-          <span class="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded-full uppercase tracking-widest font-black">Psikometri Standard</span>
-        </h3>
+      <CardBox class="mt-6" v-if="showItemAnalysis">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold dark:text-slate-100 flex items-center gap-2">
+            Analisis Butir Soal
+            <span class="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded-full uppercase tracking-widest font-black">Psikometri Standard</span>
+          </h3>
+          <BaseButton 
+            :icon="mdiClose" 
+            color="whiteDark" 
+            small 
+            rounded-full
+            @click="showItemAnalysis = false" 
+          />
+        </div>
 
         <!-- Legend / Guide for Teachers -->
         <div class="mb-6 grid gap-4 md:grid-cols-3">
@@ -665,6 +703,11 @@ onMounted(async () => {
           </table>
         </div>
       </CardBox>
+      <div v-else class="mt-4 flex justify-end">
+        <button @click="showItemAnalysis = true" class="text-xs font-bold text-blue-600 hover:underline">
+          + Tampilkan Analisis Butir
+        </button>
+      </div>
     </SectionMain>
 
     <CardBoxModal
