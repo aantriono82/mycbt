@@ -3,8 +3,6 @@ package handlers
 import (
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -15,16 +13,21 @@ import (
 	"mycbt/backend/internal/repo/loginlogrepo"
 	"mycbt/backend/internal/repo/userrepo"
 	"mycbt/backend/internal/service/authsvc"
+	"mycbt/backend/internal/storage"
 )
 
 type AuthHandler struct {
 	auth      *authsvc.Service
 	users     *userrepo.Repo
 	loginLogs *loginlogrepo.Repo
+	store     storage.ObjectStore
 }
 
-func NewAuthHandler(auth *authsvc.Service, users *userrepo.Repo, loginLogs *loginlogrepo.Repo) *AuthHandler {
-	return &AuthHandler{auth: auth, users: users, loginLogs: loginLogs}
+func NewAuthHandler(auth *authsvc.Service, users *userrepo.Repo, loginLogs *loginlogrepo.Repo, store storage.ObjectStore) *AuthHandler {
+	if store == nil {
+		store = storage.NewLocalObjectStore("uploads")
+	}
+	return &AuthHandler{auth: auth, users: users, loginLogs: loginLogs, store: store}
 }
 
 type loginReq struct {
@@ -56,11 +59,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	if h.loginLogs != nil {
 		uID := user.ID
 		_ = h.loginLogs.Insert(c.Request.Context(), loginlogrepo.LoginLog{
-			UserID:    &uID,
-			Username:  user.Username,
-			Role:      user.Role,
-			IP:        c.ClientIP(),
-			UserAgent: c.Request.UserAgent(),
+			UserID:     &uID,
+			Username:   user.Username,
+			Role:       user.Role,
+			IP:         c.ClientIP(),
+			UserAgent:  c.Request.UserAgent(),
 			LoggedInAt: time.Now().UTC(),
 		})
 		// Enforce retention default: keep last 30 days.
@@ -73,11 +76,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 			"token_type":   "Bearer",
 			"expires_at":   exp.Format(time.RFC3339),
 			"user": gin.H{
-				"id":       user.ID,
-				"username": user.Username,
-				"role":     user.Role,
-				"name":     user.Name,
-				"email":    user.Email,
+				"id":        user.ID,
+				"username":  user.Username,
+				"role":      user.Role,
+				"name":      user.Name,
+				"email":     user.Email,
 				"photo_url": user.PhotoURL,
 			},
 		},
@@ -108,14 +111,22 @@ func (h *AuthHandler) Me(c *gin.Context) {
 			"role":      u.Role,
 			"name":      u.Name,
 			"email":     u.Email,
-			"photo_url":  u.PhotoURL,
+			"photo_url": u.PhotoURL,
 			"is_active": u.IsActive,
 		},
 	})
 }
 
 func (h *AuthHandler) Logout(c *gin.Context) {
-	// Stateless JWT for now.
+	rawToken := ""
+	authHeader := strings.TrimSpace(c.GetHeader("Authorization"))
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) == 2 && strings.EqualFold(parts[0], "Bearer") {
+		rawToken = strings.TrimSpace(parts[1])
+	}
+	if rawToken != "" && h.auth != nil {
+		_ = h.auth.RevokeToken(c.Request.Context(), rawToken)
+	}
 	c.JSON(http.StatusOK, gin.H{"data": gin.H{"ok": true}})
 }
 
@@ -252,21 +263,12 @@ func (h *AuthHandler) UploadPhoto(c *gin.Context) {
 		return
 	}
 
-	ext := filepath.Ext(file.Filename)
-	filename := fmt.Sprintf("%v%v%v", userID, time.Now().Unix(), ext)
-	dst := filepath.Join("./uploads/avatars", filename)
-
-	if err := os.MkdirAll("./uploads/avatars", 0755); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "internal", "message": "failed to create directory"}})
-		return
-	}
-
-	if err := c.SaveUploadedFile(file, dst); err != nil {
+	filename := fmt.Sprintf("%s_%d", userID, time.Now().UnixNano())
+	photoURL, err := uploadImageToStore(c.Request.Context(), h.store, file, "avatars", filename)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "internal", "message": "failed to save file"}})
 		return
 	}
-
-	photoURL := "/uploads/avatars/" + filename
 	if err := h.users.UpdatePhoto(c.Request.Context(), userID, photoURL); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "internal", "message": "failed to update database"}})
 		return

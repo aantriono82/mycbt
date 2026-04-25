@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -13,12 +12,18 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"mycbt/backend/internal/httpapi/middleware"
+	"mycbt/backend/internal/storage"
 )
 
-type UploadsHandler struct{}
+type UploadsHandler struct {
+	store storage.ObjectStore
+}
 
-func NewUploadsHandler() *UploadsHandler {
-	return &UploadsHandler{}
+func NewUploadsHandler(store storage.ObjectStore) *UploadsHandler {
+	if store == nil {
+		store = storage.NewLocalObjectStore("uploads")
+	}
+	return &UploadsHandler{store: store}
 }
 
 func (h *UploadsHandler) UploadImage(c *gin.Context) {
@@ -40,22 +45,15 @@ func (h *UploadsHandler) UploadImage(c *gin.Context) {
 		return
 	}
 
-	targetDir := filepath.Join("uploads", "editor-images")
-	if err := os.MkdirAll(targetDir, 0o755); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "internal", "message": "failed to prepare upload directory"}})
-		return
-	}
-
 	userID := middleware.GetUserID(c)
 	suffix := randHex(6)
-	filename := fmt.Sprintf("img_%s_%d_%s%s", userID, time.Now().UnixNano(), suffix, ext)
-	targetPath := filepath.Join(targetDir, filename)
-	if err := c.SaveUploadedFile(file, targetPath); err != nil {
+	filename := fmt.Sprintf("img_%s_%s", userID, suffix)
+	url, err := uploadImageToStore(c.Request.Context(), h.store, file, "editor-images", filename)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "internal", "message": "failed to save uploaded file"}})
 		return
 	}
 
-	url := "/" + filepath.ToSlash(targetPath)
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
 			"url": url,
@@ -74,4 +72,3 @@ func randHex(nbytes int) string {
 	}
 	return hex.EncodeToString(buf)
 }
-

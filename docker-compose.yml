@@ -10,5 +10,38 @@ services:
     volumes:
       - mycbt_pgdata:/var/lib/postgresql/data
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - mycbt_redisdata:/data
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - mycbt_miniodata:/data
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin; do sleep 1; done;
+      /usr/bin/mc mb --ignore-existing myminio/mycbt-uploads;
+      /usr/bin/mc anonymous set public myminio/mycbt-uploads;
+      exit 0;
+      "
+
 volumes:
   mycbt_pgdata:
+  mycbt_redisdata:
+  mycbt_miniodata:

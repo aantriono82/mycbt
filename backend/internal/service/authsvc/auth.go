@@ -1,10 +1,13 @@
 package authsvc
 
 import (
+	"crypto/sha256"
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -27,12 +30,19 @@ type Service struct {
 	secret []byte
 	issuer string
 	ttl    time.Duration
+
+	blocklist TokenBlocklist
 }
 
 type Claims struct {
 	jwt.RegisteredClaims
 	Role     string `json:"role"`
 	Username string `json:"username"`
+}
+
+type TokenBlocklist interface {
+	Revoke(ctx context.Context, tokenHash string, ttl time.Duration) error
+	IsRevoked(ctx context.Context, tokenHash string) (bool, error)
 }
 
 func New(cfg config.Config, users *userrepo.Repo) (*Service, error) {
@@ -74,6 +84,7 @@ func (s *Service) Login(ctx context.Context, username, password string) (token s
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    s.issuer,
 			Subject:   u.ID,
+			ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
 		},
@@ -99,6 +110,7 @@ func (s *Service) IssueToken(user model.User) (token string, expiresAt time.Time
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    s.issuer,
 			Subject:   user.ID,
+			ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
 		},
@@ -112,7 +124,21 @@ func (s *Service) IssueToken(user model.User) (token string, expiresAt time.Time
 }
 
 func (s *Service) ParseToken(tokenString string) (Claims, error) {
+	return s.parseToken(tokenString, true)
+}
+
+func (s *Service) parseToken(tokenString string, checkRevoked bool) (Claims, error) {
 	var c Claims
+	tokenString = strings.TrimSpace(tokenString)
+	if tokenString == "" {
+		return Claims{}, ErrUnauthorized
+	}
+	if checkRevoked && s.blocklist != nil {
+		revoked, err := s.blocklist.IsRevoked(context.Background(), tokenHash(tokenString))
+		if err == nil && revoked {
+			return Claims{}, ErrUnauthorized
+		}
+	}
 
 	parsed, err := jwt.ParseWithClaims(tokenString, &c, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -128,6 +154,33 @@ func (s *Service) ParseToken(tokenString string) (Claims, error) {
 	}
 
 	return c, nil
+}
+
+func (s *Service) SetBlocklist(blocklist TokenBlocklist) {
+	s.blocklist = blocklist
+}
+
+func (s *Service) RevokeToken(ctx context.Context, tokenString string) error {
+	if s.blocklist == nil {
+		return nil
+	}
+
+	claims, err := s.parseToken(tokenString, false)
+	if err != nil {
+		return err
+	}
+	ttl := time.Minute
+	if claims.ExpiresAt != nil {
+		if d := time.Until(claims.ExpiresAt.Time); d > 0 {
+			ttl = d
+		}
+	}
+	return s.blocklist.Revoke(ctx, tokenHash(tokenString), ttl)
+}
+
+func tokenHash(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }
 
 func HashPassword(password string) (string, error) {
