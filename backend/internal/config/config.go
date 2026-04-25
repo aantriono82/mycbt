@@ -14,6 +14,21 @@ type Config struct {
 
 	DatabaseURL string
 
+	RedisAddr     string
+	RedisPassword string
+	RedisDB       string
+	RedisPrefix   string
+
+	UploadProvider     string
+	UploadLocalDir     string
+	MinIOEndpoint      string
+	MinIOAccessKey     string
+	MinIOSecretKey     string
+	MinIOBucket        string
+	MinIOUseSSL        string
+	MinIOPublicBaseURL string
+	MinIOKeyPrefix     string
+
 	JWTSecret     string
 	JWTIssuer     string
 	JWTTTLMinutes string
@@ -45,6 +60,21 @@ func Load() Config {
 		CORSOrigins: getenv("CORS_ORIGINS", "http://localhost:5173"),
 
 		DatabaseURL: getenv("DATABASE_URL", ""),
+
+		RedisAddr:     getenv("REDIS_ADDR", ""),
+		RedisPassword: getenv("REDIS_PASSWORD", ""),
+		RedisDB:       getenv("REDIS_DB", "0"),
+		RedisPrefix:   getenv("REDIS_PREFIX", "mycbt"),
+
+		UploadProvider:     getenv("UPLOAD_PROVIDER", "local"),
+		UploadLocalDir:     getenv("UPLOAD_LOCAL_DIR", "uploads"),
+		MinIOEndpoint:      getenv("MINIO_ENDPOINT", ""),
+		MinIOAccessKey:     getenv("MINIO_ACCESS_KEY", ""),
+		MinIOSecretKey:     getenv("MINIO_SECRET_KEY", ""),
+		MinIOBucket:        getenv("MINIO_BUCKET", ""),
+		MinIOUseSSL:        getenv("MINIO_USE_SSL", "false"),
+		MinIOPublicBaseURL: getenv("MINIO_PUBLIC_BASE_URL", ""),
+		MinIOKeyPrefix:     getenv("MINIO_KEY_PREFIX", ""),
 
 		JWTSecret:     getenv("JWT_SECRET", ""),
 		JWTIssuer:     getenv("JWT_ISSUER", "mycbt"),

@@ -3,12 +3,14 @@ package httpapi
 import (
 	"net/http"
 	httppprof "net/http/pprof"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
 	"mycbt/backend/internal/config"
 	"mycbt/backend/internal/httpapi/handlers"
@@ -24,6 +26,7 @@ import (
 	"mycbt/backend/internal/service/authsvc"
 	"mycbt/backend/internal/service/ltisvc"
 	"mycbt/backend/internal/service/notificationsvc"
+	"mycbt/backend/internal/storage"
 )
 
 type Deps struct {
@@ -31,6 +34,9 @@ type Deps struct {
 	Auth   *authsvc.Service
 	Users  *userrepo.Repo
 	Pool   *pgxpool.Pool
+	Redis  *redis.Client
+
+	ObjectStore storage.ObjectStore
 }
 
 func NewHandler(deps Deps) http.Handler {
@@ -117,7 +123,7 @@ func NewHandler(deps Deps) http.Handler {
 		if deps.Pool != nil {
 			loginLogs = loginlogrepo.New(deps.Pool)
 		}
-		authH := handlers.NewAuthHandler(deps.Auth, deps.Users, loginLogs)
+		authH := handlers.NewAuthHandler(deps.Auth, deps.Users, loginLogs, deps.ObjectStore)
 		v1.POST("/auth/login", middleware.RateLimit("auth_login", 10, time.Minute), authH.Login)
 		v1.POST("/auth/logout", middleware.RequireAuth(deps.Auth), authH.Logout)
 		v1.GET("/me", middleware.RequireAuth(deps.Auth), authH.Me)
@@ -156,7 +162,7 @@ func NewHandler(deps Deps) http.Handler {
 		qb := questionbankrepo.New(deps.Pool)
 		teacherSubs := masterrepo.NewTeacherSubjects(deps.Pool)
 		h := handlers.NewQuestionBankHandler(qb, teacherSubs)
-		up := handlers.NewUploadsHandler()
+		up := handlers.NewUploadsHandler(deps.ObjectStore)
 
 		qg := v1.Group("")
 		qg.Use(middleware.RequireAuth(deps.Auth), middleware.RequireRole("admin", "teacher"))
@@ -318,7 +324,7 @@ func NewHandler(deps Deps) http.Handler {
 		sg.Use(middleware.RequireAuth(deps.Auth), middleware.RequireRole("admin"))
 
 		settings := masterrepo.NewSettings(deps.Pool)
-		h := handlers.NewSettingsHandler(settings)
+		h := handlers.NewSettingsHandler(settings, deps.ObjectStore)
 
 		sg.GET("/school-identity", h.GetSchoolIdentity)
 		sg.PUT("/school-identity", h.PutSchoolIdentity)
@@ -513,8 +519,12 @@ func NewHandler(deps Deps) http.Handler {
 		admin.DELETE("/audit-logs/:id", al.Delete)
 	}
 
-	// Serve uploaded assets (logo sekolah, dll) from local storage.
-	r.Static("/uploads", "./uploads")
+	// Serve uploaded assets from local storage when URL path starts with /uploads.
+	localUploadDir := strings.TrimSpace(deps.Config.UploadLocalDir)
+	if localUploadDir == "" {
+		localUploadDir = "uploads"
+	}
+	r.Static("/uploads", "./"+filepath.ToSlash(localUploadDir))
 	return r
 }
 

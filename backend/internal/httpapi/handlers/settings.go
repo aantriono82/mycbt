@@ -3,7 +3,6 @@ package handlers
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -11,14 +10,19 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"mycbt/backend/internal/repo/masterrepo"
+	"mycbt/backend/internal/storage"
 )
 
 type SettingsHandler struct {
 	settings *masterrepo.SettingsRepo
+	store    storage.ObjectStore
 }
 
-func NewSettingsHandler(settings *masterrepo.SettingsRepo) *SettingsHandler {
-	return &SettingsHandler{settings: settings}
+func NewSettingsHandler(settings *masterrepo.SettingsRepo, store storage.ObjectStore) *SettingsHandler {
+	if store == nil {
+		store = storage.NewLocalObjectStore("uploads")
+	}
+	return &SettingsHandler{settings: settings, store: store}
 }
 
 func (h *SettingsHandler) GetSchoolIdentity(c *gin.Context) {
@@ -86,15 +90,9 @@ func (h *SettingsHandler) UploadSchoolLogo(c *gin.Context) {
 		return
 	}
 
-	targetDir := filepath.Join("uploads", "logos")
-	if err := os.MkdirAll(targetDir, 0o755); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "internal", "message": "failed to prepare upload directory"}})
-		return
-	}
-
-	filename := fmt.Sprintf("school_logo_%d%s", time.Now().UnixNano(), ext)
-	targetPath := filepath.Join(targetDir, filename)
-	if err := c.SaveUploadedFile(file, targetPath); err != nil {
+	filename := fmt.Sprintf("school_logo_%d", time.Now().UnixNano())
+	logoURL, err := uploadImageToStore(c.Request.Context(), h.store, file, "logos", filename)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "internal", "message": "failed to save uploaded file"}})
 		return
 	}
@@ -104,7 +102,7 @@ func (h *SettingsHandler) UploadSchoolLogo(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
 		return
 	}
-	identity.LogoURL = "/" + filepath.ToSlash(targetPath)
+	identity.LogoURL = logoURL
 	data, err := h.settings.UpsertSchoolIdentity(c.Request.Context(), identity)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
@@ -184,7 +182,7 @@ type putSMTPReq struct {
 	Host       string `json:"host"`
 	Port       int    `json:"port"`
 	User       string `json:"user"`
-	Username   string `json:"username"`   // legacy alias from old frontend
+	Username   string `json:"username"` // legacy alias from old frontend
 	Password   string `json:"password"`
 	From       string `json:"from"`
 	FromEmail  string `json:"from_email"` // legacy alias from old frontend
