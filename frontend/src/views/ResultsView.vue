@@ -70,7 +70,6 @@ const statusLabel = (value) => {
           color="emerald"
           label="Nilai Tertinggi"
           :number="Math.max(...results.map(r => r.score || 0))"
-          small
         />
         <DashboardCard
           v-if="results.length"
@@ -78,7 +77,6 @@ const statusLabel = (value) => {
           color="indigo"
           label="Ujian Terakhir"
           :number="results[0]?.score || 0"
-          small
         />
       </div>
 

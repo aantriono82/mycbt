@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, reactive, ref, computed, watch } from 'vue'
+import { onMounted, reactive, ref, computed, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   mdiDatabasePlus,
@@ -47,6 +47,7 @@ const errorMessage = ref('')
 const successMessage = ref('')
 const isEditingMetadata = ref(false)
 const initializedSetId = ref('')
+const questionPopulateSeq = ref(0)
 
 const getNextOrderNo = () => {
   const maxOrder = (questions.value || []).reduce((m, q) => {
@@ -257,6 +258,13 @@ const summarizeText = (value, maxLen = 120) => {
   return `${text.slice(0, maxLen - 1)}…`
 }
 
+const formatQuestionId = (value) => {
+  const id = String(value || '').trim()
+  if (!id) return '-'
+  if (id.length <= 16) return id
+  return `${id.slice(0, 8)}...${id.slice(-4)}`
+}
+
 const buildQuestionCardAnswerPreviewHtml = (item) => {
   if (!item || typeof item !== 'object') return ''
   const type = String(item.type || '').trim()
@@ -364,13 +372,13 @@ const loadQuestions = async () => {
   }
 }
 
-const initEditorFromFirstQuestion = () => {
+const initEditorFromFirstQuestion = async () => {
   if (!currentSetId.value) return
   if (initializedSetId.value === currentSetId.value) return
   initializedSetId.value = currentSetId.value
 
   if (questions.value.length > 0) {
-    populateQuestionForm(questions.value[0])
+    await populateQuestionForm(questions.value[0])
     return
   }
   resetQuestionForm(false)
@@ -448,7 +456,9 @@ const resetQuestionForm = (keepType = true) => {
   resetShortAnswers()
   resetTrueFalseStatements()
   resetMatchingPairs()
-  editorRenderVersion.value += 1
+  nextTick(() => {
+    editorRenderVersion.value += 1
+  })
 }
 
 const isQuickAddOpen = ref(false)
@@ -646,9 +656,10 @@ const deleteQuestion = async (id) => {
   }
 }
 
-const populateQuestionForm = (item) => {
+const applyQuestionToForm = (item) => {
+  if (!item) return
+  const nextType = String(item.type || '').trim() || 'mc_single'
   editingQuestionId.value = item.id
-  questionForm.type = item.type
   questionForm.stem = item.stem || ''
   questionForm.order_no = item.order_no
   questionForm.options_text = (item.options || []).map(o => `${o.label}|${o.content}|${o.is_correct}`).join('\n')
@@ -658,7 +669,7 @@ const populateQuestionForm = (item) => {
   questionForm.rubric_text = item.essay?.rubric_text || ''
   questionForm.max_score = item.essay?.max_score ?? 100
   
-  if (item.type === 'mc_single' && item.options?.length) {
+  if (nextType === 'mc_single' && item.options?.length) {
     mcOptions.splice(0, mcOptions.length)
     // Map whatever labels come from backend (A, B, C, D, E, etc.)
     item.options.forEach(o => {
@@ -675,29 +686,29 @@ const populateQuestionForm = (item) => {
       mcOptions.push({ label: nextLabel, content: '', is_correct: false })
     }
   }
-  if (item.type === 'mc_multiple' && item.options?.length) {
+  if (nextType === 'mc_multiple' && item.options?.length) {
     mcMultipleOptions.splice(0, mcMultipleOptions.length)
     item.options.forEach(o => {
       mcMultipleOptions.push({ label: o.label, content: o.content, is_correct: o.is_correct })
     })
   }
-  if (item.type === 'short_answer' && item.answers?.length) {
+  if (nextType === 'short_answer' && item.answers?.length) {
     shortAnswers.splice(0, shortAnswers.length)
     item.answers.forEach(a => {
       shortAnswers.push({ text: a.answer_text || '' })
     })
-  } else if (item.type === 'short_answer') {
+  } else if (nextType === 'short_answer') {
     shortAnswers.splice(0, shortAnswers.length)
     shortAnswers.push({ text: '' })
   }
-  if (item.type === 'true_false' && item.statements?.length) {
+  if (nextType === 'true_false' && item.statements?.length) {
     trueFalseStatements.splice(0, trueFalseStatements.length)
     item.statements.forEach(s => {
       trueFalseStatements.push({ content: s.content || '', correct: s.correct ?? true })
     })
     if (trueFalseStatements.length === 0) trueFalseStatements.push({ content: '', correct: true })
   }
-  if (item.type === 'matching' && item.pairs?.length) {
+  if (nextType === 'matching' && item.pairs?.length) {
     matchingPairs.splice(0, matchingPairs.length)
     item.pairs.forEach(p => {
       matchingPairs.push({ left_content: p.left_content || '', right_content: p.right_content || '' })
@@ -705,8 +716,35 @@ const populateQuestionForm = (item) => {
     if (matchingPairs.length === 0) { matchingPairs.push({ left_content: '', right_content: '' }); matchingPairs.push({ left_content: '', right_content: '' }) }
   }
 
-  // Force TinyMCE instances to fully remount after switching question payload.
-  editorRenderVersion.value += 1
+  // Set type last so branch editors mount with already-hydrated data.
+  questionForm.type = nextType
+
+  // Force TinyMCE instances to remount after reactive model updates are flushed.
+  nextTick(() => {
+    editorRenderVersion.value += 1
+  })
+}
+
+const populateQuestionForm = async (item) => {
+  if (!item?.id) {
+    applyQuestionToForm(item)
+    return
+  }
+
+  const seq = ++questionPopulateSeq.value
+  // Apply list payload immediately so editor never appears empty while waiting detail API.
+  applyQuestionToForm(item)
+  let hydrated = item
+
+  try {
+    const { data } = await api.get(`/api/v1/questions/${item.id}`)
+    if (data?.data) hydrated = data.data
+  } catch {
+    // Fallback to list payload when detail request fails.
+  }
+
+  if (seq !== questionPopulateSeq.value) return
+  applyQuestionToForm(hydrated)
 }
 
 
@@ -750,7 +788,7 @@ onMounted(async () => {
   if (currentSetId.value) {
     await loadSetDetail()
     await loadQuestions()
-    initEditorFromFirstQuestion()
+    await initEditorFromFirstQuestion()
   }
 })
 
@@ -776,13 +814,32 @@ watch(() => route.query.id, async (newId) => {
   if (newId) {
     await loadSetDetail()
     await loadQuestions()
-    initEditorFromFirstQuestion()
+    await initEditorFromFirstQuestion()
   } else {
     currentSet.value = null
     questions.value = []
     createForm.title = ''
   }
 })
+
+// Re-init only when crossing route namespace (admin <-> teacher), because Vue
+// can reuse this component instance for both paths.
+watch(
+  () => route.path,
+  async (nextPath, prevPath) => {
+    const prevRole = String(prevPath || '').startsWith('/admin') ? 'admin' : 'teacher'
+    const nextRole = String(nextPath || '').startsWith('/admin') ? 'admin' : 'teacher'
+    if (prevRole === nextRole) return
+
+    const nextId = route.query.id || ''
+    if (!nextId) return
+    currentSetId.value = nextId
+    initializedSetId.value = ''
+    await loadSetDetail()
+    await loadQuestions()
+    await initEditorFromFirstQuestion()
+  },
+)
 
 // Soal: richer toolbar (2 lines expected if needed)
 const stemToolbar = 'undo redo | bold italic underline | fontfamily fontsize forecolor | alignleft aligncenter alignright | bullist numlist | table image media | math charmap code | fullscreen'
@@ -828,7 +885,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
           <BaseButton
             :icon="mdiArrowLeft"
             :label="isStepEditor ? 'Tutup Editor' : 'Batal'"
-            color="whiteDark"
+            color="success"
             small
             @click="router.push(route.path.startsWith('/admin') ? '/admin/bank-soal' : '/teacher/bank-soal')"
           />
@@ -1081,6 +1138,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                       <BaseIcon :path="mdiDelete" size="16" class="text-red-500 cursor-pointer" @click="deleteQuestion(item.id)" />
                     </div>
                   </div>
+                  <div class="mb-2 text-[10px] font-mono text-slate-400 truncate" :title="item.id">ID: {{ formatQuestionId(item.id) }}</div>
                   <div class="text-xs text-slate-600 dark:text-slate-300 line-clamp-3" v-html="item.stem"></div>
                   <div v-if="buildQuestionCardAnswerPreviewHtml(item)" class="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300" v-html="buildQuestionCardAnswerPreviewHtml(item)"></div>
                </div>
@@ -1213,6 +1271,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                       <BaseIcon :path="mdiDelete" size="16" class="text-red-500 cursor-pointer" @click="deleteQuestion(item.id)" />
                     </div>
                   </div>
+                  <div class="mb-2 text-[10px] font-mono text-slate-400 truncate" :title="item.id">ID: {{ formatQuestionId(item.id) }}</div>
                   <span class="inline-block mb-1 px-2 py-0.5 rounded text-[9px] font-black uppercase bg-slate-100 dark:bg-slate-800 text-slate-500">{{ item.type.replace('_', ' ') }}</span>
                   <div class="text-xs text-slate-600 dark:text-slate-300 line-clamp-3" v-html="item.stem"></div>
                   <div v-if="buildQuestionCardAnswerPreviewHtml(item)" class="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300" v-html="buildQuestionCardAnswerPreviewHtml(item)"></div>
@@ -1351,6 +1410,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                       <BaseIcon :path="mdiDelete" size="16" class="text-red-500 cursor-pointer" @click="deleteQuestion(item.id)" />
                     </div>
                   </div>
+                  <div class="mb-2 text-[10px] font-mono text-slate-400 truncate" :title="item.id">ID: {{ formatQuestionId(item.id) }}</div>
                   <span class="inline-block mb-1 px-2 py-0.5 rounded text-[9px] font-black uppercase bg-teal-100 dark:bg-teal-900/40 text-teal-600">{{ item.type.replace('_', ' ') }}</span>
                   <div class="text-xs text-slate-600 dark:text-slate-300 line-clamp-3" v-html="item.stem"></div>
                   <div v-if="buildQuestionCardAnswerPreviewHtml(item)" class="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300" v-html="buildQuestionCardAnswerPreviewHtml(item)"></div>
@@ -1490,6 +1550,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                       <BaseIcon :path="mdiDelete" size="16" class="text-red-500 cursor-pointer" @click="deleteQuestion(item.id)" />
                     </div>
                   </div>
+                  <div class="mb-2 text-[10px] font-mono text-slate-400 truncate" :title="item.id">ID: {{ formatQuestionId(item.id) }}</div>
                   <span class="inline-block mb-1 px-2 py-0.5 rounded text-[9px] font-black uppercase bg-violet-100 dark:bg-violet-900/40 text-violet-600">{{ item.type.replace('_', ' ') }}</span>
                   <div class="text-xs text-slate-600 dark:text-slate-300 line-clamp-3" v-html="item.stem"></div>
                   <div v-if="buildQuestionCardAnswerPreviewHtml(item)" class="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300" v-html="buildQuestionCardAnswerPreviewHtml(item)"></div>
@@ -1619,6 +1680,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                       <button type="button" class="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100" @click="deleteQuestion(item.id)"><BaseIcon :path="mdiDelete" size="14" /></button>
                     </div>
                   </div>
+                  <div class="mb-2 text-[10px] font-mono text-slate-400 truncate" :title="item.id">ID: {{ formatQuestionId(item.id) }}</div>
                   <div class="flex gap-2 mb-2">
                      <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter" :class="item.type === 'mc_single' ? 'bg-indigo-100 text-indigo-600' : 'bg-emerald-100 text-emerald-600'">{{ item.type.replace('_', ' ') }}</span>
                   </div>
@@ -1773,6 +1835,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                       <BaseIcon :path="mdiDelete" size="16" class="text-red-500 cursor-pointer" @click="deleteQuestion(item.id)" />
                     </div>
                   </div>
+                  <div class="mb-2 text-[10px] font-mono text-slate-400 truncate" :title="item.id">ID: {{ formatQuestionId(item.id) }}</div>
                   <span class="inline-block mb-1 px-2 py-0.5 rounded text-[9px] font-black uppercase bg-amber-100 dark:bg-amber-900/40 text-amber-600">{{ item.type.replace('_', ' ') }}</span>
                   <div class="text-xs text-slate-600 dark:text-slate-300 line-clamp-3" v-html="item.stem"></div>
                   <div v-if="buildQuestionCardAnswerPreviewHtml(item)" class="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300" v-html="buildQuestionCardAnswerPreviewHtml(item)"></div>
@@ -1813,6 +1876,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                     <BaseIcon :path="mdiDelete" size="18" class="text-red-500 hover:scale-125 transition-transform cursor-pointer" @click="deleteQuestion(item.id)" />
                   </div>
                 </div>
+                <div class="mb-3 pl-6 text-[10px] font-mono text-slate-400 truncate" :title="item.id">ID: {{ formatQuestionId(item.id) }}</div>
                 <div class="mb-6 pl-6 text-base text-slate-700 dark:text-slate-200 leading-relaxed">{{ item.stem }}</div>
                 
                 <!-- Answer Preview -->

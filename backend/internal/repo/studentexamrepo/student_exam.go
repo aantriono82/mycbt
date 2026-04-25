@@ -101,6 +101,12 @@ func (r *Repo) ListAvailableForStudent(ctx context.Context, studentID, levelID, 
         OR (t.level_id IS NOT NULL AND $3 <> '' AND t.level_id::text = $3)
         OR (t.group_id IS NOT NULL AND $4 <> '' AND t.group_id::text = $4)
       )
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM student_exam_dismissals d
+    WHERE d.exam_id = e.id
+      AND d.student_id::text = $2
   )`
 
 	rows, err := r.pool.Query(ctx, `
@@ -142,6 +148,12 @@ SELECT e.id::text, e.subject_id::text, sub.name, e.teacher_id::text, tu.name, e.
         OR (t.level_id IS NOT NULL AND $3 <> '' AND t.level_id::text = $3)
         OR (t.group_id IS NOT NULL AND $4 <> '' AND t.group_id::text = $4)
       )
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM student_exam_dismissals d
+    WHERE d.exam_id = e.id
+      AND d.student_id::text = $2
   )
 ORDER BY e.starts_at DESC, e.created_at DESC
 LIMIT $5 OFFSET $6`, strings.TrimSpace(f.Q), studentID, levelID, groupID, f.Limit, f.Offset)
@@ -1036,7 +1048,58 @@ var (
 	ErrSessionNotFound      = errors.New("session not found")
 	ErrQuestionNotInSession = errors.New("question not in session")
 	ErrSessionNotActive     = errors.New("session not active")
+	ErrExamNotDismissible   = errors.New("exam not dismissible")
 )
+
+func (r *Repo) DismissExamCard(ctx context.Context, examID, studentID string) error {
+	// Allow dismiss when:
+	// 1) student has a completed session, or
+	// 2) exam schedule has ended for a targeted exam (even if student did not join).
+	var canDismiss bool
+	if err := r.pool.QueryRow(ctx, `
+SELECT EXISTS (
+  SELECT 1
+  FROM students st
+  JOIN exams e ON e.id = $1
+  WHERE st.id = $2
+    AND (
+      EXISTS (
+        SELECT 1
+        FROM exam_sessions s
+        WHERE s.exam_id = e.id
+          AND s.student_id = st.id
+          AND s.status IN ('submitted','forced','expired')
+      )
+      OR (
+        e.ends_at <= now()
+        AND EXISTS (
+          SELECT 1
+          FROM exam_targets t
+          WHERE t.exam_id = e.id
+            AND (
+              (t.student_id IS NOT NULL AND t.student_id = st.id)
+              OR (t.level_id IS NOT NULL AND st.level_id IS NOT NULL AND t.level_id = st.level_id)
+              OR (t.group_id IS NOT NULL AND st.group_id IS NOT NULL AND t.group_id = st.group_id)
+            )
+        )
+      )
+    )
+)`, examID, studentID).Scan(&canDismiss); err != nil {
+		return fmt.Errorf("check dismiss eligibility: %w", err)
+	}
+	if !canDismiss {
+		return ErrExamNotDismissible
+	}
+
+	if _, err := r.pool.Exec(ctx, `
+INSERT INTO student_exam_dismissals (student_id, exam_id)
+VALUES ($1, $2)
+ON CONFLICT (student_id, exam_id) DO NOTHING
+`, studentID, examID); err != nil {
+		return fmt.Errorf("dismiss exam card: %w", err)
+	}
+	return nil
+}
 
 func (r *Repo) UpsertAnswer(ctx context.Context, sessionID, studentID, questionID string, answerJSON json.RawMessage, nowUTC time.Time) error {
 	if _, err := r.expireSessionIfNeeded(ctx, sessionID, studentID, nowUTC); err != nil {

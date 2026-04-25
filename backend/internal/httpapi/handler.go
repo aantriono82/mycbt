@@ -253,6 +253,7 @@ func NewHandler(deps Deps) http.Handler {
 
 		sg.GET("/notifications/stream", middleware.RequireAuthHeaderOrQueryToken(deps.Auth), nh.Stream)
 		sg.GET("/exams", h.ListExams)
+		sg.DELETE("/exams/:id/dismiss", h.DismissExamCard)
 		sg.GET("/exams/:id/session", h.GetActiveSessionByExam)
 		sg.POST("/exams/:id/join", middleware.RateLimit("student_join_exam", 20, time.Minute), h.Join)
 		sg.GET("/sessions/:id", h.GetSession)

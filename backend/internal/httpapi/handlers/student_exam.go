@@ -20,6 +20,7 @@ import (
 type studentExamRepo interface {
 	StudentByUserID(ctx context.Context, userID string) (studentexamrepo.StudentInfo, bool, error)
 	ListAvailableForStudent(ctx context.Context, studentID, levelID, groupID string, f studentexamrepo.ListStudentExamsFilter) ([]studentexamrepo.StudentExam, int, error)
+	DismissExamCard(ctx context.Context, examID, studentID string) error
 	VerifyExamToken(ctx context.Context, examID, token string, nowUTC time.Time) error
 	GetExamForStudentJoin(ctx context.Context, examID, studentID, levelID, groupID string, nowUTC time.Time, loc *time.Location) (studentexamrepo.ExamForJoin, error)
 	GetSessionByExamStudent(ctx context.Context, examID, studentID string) (studentexamrepo.Session, bool, error)
@@ -96,6 +97,42 @@ func (h *StudentExamHandler) ListExams(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"data": items, "meta": gin.H{"q": q, "limit": limit, "offset": offset, "total": total}})
+}
+
+func (h *StudentExamHandler) DismissExamCard(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+
+	st, ok, err := h.repo.StudentByUserID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if !ok {
+		c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "student not registered"}})
+		return
+	}
+	if !st.IsActive {
+		c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "user inactive"}})
+		return
+	}
+
+	examID := strings.TrimSpace(c.Param("id"))
+	if examID == "" {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "exam id required"}})
+		return
+	}
+
+	if err := h.repo.DismissExamCard(c.Request.Context(), examID, st.StudentID); err != nil {
+		switch err {
+		case studentexamrepo.ErrExamNotDismissible:
+			c.JSON(409, gin.H{"error": gin.H{"code": "conflict", "message": "exam card can only be dismissed after exam has finished"}})
+		default:
+			c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		}
+		return
+	}
+
+	c.JSON(200, gin.H{"data": gin.H{"ok": true}})
 }
 
 type joinReq struct {

@@ -27,6 +27,18 @@ const editorRef = ref(null)
 const editorInstance = ref(null)
 const uid = ref(`tiny-${Math.random().toString(36).slice(2, 9)}`)
 const isApplyingExternalContent = ref(false)
+const isEditorReady = ref(false)
+const normalizeToolbar = (value) => {
+  const raw = String(value || '').trim()
+  let next = raw || 'undo redo | blocks | bold italic underline forecolor | bullist numlist | table image link | fullscreen'
+  if (!/\balignleft\b|\baligncenter\b|\balignright\b/.test(next)) {
+    next += ' | alignleft aligncenter alignright'
+  }
+  if (!/\bltr\b|\brtl\b/.test(next)) {
+    next += ' | ltr rtl'
+  }
+  return next
+}
 const mathMlElements = [
   'math', 'semantics', 'annotation', 'annotation-xml',
   'mrow', 'mi', 'mn', 'mo',
@@ -173,6 +185,7 @@ const openMathDialog = (editor, initialLatex = '', initialDisplay = false, targe
 }
 
 const initEditor = async () => {
+  isEditorReady.value = false
   let attempts = 0
   while (!window.tinymce && attempts < 50) {
     await new Promise(r => setTimeout(r, 100))
@@ -187,9 +200,9 @@ const initEditor = async () => {
     plugins: [
       'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
       'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-      'insertdatetime', 'media', 'table', 'help', 'wordcount', 'emoticons'
+      'insertdatetime', 'media', 'table', 'help', 'wordcount', 'emoticons', 'directionality'
     ],
-    toolbar: props.toolbar,
+    toolbar: normalizeToolbar(props.toolbar),
     toolbar_mode: 'wrap',
     min_height: props.height,
     custom_elements: customMathElements,
@@ -202,6 +215,8 @@ const initEditor = async () => {
     content_css: ['default'],
     content_style: `
       body { font-family:Inter,Helvetica,Arial,sans-serif; font-size:14px; color: #475569; padding: 10px; }
+      body[dir="rtl"] { text-align: right; font-family: "Noto Naskh Arabic", "Amiri", Arial, sans-serif; }
+      [dir="rtl"] { direction: rtl; text-align: right; font-family: "Noto Naskh Arabic", "Amiri", Arial, sans-serif; }
       .math-tex { display: inline-flex; align-items: center; vertical-align: middle; white-space: nowrap; cursor: pointer; }
       .math-tex math { font-size: 1em; line-height: 1.2; }
       .math-tex[data-display="1"] { display: block; white-space: normal; margin: 0.5rem 0; }
@@ -265,9 +280,11 @@ const initEditor = async () => {
           editor.setContent(initialContent)
           isApplyingExternalContent.value = false
         }
+        isEditorReady.value = true
       })
 
       editor.on('change input undo redo SetContent ExecCommand', () => {
+        if (!isEditorReady.value) return
         if (isApplyingExternalContent.value) return
         syncModelValue(editor)
       })
@@ -296,6 +313,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  isEditorReady.value = false
   if (editorInstance.value) {
     editorInstance.value.destroy()
   }
