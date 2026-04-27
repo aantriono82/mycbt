@@ -17,31 +17,17 @@ services:
     volumes:
       - mycbt_redisdata:/data
 
-  minio:
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+  rustfs:
+    image: rustfs/rustfs:latest
     ports:
       - "9000:9000"
       - "9001:9001"
     volumes:
-      - mycbt_miniodata:/data
-
-  minio-init:
-    image: minio/mc:latest
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-      until /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin; do sleep 1; done;
-      /usr/bin/mc mb --ignore-existing myminio/mycbt-uploads;
-      /usr/bin/mc anonymous set public myminio/mycbt-uploads;
-      exit 0;
-      "
+      - mycbt_rustfs_data:/data
+      - mycbt_rustfs_logs:/logs
 
 volumes:
   mycbt_pgdata:
   mycbt_redisdata:
-  mycbt_miniodata:
+  mycbt_rustfs_data:
+  mycbt_rustfs_logs:

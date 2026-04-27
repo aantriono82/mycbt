@@ -19,15 +19,15 @@ type Config struct {
 	RedisDB       string
 	RedisPrefix   string
 
-	UploadProvider     string
-	UploadLocalDir     string
-	MinIOEndpoint      string
-	MinIOAccessKey     string
-	MinIOSecretKey     string
-	MinIOBucket        string
-	MinIOUseSSL        string
-	MinIOPublicBaseURL string
-	MinIOKeyPrefix     string
+	UploadProvider      string
+	UploadLocalDir      string
+	RustFSEndpoint      string
+	RustFSAccessKey     string
+	RustFSSecretKey     string
+	RustFSBucket        string
+	RustFSUseSSL        string
+	RustFSPublicBaseURL string
+	RustFSKeyPrefix     string
 
 	JWTSecret     string
 	JWTIssuer     string
@@ -66,15 +66,15 @@ func Load() Config {
 		RedisDB:       getenv("REDIS_DB", "0"),
 		RedisPrefix:   getenv("REDIS_PREFIX", "mycbt"),
 
-		UploadProvider:     getenv("UPLOAD_PROVIDER", "local"),
-		UploadLocalDir:     getenv("UPLOAD_LOCAL_DIR", "uploads"),
-		MinIOEndpoint:      getenv("MINIO_ENDPOINT", ""),
-		MinIOAccessKey:     getenv("MINIO_ACCESS_KEY", ""),
-		MinIOSecretKey:     getenv("MINIO_SECRET_KEY", ""),
-		MinIOBucket:        getenv("MINIO_BUCKET", ""),
-		MinIOUseSSL:        getenv("MINIO_USE_SSL", "false"),
-		MinIOPublicBaseURL: getenv("MINIO_PUBLIC_BASE_URL", ""),
-		MinIOKeyPrefix:     getenv("MINIO_KEY_PREFIX", ""),
+		UploadProvider:      getenv("UPLOAD_PROVIDER", "local"),
+		UploadLocalDir:      getenv("UPLOAD_LOCAL_DIR", "uploads"),
+		RustFSEndpoint:      getenvAny([]string{"RUSTFS_ENDPOINT", "MINIO_ENDPOINT"}, ""),
+		RustFSAccessKey:     getenvAny([]string{"RUSTFS_ACCESS_KEY", "MINIO_ACCESS_KEY"}, ""),
+		RustFSSecretKey:     getenvAny([]string{"RUSTFS_SECRET_KEY", "MINIO_SECRET_KEY"}, ""),
+		RustFSBucket:        getenvAny([]string{"RUSTFS_BUCKET", "MINIO_BUCKET"}, ""),
+		RustFSUseSSL:        getenvAny([]string{"RUSTFS_USE_SSL", "MINIO_USE_SSL"}, "false"),
+		RustFSPublicBaseURL: getenvAny([]string{"RUSTFS_PUBLIC_BASE_URL", "MINIO_PUBLIC_BASE_URL"}, ""),
+		RustFSKeyPrefix:     getenvAny([]string{"RUSTFS_KEY_PREFIX", "MINIO_KEY_PREFIX"}, ""),
 
 		JWTSecret:     getenv("JWT_SECRET", ""),
 		JWTIssuer:     getenv("JWT_ISSUER", "mycbt"),
@@ -98,6 +98,15 @@ func Load() Config {
 func getenv(k, fallback string) string {
 	if v := os.Getenv(k); v != "" {
 		return v
+	}
+	return fallback
+}
+
+func getenvAny(keys []string, fallback string) string {
+	for _, k := range keys {
+		if v := os.Getenv(k); v != "" {
+			return v
+		}
 	}
 	return fallback
 }

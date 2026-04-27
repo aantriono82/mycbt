@@ -42,10 +42,10 @@ func main() {
 	}
 
 	if objectStore, err := newObjectStore(ctx, cfg); err != nil {
-		log.Printf("warning: minio disabled, fallback to local uploads: %v", err)
+		log.Printf("warning: rustfs/s3 storage disabled, fallback to local uploads: %v", err)
 	} else if objectStore != nil {
 		deps.ObjectStore = objectStore
-		log.Printf("minio enabled: bucket=%s endpoint=%s", cfg.MinIOBucket, cfg.MinIOEndpoint)
+		log.Printf("rustfs/s3 storage enabled: bucket=%s endpoint=%s", cfg.RustFSBucket, cfg.RustFSEndpoint)
 	}
 
 	if cfg.DatabaseURL != "" {
@@ -133,18 +133,18 @@ func newObjectStore(ctx context.Context, cfg config.Config) (storage.ObjectStore
 	if provider == "" || provider == "local" {
 		return nil, nil
 	}
-	if provider != "minio" {
+	if provider != "rustfs" && provider != "s3" && provider != "minio" {
 		return nil, errors.New("unknown UPLOAD_PROVIDER")
 	}
 
-	useSSL := strings.EqualFold(strings.TrimSpace(cfg.MinIOUseSSL), "true") || strings.TrimSpace(cfg.MinIOUseSSL) == "1"
-	return storage.NewMinIOObjectStore(ctx, storage.MinIOConfig{
-		Endpoint:      cfg.MinIOEndpoint,
-		AccessKey:     cfg.MinIOAccessKey,
-		SecretKey:     cfg.MinIOSecretKey,
-		Bucket:        cfg.MinIOBucket,
+	useSSL := strings.EqualFold(strings.TrimSpace(cfg.RustFSUseSSL), "true") || strings.TrimSpace(cfg.RustFSUseSSL) == "1"
+	return storage.NewS3ObjectStore(ctx, storage.S3Config{
+		Endpoint:      cfg.RustFSEndpoint,
+		AccessKey:     cfg.RustFSAccessKey,
+		SecretKey:     cfg.RustFSSecretKey,
+		Bucket:        cfg.RustFSBucket,
 		UseSSL:        useSSL,
-		PublicBaseURL: cfg.MinIOPublicBaseURL,
-		KeyPrefix:     cfg.MinIOKeyPrefix,
+		PublicBaseURL: cfg.RustFSPublicBaseURL,
+		KeyPrefix:     cfg.RustFSKeyPrefix,
 	})
 }
