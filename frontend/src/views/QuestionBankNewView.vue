@@ -72,6 +72,7 @@ const questionForm = reactive({
   type: 'mc_single',
   stem: '',
   order_no: 1,
+  weight: 1,
   options_text: 'A|Opsi A|true\nB|Opsi B|false',
   answers_text: '',
   pairs_text: '',
@@ -366,7 +367,10 @@ const loadQuestions = async () => {
   try {
     const { data } = await api.get(`/api/v1/question-sets/${currentSetId.value}/questions`)
     questions.value = data?.data || []
-    if (!editingQuestionId.value) questionForm.order_no = questions.value.length + 1
+    if (!editingQuestionId.value) {
+      questionForm.order_no = questions.value.length + 1
+      questionForm.weight = 1
+    }
   } catch {
     errorMessage.value = 'Gagal memuat pertanyaan'
   }
@@ -440,6 +444,7 @@ const resetQuestionForm = (keepType = true) => {
   
   questionForm.stem = ''
   questionForm.order_no = getNextOrderNo()
+  questionForm.weight = 1
   questionForm.options_text = 'A|Opsi A|true\nB|Opsi B|false'
   questionForm.answers_text = ''
   questionForm.pairs_text = ''
@@ -479,7 +484,7 @@ const openQuickAddModal = () => {
 
 const buildTemplateQuestionPayload = (type, orderNo) => {
   const stem = `Soal ${orderNo}`
-  const payload = { type, stem, order_no: orderNo }
+  const payload = { type, stem, order_no: orderNo, weight: 1 }
 
   if (type === 'mc_single') {
     payload.options = [
@@ -580,6 +585,7 @@ const buildQuestionPayload = () => {
     type: questionForm.type,
     stem: questionForm.stem,
     order_no: Number(questionForm.order_no) || 1,
+    weight: Number(questionForm.weight) > 0 ? Number(questionForm.weight) : 1,
   }
   if (['mc_single', 'mc_multiple'].includes(questionForm.type)) {
      if (questionForm.type === 'mc_single') {
@@ -662,6 +668,7 @@ const applyQuestionToForm = (item) => {
   editingQuestionId.value = item.id
   questionForm.stem = item.stem || ''
   questionForm.order_no = item.order_no
+  questionForm.weight = Number(item.weight) > 0 ? Number(item.weight) : 1
   questionForm.options_text = (item.options || []).map(o => `${o.label}|${o.content}|${o.is_correct}`).join('\n')
   questionForm.answers_text = (item.answers || []).map(a => a.answer_text).join('\n')
   questionForm.pairs_text = (item.pairs || []).map(p => `${p.left_content}|${p.right_content}`).join('\n')
@@ -1032,6 +1039,16 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                 <div class="flex items-center gap-3">
                    <span class="text-xs font-black uppercase tracking-widest text-slate-400">Tipe Soal </span>
                    <FormControl v-model="questionForm.type" :options="questionTypeOptions" transparent class="min-w-[180px]" />
+                   <div class="flex items-center gap-2">
+                     <span class="text-xs font-black uppercase tracking-widest text-slate-400">Bobot</span>
+                     <input
+                       v-model.number="questionForm.weight"
+                       type="number"
+                       min="1"
+                       step="1"
+                       class="w-20 rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                     />
+                   </div>
                 </div>
               </div>
               <div class="flex items-center gap-3">
@@ -1159,6 +1176,16 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
               <div class="flex items-center gap-2">
                 <span class="text-xs font-black uppercase tracking-widest text-slate-400">Tipe</span>
                 <FormControl v-model="questionForm.type" :options="questionTypeOptions" transparent class="min-w-[180px]" />
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-black uppercase tracking-widest text-slate-400">Bobot</span>
+                  <input
+                    v-model.number="questionForm.weight"
+                    type="number"
+                    min="1"
+                    step="1"
+                    class="w-20 rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  />
+                </div>
               </div>
             </div>
             <div class="flex items-center gap-3">
@@ -1293,6 +1320,16 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
               <div class="flex items-center gap-2">
                 <span class="text-xs font-black uppercase tracking-widest text-slate-400">Tipe</span>
                 <FormControl v-model="questionForm.type" :options="questionTypeOptions" transparent class="min-w-[180px]" />
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-black uppercase tracking-widest text-slate-400">Bobot</span>
+                  <input
+                    v-model.number="questionForm.weight"
+                    type="number"
+                    min="1"
+                    step="1"
+                    class="w-20 rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  />
+                </div>
               </div>
             </div>
             <div class="flex items-center gap-3">
@@ -1432,6 +1469,16 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
               <div class="flex items-center gap-2">
                 <span class="text-xs font-black uppercase tracking-widest text-slate-400">Tipe</span>
                 <FormControl v-model="questionForm.type" :options="questionTypeOptions" transparent class="min-w-[180px]" />
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-black uppercase tracking-widest text-slate-400">Bobot</span>
+                  <input
+                    v-model.number="questionForm.weight"
+                    type="number"
+                    min="1"
+                    step="1"
+                    class="w-20 rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  />
+                </div>
               </div>
             </div>
             <div class="flex items-center gap-3">
@@ -1576,7 +1623,17 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                 <div class="flex items-center gap-3">
                    <span class="text-xs font-black uppercase tracking-widest text-slate-400">Tipe Soal </span>
                    <FormControl v-model="questionForm.type" :options="questionTypeOptions" transparent class="min-w-[180px]" />
-                </div>
+                   <div class="flex items-center gap-2">
+                     <span class="text-xs font-black uppercase tracking-widest text-slate-400">Bobot</span>
+                     <input
+                       v-model.number="questionForm.weight"
+                       type="number"
+                       min="1"
+                       step="1"
+                       class="w-20 rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                     />
+                   </div>
+                 </div>
               </div>
               <div class="flex items-center gap-3">
                 <button type="button" 
@@ -1708,7 +1765,17 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                 <div class="flex items-center gap-3">
                    <span class="text-xs font-black uppercase tracking-widest text-slate-400">Tipe Soal </span>
                    <FormControl v-model="questionForm.type" :options="questionTypeOptions" transparent class="min-w-[180px]" />
-                </div>
+                   <div class="flex items-center gap-2">
+                     <span class="text-xs font-black uppercase tracking-widest text-slate-400">Bobot</span>
+                     <input
+                       v-model.number="questionForm.weight"
+                       type="number"
+                       min="1"
+                       step="1"
+                       class="w-20 rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                     />
+                   </div>
+                 </div>
               </div>
               <div class="flex items-center gap-3">
                 <button type="button" 
@@ -1907,6 +1974,9 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                <div class="grid gap-5">
                  <FormField label="Tipe Soal">
                    <FormControl v-model="questionForm.type" :options="questionTypeOptions" />
+                 </FormField>
+                 <FormField label="Bobot Soal">
+                   <FormControl v-model.number="questionForm.weight" type="number" min="1" />
                  </FormField>
                  <FormField label="Isi Pertanyaan">
                    <FormControl v-model="questionForm.stem" type="textarea" rows="4" />

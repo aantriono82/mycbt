@@ -34,9 +34,16 @@ const schoolIdentity = ref({
 const masterLevels = ref([])
 const masterGroups = ref([])
 const masterSessions = ref([])
-const selectedTemplate = ref('default')
+const selectedTemplate = ref('official')
 const printTemplateStorageKey = 'mycbt.print.templatePreset'
 const templatePresets = [
+  {
+    value: 'official',
+    label: 'Kartu Dinas (ASAT)',
+    cardTitle: 'ASESMEN SUMATIF AKHIR SEMESTER',
+    cardSubtitle: 'Template kartu ujian resmi sekolah',
+    signatoryTitle: 'Kepala Sekolah',
+  },
   {
     value: 'default',
     label: 'Default CBT',
@@ -64,13 +71,6 @@ const templatePresets = [
     cardTitle: 'KARTU TRY OUT',
     cardSubtitle: 'Simulasi ujian dan evaluasi kesiapan',
     signatoryTitle: 'Koordinator Try Out',
-  },
-  {
-    value: 'official',
-    label: 'Kartu Dinas (ASAT)',
-    cardTitle: 'ASESMEN SUMATIF AKHIR SEMESTER',
-    cardSubtitle: 'Template kartu ujian resmi sekolah',
-    signatoryTitle: 'Kepala Sekolah',
   },
 ]
 const signatoryName = ref('')
@@ -561,92 +561,95 @@ const printExamCards = async () => {
         `Kartu Ujian - ${selectedExamTitle()}`,
         `
           <style>
-            @page { size: A4 portrait; margin: 6mm; }
-            body { margin: 6mm !important; }
-            body > h1 { font-size: 14px; margin: 0 0 2mm; text-align: center; }
-            body > .meta { font-size: 10px; margin: 0 0 4mm; text-align: center; }
+            @page { size: A4 portrait; margin: 8mm; }
+            body { margin: 0 !important; font-family: "Arial", sans-serif; }
+            body > h1 { font-size: 14px; margin: 2mm 0; text-align: center; }
+            body > .meta { font-size: 10px; margin: 0 0 4mm; text-align: center; opacity: 0.7; }
             .official-cards {
               display: grid;
-              grid-template-columns: 1fr;
-              gap: 4mm;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 2mm;
+              padding: 2mm;
             }
             .official-card {
-              border: 1.5pt solid #000;
+              border: 1pt solid #000;
               break-inside: avoid;
               page-break-inside: avoid;
               background: #fff;
               width: 100%;
-              max-width: 180mm;
-              margin: 0 auto;
+              min-height: 68mm;
+              max-height: 70mm;
               position: relative;
+              overflow: hidden;
+              display: flex;
+              flex-direction: column;
             }
             .official-header-row {
               display: grid;
-              grid-template-columns: 25mm 1fr 25mm;
-              border-bottom: 1.5pt solid #000;
-              min-height: 25mm;
+              grid-template-columns: 18mm 1fr 18mm;
+              border-bottom: 1pt solid #000;
+              min-height: 18mm;
             }
             .official-logo-wrap {
               display: flex;
               align-items: center;
               justify-content: center;
-              padding: 2mm;
+              padding: 1mm;
             }
-            .official-logo-wrap.left { border-right: 1pt solid #000; }
-            .official-logo-wrap.right { border-left: 1pt solid #000; }
-            .official-logo { width: 18mm; height: 18mm; object-fit: contain; }
-            .official-logo-fallback { font-size: 9px; font-weight: bold; color: #666; }
+            .official-logo-wrap.left { border-right: 0.5pt solid #000; }
+            .official-logo-wrap.right { border-left: 0.5pt solid #000; }
+            .official-logo { width: 14mm; height: 14mm; object-fit: contain; }
+            .official-logo-fallback { font-size: 7px; font-weight: bold; color: #666; }
             
-            .official-header-text { text-align: center; padding: 2mm; display: flex; flex-direction: column; justify-content: center; }
-            .official-header-text .line { line-height: 1.2; font-family: "Arial", sans-serif; }
-            .official-header-text .line.small-bold { font-size: 9pt; font-weight: 700; }
-            .official-header-text .line.school { font-size: 12pt; font-weight: 700; }
-            .official-header-text .line.exam { font-size: 10pt; font-weight: 700; }
-            .official-header-text .line.year { font-size: 9pt; font-weight: 700; }
+            .official-header-text { text-align: center; padding: 1mm; display: flex; flex-direction: column; justify-content: center; }
+            .official-header-text .line { line-height: 1.1; }
+            .official-header-text .line.small-bold { font-size: 6.5pt; font-weight: 700; text-transform: uppercase; }
+            .official-header-text .line.school { font-size: 8.5pt; font-weight: 700; text-transform: uppercase; }
+            .official-header-text .line.exam { font-size: 7.5pt; font-weight: 700; }
+            .official-header-text .line.year { font-size: 7pt; font-weight: 700; }
 
             .official-identity {
-              padding: 2mm 3mm;
-              border-bottom: 1pt solid #000;
+              padding: 1.5mm 2mm;
+              border-bottom: 0.5pt solid #000;
               display: flex;
               flex-direction: column;
-              gap: 0.5mm;
+              gap: 0.3mm;
+              flex-grow: 1;
             }
             .identity-row {
               display: grid;
-              grid-template-columns: 20mm 4mm 1fr;
-              font-size: 9pt;
-              line-height: 1.3;
+              grid-template-columns: 14mm 3mm 1fr;
+              font-size: 7.5pt;
+              line-height: 1.2;
             }
             .identity-row .label { color: #111; }
-            .identity-row .colon { text-align: left; }
-            .identity-row .value { color: #111; }
             .identity-row .value.bold { font-weight: 700; }
 
             .official-bottom {
               display: grid;
-              grid-template-columns: 1fr 1fr 1fr;
-              min-height: 30mm;
+              grid-template-columns: 1fr 20mm 1fr;
+              min-height: 25mm;
             }
             .no-peserta-col {
               display: flex;
               flex-direction: column;
               align-items: center;
               justify-content: flex-start;
-              padding-top: 4mm;
-              border-right: 1pt solid #000;
+              padding-top: 2mm;
+              border-right: 0.5pt solid #000;
             }
-            .no-peserta-col .title { font-size: 10pt; font-weight: 700; text-decoration: underline; margin-bottom: 2mm; }
-            .no-peserta-col .number { font-size: 14pt; font-weight: 700; }
+            .no-peserta-col .title { font-size: 7.5pt; font-weight: 700; text-decoration: underline; margin-bottom: 1mm; }
+            .no-peserta-col .number { font-size: 11pt; font-weight: 900; letter-spacing: -0.5px; }
 
             .photo-col {
               display: flex;
               align-items: center;
               justify-content: center;
-              border-right: 1pt solid #000;
+              border-right: 0.5pt solid #000;
             }
             .participant-photo-box {
-              width: 20mm;
-              height: 25mm;
+              width: 15mm;
+              height: 20mm;
               border: 0.5pt solid #000;
               display: flex;
               align-items: center;
@@ -654,23 +657,20 @@ const printExamCards = async () => {
               overflow: hidden;
             }
             .participant-photo { width: 100%; height: 100%; object-fit: cover; }
-            .participant-photo-fallback { 
-              font-size: 7pt; color: #666; text-align: center; 
-            }
+            .participant-photo-fallback { font-size: 6pt; color: #666; text-align: center; }
 
             .signature-col {
               display: flex;
               flex-direction: column;
-              align-items: flex-end;
+              align-items: center;
               justify-content: flex-start;
-              padding: 2mm 4mm;
-              font-size: 8pt;
+              padding: 1.5mm;
+              font-size: 6.5pt;
             }
-            .signature-box { text-align: right; width: 100%; }
-            .signature-box .ttd-space { height: 12mm; }
-            .signature-box .name { font-weight: 700; text-decoration: none; border-bottom: 0px; position: relative; }
-            .signature-box .name::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; border-bottom: 1pt solid #000; }
-            .signature-box .nip { margin-top: 1px; }
+            .signature-box { text-align: center; width: 100%; }
+            .signature-box .ttd-space { height: 8mm; }
+            .signature-box .name { font-weight: 700; text-decoration: underline; }
+            .signature-box .nip { margin-top: 0.5px; }
           </style>
           <div class="meta">
             Ujian: <strong>${escapeHtml(selectedExamTitle())}</strong>
@@ -856,50 +856,64 @@ watch(levelFilter, () => {
       </div>
 
       <CardBox>
-        <div class="mb-6 border-b dark:border-slate-800 pb-4">
-          <h3 class="font-bold text-slate-700 dark:text-slate-100 mb-4">Pengaturan Cetak</h3>
-          <FormField label="Pilih Ujian">
-            <FormControl
-              v-model="selectedExamId"
-              :options="exams.map((item) => ({ value: item.id, label: item.title }))"
-            />
-          </FormField>
-        </div>
-        <div class="grid gap-4 pb-4 md:grid-cols-2">
-          <FormField label="Preset Template Kartu">
-            <div class="flex gap-2">
+        <div class="p-5 mb-6 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/10">
+          <h3 class="font-black text-slate-800 dark:text-slate-100 mb-5 uppercase tracking-tighter text-sm flex items-center gap-2">
+            <div class="w-1.5 h-4 bg-info rounded-full"></div>
+            Pengaturan & Filter Cetak
+          </h3>
+          <div class="grid gap-5 md:grid-cols-2">
+            <FormField label="Pilih Ujian">
               <FormControl
-                v-model="selectedTemplate"
-                :options="templatePresets.map((item) => ({ value: item.value, label: item.label }))"
+                v-model="selectedExamId"
+                :options="exams.map((item) => ({ value: item.id, label: item.title }))"
               />
-              <BaseButton color="whiteDark" outline label="Terapkan" @click="applyTemplatePreset" />
-            </div>
-          </FormField>
-          <FormField label="Filter Peserta (nama/username/NIS)">
-            <FormControl v-model="participantQuery" placeholder="Contoh: Budi / 10231" />
-          </FormField>
-          <FormField label="Status Kehadiran">
-            <FormControl
-              v-model="attendanceFilter"
-              :options="[
-                { value: 'all', label: 'Semua peserta target' },
-                { value: 'attended', label: 'Hanya yang sudah hadir' },
-                { value: 'not_attended', label: 'Hanya yang belum hadir' },
-              ]"
-            />
-          </FormField>
-          <FormField label="Filter Level">
-            <FormControl v-model="levelFilter" :options="levelOptions" />
-          </FormField>
-          <FormField label="Filter Kelas / Group">
-            <FormControl v-model="groupFilter" :options="groupOptions" />
-          </FormField>
-          <FormField label="Filter Sesi">
-            <FormControl v-model="sessionFilter" :options="sessionOptions" />
-          </FormField>
-          <FormField label="Status Sesi Ujian">
-            <FormControl v-model="sessionStatusFilter" :options="sessionStatusOptions" />
-          </FormField>
+            </FormField>
+            <FormField label="Preset Template Kartu">
+              <div class="flex gap-3 items-center">
+                <div class="flex-1">
+                  <FormControl
+                    v-model="selectedTemplate"
+                    :options="templatePresets.map((item) => ({ value: item.value, label: item.label }))"
+                  />
+                </div>
+                <div class="bg-purple-100/50 dark:bg-purple-900/20 p-1.5 rounded-2xl border border-purple-200 dark:border-purple-800 flex items-center shadow-sm">
+                  <BaseButton 
+                    color="purple" 
+                    label="Terapkan" 
+                    @click="applyTemplatePreset" 
+                    class="!bg-purple-600 !border-purple-700 hover:!bg-purple-700 text-white font-bold shadow-md min-w-[100px]"
+                  />
+                </div>
+              </div>
+            </FormField>
+            <FormField label="Filter Peserta (nama/username/NIS)">
+              <FormControl v-model="participantQuery" placeholder="Contoh: Budi / 10231" />
+            </FormField>
+            <FormField label="Status Kehadiran">
+              <FormControl
+                v-model="attendanceFilter"
+                :options="[
+                  { value: 'all', label: 'Semua peserta target' },
+                  { value: 'attended', label: 'Hanya yang sudah hadir' },
+                  { value: 'not_attended', label: 'Hanya yang belum hadir' },
+                ]"
+              />
+            </FormField>
+            <FormField label="Filter Level">
+              <FormControl v-model="levelFilter" :options="levelOptions" />
+            </FormField>
+            <FormField label="Filter Kelas / Group">
+              <FormControl v-model="groupFilter" :options="groupOptions" />
+            </FormField>
+            <FormField label="Filter Sesi">
+              <FormControl v-model="sessionFilter" :options="sessionOptions" />
+            </FormField>
+            <FormField label="Status Sesi Ujian">
+              <FormControl v-model="sessionStatusFilter" :options="sessionStatusOptions" />
+            </FormField>
+          </div>
+        </div>
+        <div class="grid gap-4 md:grid-cols-2 mb-6">
           <FormField label="Nama Penandatangan">
             <FormControl v-model="signatoryName" placeholder="Nama panitia / kepala sekolah" />
           </FormField>

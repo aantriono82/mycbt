@@ -430,6 +430,12 @@ const routes = [
     component: () => import('@/views/student/StudentExamsView.vue'),
   },
   {
+    meta: { title: 'Token Ujian'},
+    path: '/student/ujian/:examId/token',
+    name: 'student-ujian-token-gate',
+    component: () => import('@/views/student/StudentExamTokenGateView.vue'),
+  },
+  {
     meta: { title: 'Kerjakan Ujian'},
     path: '/student/kerjakan',
     name: 'student-kerjakan-home',
