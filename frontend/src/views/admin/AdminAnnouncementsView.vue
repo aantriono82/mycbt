@@ -373,8 +373,7 @@ onMounted(async () => {
               />
               <BaseButton
                 :icon="mdiPencil"
-                color="whiteDark"
-                outline
+                color="purple"
                 :label="isEditing ? 'Batal Edit' : 'Reset Form'"
                 @click="resetForm"
               />
