@@ -52,7 +52,7 @@ func (s *LocalObjectStore) PutObject(_ context.Context, objectKey, _ string, bod
 	return "/" + filepath.ToSlash(filepath.Join(s.BaseDir, objectKey)), nil
 }
 
-type MinIOObjectStore struct {
+type S3ObjectStore struct {
 	Client        *minio.Client
 	Bucket        string
 	KeyPrefix     string
@@ -61,7 +61,7 @@ type MinIOObjectStore struct {
 	Endpoint      string
 }
 
-type MinIOConfig struct {
+type S3Config struct {
 	Endpoint      string
 	AccessKey     string
 	SecretKey     string
@@ -71,13 +71,13 @@ type MinIOConfig struct {
 	KeyPrefix     string
 }
 
-func NewMinIOObjectStore(ctx context.Context, cfg MinIOConfig) (*MinIOObjectStore, error) {
+func NewS3ObjectStore(ctx context.Context, cfg S3Config) (*S3ObjectStore, error) {
 	endpoint := strings.TrimSpace(cfg.Endpoint)
 	bucket := strings.TrimSpace(cfg.Bucket)
 	accessKey := strings.TrimSpace(cfg.AccessKey)
 	secretKey := strings.TrimSpace(cfg.SecretKey)
 	if endpoint == "" || bucket == "" || accessKey == "" || secretKey == "" {
-		return nil, fmt.Errorf("incomplete minio configuration")
+		return nil, fmt.Errorf("incomplete s3-compatible object storage configuration")
 	}
 
 	client, err := minio.New(endpoint, &minio.Options{
@@ -85,7 +85,7 @@ func NewMinIOObjectStore(ctx context.Context, cfg MinIOConfig) (*MinIOObjectStor
 		Secure: cfg.UseSSL,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("minio client: %w", err)
+		return nil, fmt.Errorf("s3 client: %w", err)
 	}
 
 	exists, err := client.BucketExists(ctx, bucket)
@@ -98,7 +98,7 @@ func NewMinIOObjectStore(ctx context.Context, cfg MinIOConfig) (*MinIOObjectStor
 		}
 	}
 
-	return &MinIOObjectStore{
+	return &S3ObjectStore{
 		Client:        client,
 		Bucket:        bucket,
 		KeyPrefix:     strings.Trim(strings.TrimSpace(cfg.KeyPrefix), "/"),
@@ -108,7 +108,7 @@ func NewMinIOObjectStore(ctx context.Context, cfg MinIOConfig) (*MinIOObjectStor
 	}, nil
 }
 
-func (s *MinIOObjectStore) PutObject(ctx context.Context, objectKey, contentType string, body io.Reader, size int64) (string, error) {
+func (s *S3ObjectStore) PutObject(ctx context.Context, objectKey, contentType string, body io.Reader, size int64) (string, error) {
 	objectKey = strings.TrimLeft(filepath.ToSlash(strings.TrimSpace(objectKey)), "/")
 	if objectKey == "" {
 		return "", fmt.Errorf("object key is required")
