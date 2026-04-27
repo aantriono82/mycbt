@@ -10,15 +10,16 @@ import (
 )
 
 type Teacher struct {
-	ID       string `json:"id"`
-	UserID   string `json:"user_id"`
-	Username string `json:"username"`
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Phone    string `json:"phone"`
-	NIP      string `json:"nip"`
-	Jenjang  string `json:"jenjang"`
-	IsActive bool   `json:"is_active"`
+	ID           string `json:"id"`
+	UserID       string `json:"user_id"`
+	Username     string `json:"username"`
+	Name         string `json:"name"`
+	Email        string `json:"email"`
+	Phone        string `json:"phone"`
+	NIP          string `json:"nip"`
+	Jenjang      string `json:"jenjang"`
+	PhotoURL     string `json:"photo_url"`
+	IsActive     bool   `json:"is_active"`
 	MapelSummary string `json:"mapel_summary"`
 	LevelSummary string `json:"level_summary"`
 	GroupSummary string `json:"group_summary"`
@@ -36,6 +37,7 @@ type Student struct {
 	ProgramID string `json:"program_id"`
 	LevelID   string `json:"level_id"`
 	GroupID   string `json:"group_id"`
+	PhotoURL  string `json:"photo_url"`
 	IsActive  bool   `json:"is_active"`
 }
 
@@ -47,7 +49,7 @@ func NewStudents(pool *pgxpool.Pool) *StudentsRepo { return &StudentsRepo{pool: 
 
 func (r *TeachersRepo) List(ctx context.Context, query string, limit, offset int) ([]Teacher, int, error) {
 	const q = `
-SELECT t.id, u.id, u.username, u.name, COALESCE(u.email,''), COALESCE(t.nip,''), COALESCE(t.jenjang,''), u.is_active,
+SELECT t.id, u.id, u.username, u.name, COALESCE(u.email,''), COALESCE(u.phone,''), COALESCE(t.nip,''), COALESCE(t.jenjang,''), COALESCE(u.photo_url,''), u.is_active,
        COALESCE(sub.codes, ''), COALESCE(lvl.names, ''), COALESCE(grp.names, '')
 FROM teachers t
 JOIN users u ON u.id = t.user_id
@@ -81,7 +83,7 @@ LIMIT $2 OFFSET $3`
 	out := []Teacher{}
 	for rows.Next() {
 		var it Teacher
-		if err := rows.Scan(&it.ID, &it.UserID, &it.Username, &it.Name, &it.Email, &it.NIP, &it.Jenjang, &it.IsActive, &it.MapelSummary, &it.LevelSummary, &it.GroupSummary); err != nil {
+		if err := rows.Scan(&it.ID, &it.UserID, &it.Username, &it.Name, &it.Email, &it.Phone, &it.NIP, &it.Jenjang, &it.PhotoURL, &it.IsActive, &it.MapelSummary, &it.LevelSummary, &it.GroupSummary); err != nil {
 			return nil, 0, fmt.Errorf("scan: %w", err)
 		}
 		out = append(out, it)
@@ -131,7 +133,7 @@ LEFT JOIN (
 WHERE t.id = $1
 LIMIT 1`
 	var it Teacher
-	err := r.pool.QueryRow(ctx, q, id).Scan(&it.ID, &it.UserID, &it.Username, &it.Name, &it.Email, &it.Phone, &it.NIP, &it.Jenjang, &it.IsActive, &it.MapelSummary, &it.LevelSummary, &it.GroupSummary)
+	err := r.pool.QueryRow(ctx, q, id).Scan(&it.ID, &it.UserID, &it.Username, &it.Name, &it.Email, &it.Phone, &it.NIP, &it.Jenjang, &it.PhotoURL, &it.IsActive, &it.MapelSummary, &it.LevelSummary, &it.GroupSummary)
 	if err != nil {
 		if isNoRows(err) {
 			return Teacher{}, false, nil
@@ -143,9 +145,9 @@ LIMIT 1`
 
 func (r *StudentsRepo) List(ctx context.Context, query string, limit, offset int) ([]Student, int, error) {
 	const q = `
-SELECT s.id, u.id, u.username, u.name, COALESCE(u.email,''), s.nis,
+SELECT s.id, u.id, u.username, u.name, COALESCE(u.email,''), COALESCE(u.phone,''), s.nis,
        COALESCE(s.jenjang,''), COALESCE(s.program_id::text,''), COALESCE(s.level_id::text,''), COALESCE(s.group_id::text,''),
-       u.is_active
+       COALESCE(u.photo_url,''), u.is_active
 FROM students s
 JOIN users u ON u.id = s.user_id
 WHERE ($1 = '' OR u.username ILIKE '%'||$1||'%' OR u.name ILIKE '%'||$1||'%' OR COALESCE(u.email,'') ILIKE '%'||$1||'%' OR s.nis ILIKE '%'||$1||'%')
@@ -160,7 +162,7 @@ LIMIT $2 OFFSET $3`
 	out := []Student{}
 	for rows.Next() {
 		var it Student
-		if err := rows.Scan(&it.ID, &it.UserID, &it.Username, &it.Name, &it.Email, &it.NIS, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.IsActive); err != nil {
+		if err := rows.Scan(&it.ID, &it.UserID, &it.Username, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.PhotoURL, &it.IsActive); err != nil {
 			return nil, 0, fmt.Errorf("scan: %w", err)
 		}
 		out = append(out, it)
@@ -194,9 +196,9 @@ WHERE ($1 = '' OR u.username ILIKE '%'||$1||'%' OR u.name ILIKE '%'||$1||'%' OR 
   )`
 
 	const q = `
-SELECT s.id, u.id, u.username, u.name, COALESCE(u.email,''), s.nis,
+SELECT s.id, u.id, u.username, u.name, COALESCE(u.email,''), COALESCE(u.phone,''), s.nis,
        COALESCE(s.jenjang,''), COALESCE(s.program_id::text,''), COALESCE(s.level_id::text,''), COALESCE(s.group_id::text,''),
-       u.is_active ` + base + `
+       COALESCE(u.photo_url,''), u.is_active ` + base + `
 ORDER BY u.name ASC
 LIMIT $3 OFFSET $4`
 
@@ -209,7 +211,7 @@ LIMIT $3 OFFSET $4`
 	out := []Student{}
 	for rows.Next() {
 		var it Student
-		if err := rows.Scan(&it.ID, &it.UserID, &it.Username, &it.Name, &it.Email, &it.NIS, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.IsActive); err != nil {
+		if err := rows.Scan(&it.ID, &it.UserID, &it.Username, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.PhotoURL, &it.IsActive); err != nil {
 			return nil, 0, fmt.Errorf("scan: %w", err)
 		}
 		out = append(out, it)
@@ -230,13 +232,13 @@ func (r *StudentsRepo) Get(ctx context.Context, id string) (Student, bool, error
 	const q = `
 SELECT s.id, u.id, u.username, u.name, COALESCE(u.email,''), COALESCE(u.phone,''), s.nis,
        COALESCE(s.jenjang,''), COALESCE(s.program_id::text,''), COALESCE(s.level_id::text,''), COALESCE(s.group_id::text,''),
-       u.is_active
+       COALESCE(u.photo_url,''), u.is_active
 FROM students s
 JOIN users u ON u.id = s.user_id
 WHERE s.id = $1
 LIMIT 1`
 	var it Student
-	err := r.pool.QueryRow(ctx, q, id).Scan(&it.ID, &it.UserID, &it.Username, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.IsActive)
+	err := r.pool.QueryRow(ctx, q, id).Scan(&it.ID, &it.UserID, &it.Username, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.PhotoURL, &it.IsActive)
 	if err != nil {
 		if isNoRows(err) {
 			return Student{}, false, nil
@@ -486,6 +488,7 @@ SELECT s.id::text,
        COALESCE(s.program_id::text,''),
        COALESCE(s.level_id::text,''),
        COALESCE(s.group_id::text,''),
+       COALESCE(u.photo_url,''),
        u.is_active
 `+base, strings.TrimSpace(levelID), strings.TrimSpace(groupID), strings.TrimSpace(studentID))
 	if err != nil {
@@ -508,6 +511,7 @@ SELECT s.id::text,
 			&it.ProgramID,
 			&it.LevelID,
 			&it.GroupID,
+			&it.PhotoURL,
 			&it.IsActive,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan student: %w", err)
