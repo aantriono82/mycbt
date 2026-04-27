@@ -11,6 +11,7 @@ type ExamAttendanceParticipant struct {
 	Username       string `json:"username"`
 	Name           string `json:"name"`
 	NIS            string `json:"nis"`
+	PhotoURL       string `json:"photo_url,omitempty"`
 	LevelName      string `json:"level_name,omitempty"`
 	GroupName      string `json:"group_name,omitempty"`
 	Attended       bool   `json:"attended"`
@@ -67,6 +68,7 @@ SELECT ts.student_id::text,
        u.username,
        u.name,
        st.nis,
+       COALESCE(u.photo_url,''),
        COALESCE(lv.name,''),
        COALESCE(gr.name,''),
        (sa.id IS NOT NULL) AS attended,
@@ -93,6 +95,7 @@ LIMIT $3 OFFSET $4`, examID, strings.TrimSpace(f.Q), f.Limit, f.Offset)
 			&it.Username,
 			&it.Name,
 			&it.NIS,
+			&it.PhotoURL,
 			&it.LevelName,
 			&it.GroupName,
 			&it.Attended,

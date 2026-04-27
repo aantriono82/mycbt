@@ -23,6 +23,11 @@ const errorMessage = ref('')
 const successMessage = ref('')
 const query = ref('')
 const editingId = ref('')
+const editingUserId = ref('')
+
+const photoFile = ref(null)
+const photoPreview = ref(null)
+const isUploadingPhoto = ref(false)
 
 const programs = ref([])
 const levels = ref([])
@@ -39,6 +44,7 @@ const form = reactive({
   level_id: '',
   group_id: '',
   phone: '',
+  photo_url: '',
   is_active: true,
 })
 
@@ -82,7 +88,10 @@ const resetForm = () => {
   form.level_id = ''
   form.group_id = ''
   form.phone = ''
+  form.photo_url = ''
   form.is_active = true
+  photoFile.value = null
+  photoPreview.value = null
 }
 
 const loadLookups = async () => {
@@ -136,7 +145,11 @@ const startEditStudent = (student) => {
   form.level_id = student.level_id || ''
   form.group_id = student.group_id || ''
   form.phone = student.phone || ''
+  form.photo_url = student.photo_url || ''
   form.is_active = !!student.is_active
+  editingUserId.value = student.user_id || ''
+  photoFile.value = null
+  photoPreview.value = null
 }
 
 const saveStudent = async () => {
@@ -271,6 +284,54 @@ const copyId = (id) => {
   alert('ID disalin ke clipboard')
 }
 
+const handlePhotoUpload = (e) => {
+  const file = e.target.files[0]
+  if (file) {
+    photoFile.value = file
+    photoPreview.value = URL.createObjectURL(file)
+  }
+}
+
+const uploadStudentPhoto = async () => {
+  if (!photoFile.value || !editingUserId.value) return
+  isUploadingPhoto.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+
+  try {
+    const formData = new FormData()
+    formData.append('file', photoFile.value)
+
+    const { data } = await api.post(`/api/v1/me/photo?target_user_id=${editingUserId.value}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+
+    form.photo_url = data?.data?.photo_url || ''
+    successMessage.value = 'Foto siswa berhasil diperbarui'
+    photoFile.value = null
+    photoPreview.value = null
+
+    // Update list to show new photo if visible
+    await loadStudents()
+  } catch (error) {
+    errorMessage.value = error?.response?.data?.error?.message || 'Gagal mengunggah foto'
+  } finally {
+    isUploadingPhoto.value = false
+  }
+}
+
+const getStudentAvatar = (student) => {
+  const photo = student.photo_url
+  if (photo) {
+    if (photo.startsWith('/uploads')) {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+      return `${baseUrl}${photo}`
+    }
+    return photo
+  }
+  return `https://api.dicebear.com/7.x/initials/svg?seed=${student.username || 'Student'}&backgroundColor=0033ff`
+}
+
 onMounted(async () => {
   await loadLookups()
   await loadStudents()
@@ -297,6 +358,30 @@ onMounted(async () => {
           <h3 class="mb-4 text-lg font-semibold dark:text-slate-100">
             {{ isEditing ? 'Edit Siswa' : 'Tambah Siswa' }}
           </h3>
+
+          <div v-if="isEditing" class="mb-6 flex flex-col items-center gap-4 border-b dark:border-slate-800 pb-6">
+            <div class="relative group">
+              <div class="h-24 w-24 overflow-hidden rounded-full border-4 border-blue-50 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 shadow-md">
+                <img :src="photoPreview || getStudentAvatar(form)" class="h-full w-full object-cover" alt="Student Photo" />
+              </div>
+              <label class="absolute bottom-0 right-0 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-all hover:scale-110 hover:bg-blue-700 ring-2 ring-white dark:ring-slate-900">
+                <BaseIcon :path="mdiCamera" size="16" />
+                <input type="file" class="hidden" accept="image/*" @change="handlePhotoUpload" />
+              </label>
+            </div>
+            <div v-if="photoFile" class="flex flex-col items-center gap-2">
+              <BaseButton
+                color="info"
+                :label="isUploadingPhoto ? 'Mengunggah...' : 'Simpan Foto Baru'"
+                :icon="mdiUpload"
+                small
+                :disabled="isUploadingPhoto"
+                @click="uploadStudentPhoto"
+              />
+              <p class="text-[10px] text-slate-400">Klik simpan untuk menerapkan foto baru</p>
+            </div>
+          </div>
+
           <div class="grid gap-4">
             <FormField label="Username">
               <FormControl v-model="form.username" placeholder="siswa.baru" />
@@ -411,6 +496,7 @@ onMounted(async () => {
             <table class="w-full text-left text-sm">
               <thead class="border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 uppercase text-xs tracking-wider">
                 <tr>
+                  <th class="px-3 py-3">Foto</th>
                   <th class="px-3 py-3">Nama</th>
                   <th class="px-3 py-3">Username</th>
                   <th class="px-3 py-3">NIS</th>
@@ -423,6 +509,11 @@ onMounted(async () => {
               </thead>
               <tbody>
                 <tr v-for="student in students" :key="student.id" class="border-b dark:border-slate-800 last:border-b-0 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors">
+                  <td class="px-3 py-3">
+                    <div class="h-10 w-10 overflow-hidden rounded-full border border-slate-200 dark:border-slate-700 bg-slate-100">
+                      <img :src="getStudentAvatar(student)" class="h-full w-full object-cover" alt="" />
+                    </div>
+                  </td>
                   <td class="px-3 py-3 font-medium dark:text-slate-200">{{ student.name }}</td>
                   <td class="px-3 py-3 text-slate-500 dark:text-slate-400">{{ student.username }}</td>
                   <td class="px-3 py-3 text-slate-500 dark:text-slate-400">{{ student.nis }}</td>

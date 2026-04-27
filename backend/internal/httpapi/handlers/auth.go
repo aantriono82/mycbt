@@ -257,6 +257,17 @@ func (h *AuthHandler) UploadPhoto(c *gin.Context) {
 		return
 	}
 
+	// Admin can upload for other users
+	targetUserID := c.Query("target_user_id")
+	if targetUserID != "" && targetUserID != userID {
+		role := middleware.GetUserRole(c)
+		if role != "admin" {
+			c.JSON(http.StatusForbidden, gin.H{"error": gin.H{"code": "forbidden", "message": "only admin can upload for others"}})
+			return
+		}
+		userID = targetUserID
+	}
+
 	file, err := c.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "bad_request", "message": "file is required"}})

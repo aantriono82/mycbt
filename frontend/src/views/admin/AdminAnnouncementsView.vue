@@ -363,7 +363,7 @@ onMounted(async () => {
             <FormField v-if="form.target_type !== 'all'" label="Pilih Target">
               <FormControl v-model="form.target_id" :options="targetOptions" />
             </FormField>
-            <BaseButtons>
+            <BaseButtons no-wrap class-addon="mr-2 last:mr-0 mb-0" mb="mb-0">
               <BaseButton
                 :icon="isEditing ? mdiContentSave : mdiPlus"
                 color="info"
