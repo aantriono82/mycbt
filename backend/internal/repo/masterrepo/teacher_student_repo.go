@@ -108,7 +108,7 @@ WHERE ($1 = '' OR u.username ILIKE '%'||$1||'%' OR u.name ILIKE '%'||$1||'%' OR 
 
 func (r *TeachersRepo) Get(ctx context.Context, id string) (Teacher, bool, error) {
 	const q = `
-SELECT t.id, u.id, u.username, u.name, COALESCE(u.email,''), COALESCE(u.phone,''), COALESCE(t.nip,''), COALESCE(t.jenjang,''), u.is_active,
+SELECT t.id, u.id, u.username, u.name, COALESCE(u.email,''), COALESCE(u.phone,''), COALESCE(t.nip,''), COALESCE(t.jenjang,''), COALESCE(u.photo_url,''), u.is_active,
        COALESCE(sub.codes, ''), COALESCE(lvl.names, ''), COALESCE(grp.names, '')
 FROM teachers t
 JOIN users u ON u.id = t.user_id

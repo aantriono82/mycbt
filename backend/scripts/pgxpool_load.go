@@ -1,3 +1,6 @@
+//go:build bench
+// +build bench
+
 package main
 
 import (
@@ -137,4 +140,3 @@ func main() {
 	fmt.Printf("duration=%.3fs throughput=%.2f req/s\n", totalElapsed.Seconds(), throughput)
 	fmt.Printf("latency_ms avg=%.3f p50=%.3f p95=%.3f p99=%.3f\n", avgMs, p50, p95, p99)
 }
-
