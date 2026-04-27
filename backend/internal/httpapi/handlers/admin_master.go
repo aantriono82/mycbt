@@ -1152,7 +1152,16 @@ func (h *AdminMasterHandler) CreateTeacher(c *gin.Context) {
 		return
 	}
 
-	it, _, _ := h.teachers.Get(c.Request.Context(), teacherID)
+	it, ok, err := h.teachers.Get(c.Request.Context(), teacherID)
+	if err != nil {
+		c.Error(err)
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if !ok {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "created teacher not found"}})
+		return
+	}
 	c.JSON(201, gin.H{"data": it})
 }
 
@@ -1858,12 +1867,12 @@ func (h *AdminMasterHandler) BulkApproveRegistrations(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"data": gin.H{
-		"matched_total":    total,
-		"processed":        processed,
-		"approved":         approved,
-		"failed":           failed,
-		"remaining":        remaining,
-		"failure_details":  failures,
+		"matched_total":     total,
+		"processed":         processed,
+		"approved":          approved,
+		"failed":            failed,
+		"remaining":         remaining,
+		"failure_details":   failures,
 		"failure_truncated": failed > len(failures),
 	}})
 }
