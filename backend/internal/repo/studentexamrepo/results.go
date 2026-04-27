@@ -120,8 +120,9 @@ type ItemGradingDetail struct {
 }
 
 type qinfo struct {
-	ID   string
-	Type string
+	ID     string
+	Type   string
+	Weight int
 }
 
 func (r *Repo) ComputeAutoScore(ctx context.Context, sessionID, studentID string, nowUTC time.Time) (AutoScoreSummary, error) {
@@ -131,7 +132,7 @@ func (r *Repo) ComputeAutoScore(ctx context.Context, sessionID, studentID string
 	}
 
 	qrows, err := r.pool.Query(ctx, `
-SELECT q.id::text, q.type
+SELECT q.id::text, q.type, COALESCE(q.weight, 1)
 FROM exam_session_questions sq
 JOIN exam_sessions s ON s.id = sq.exam_session_id
 JOIN questions q ON q.id = sq.question_id
@@ -145,7 +146,7 @@ ORDER BY sq.order_no ASC`, sessionID, studentID)
 	qs := []qinfo{}
 	for qrows.Next() {
 		var it qinfo
-		if err := qrows.Scan(&it.ID, &it.Type); err != nil {
+		if err := qrows.Scan(&it.ID, &it.Type, &it.Weight); err != nil {
 			return AutoScoreSummary{}, fmt.Errorf("scan question: %w", err)
 		}
 		qs = append(qs, it)
@@ -166,7 +167,7 @@ func (r *Repo) ComputeAutoScoreAny(ctx context.Context, sessionID string, nowUTC
 	}
 
 	qrows, err := r.pool.Query(ctx, `
-SELECT q.id::text, q.type
+SELECT q.id::text, q.type, COALESCE(q.weight, 1)
 FROM exam_session_questions sq
 JOIN questions q ON q.id = sq.question_id
 WHERE sq.exam_session_id = $1
@@ -179,7 +180,7 @@ ORDER BY sq.order_no ASC`, sessionID)
 	qs := []qinfo{}
 	for qrows.Next() {
 		var it qinfo
-		if err := qrows.Scan(&it.ID, &it.Type); err != nil {
+		if err := qrows.Scan(&it.ID, &it.Type, &it.Weight); err != nil {
 			return AutoScoreSummary{}, fmt.Errorf("scan question: %w", err)
 		}
 		qs = append(qs, it)
@@ -395,13 +396,21 @@ WHERE question_id::text = ANY($1::text[])`, essayIDs)
 
 	totalMax := 0
 	totalActual := 0
+	totalWeight := 0.0
+	totalWeightedActual := 0.0
 	manualScored := 0
 	pendingGrading := 0
 	details := make([]ItemGradingDetail, 0, len(qs))
+	effectiveWeights := resolveQuestionWeights(qs)
 
 	for _, q := range qs {
 		att, ok := attempts[q.ID]
 		raw := att.Answer
+		weight := effectiveWeights[q.ID]
+		if weight <= 0 {
+			weight = 1
+		}
+		totalWeight += weight
 		switch q.Type {
 		case "mc_single":
 			autoTotal++
@@ -415,6 +424,7 @@ WHERE question_id::text = ANY($1::text[])`, essayIDs)
 			}
 			totalMax += 100 // Scale to 100 per question internally
 			totalActual += score
+			totalWeightedActual += (float64(score) / 100.0) * weight
 			if score == 100 {
 				correct++
 			}
@@ -437,6 +447,7 @@ WHERE question_id::text = ANY($1::text[])`, essayIDs)
 			if ok {
 				totalActual += score
 			}
+			totalWeightedActual += (float64(score) / 100.0) * weight
 			if score == 100 {
 				correct++
 			}
@@ -451,6 +462,7 @@ WHERE question_id::text = ANY($1::text[])`, essayIDs)
 			if ok {
 				totalActual += score
 			}
+			totalWeightedActual += (float64(score) / 100.0) * weight
 			if score == 100 {
 				correct++
 			}
@@ -468,6 +480,7 @@ WHERE question_id::text = ANY($1::text[])`, essayIDs)
 			}
 			totalMax += 100
 			totalActual += score
+			totalWeightedActual += (float64(score) / 100.0) * weight
 			if score == 100 {
 				correct++
 			}
@@ -490,6 +503,7 @@ WHERE question_id::text = ANY($1::text[])`, essayIDs)
 			if ok {
 				totalActual += score
 			}
+			totalWeightedActual += (float64(score) / 100.0) * weight
 			if score == 100 {
 				correct++
 			}
@@ -506,6 +520,14 @@ WHERE question_id::text = ANY($1::text[])`, essayIDs)
 			if ok {
 				if att.ManualScore != nil {
 					totalActual += *att.ManualScore
+					ratio := float64(*att.ManualScore) / float64(maxS)
+					if ratio < 0 {
+						ratio = 0
+					}
+					if ratio > 1 {
+						ratio = 1
+					}
+					totalWeightedActual += ratio * weight
 					manualScored++
 					details = append(details, ItemGradingDetail{
 						QuestionID:   q.ID,
@@ -553,8 +575,8 @@ WHERE question_id::text = ANY($1::text[])`, essayIDs)
 	}
 
 	score := 0
-	if totalMax > 0 {
-		score = int(math.Round(float64(totalActual) / float64(totalMax) * 100))
+	if totalWeight > 0 {
+		score = int(math.Round((totalWeightedActual / totalWeight) * 100))
 	}
 
 	return AutoScoreSummary{
@@ -607,6 +629,43 @@ func equalStrings(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+func resolveQuestionWeights(qs []qinfo) map[string]float64 {
+	out := make(map[string]float64, len(qs))
+	if len(qs) == 0 {
+		return out
+	}
+
+	allDefault := true
+	for _, q := range qs {
+		if q.Weight > 1 {
+			allDefault = false
+			break
+		}
+	}
+	if allDefault {
+		// Distribute equal basis points so odd/even question counts are balanced.
+		base := 10000 / len(qs)
+		rem := 10000 % len(qs)
+		for i, q := range qs {
+			w := base
+			if i < rem {
+				w++
+			}
+			out[q.ID] = float64(w)
+		}
+		return out
+	}
+
+	for _, q := range qs {
+		w := q.Weight
+		if w <= 0 {
+			w = 1
+		}
+		out[q.ID] = float64(w)
+	}
+	return out
 }
 
 func isCorrectMCSingle(raw json.RawMessage, correctOptions map[string]bool) bool {

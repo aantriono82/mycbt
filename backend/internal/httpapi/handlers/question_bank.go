@@ -274,6 +274,7 @@ type createQuestionReq struct {
 	Type       string                            `json:"type"`
 	Stem       string                            `json:"stem"`
 	OrderNo    int                               `json:"order_no"`
+	Weight     *int                              `json:"weight"`
 	Options    []questionbankrepo.QuestionOption `json:"options"`
 	Pairs      []questionbankrepo.MatchingPair   `json:"pairs"`
 	Answers    []questionbankrepo.ShortAnswer    `json:"answers"`
@@ -423,6 +424,7 @@ type patchQuestionReq struct {
 	Type       *string                            `json:"type"`
 	Stem       *string                            `json:"stem"`
 	OrderNo    *int                               `json:"order_no"`
+	Weight     *int                               `json:"weight"`
 	Options    *[]questionbankrepo.QuestionOption `json:"options"`
 	Pairs      *[]questionbankrepo.MatchingPair   `json:"pairs"`
 	Answers    *[]questionbankrepo.ShortAnswer    `json:"answers"`
@@ -491,6 +493,13 @@ LIMIT 1`
 	if req.OrderNo != nil {
 		next.OrderNo = *req.OrderNo
 	}
+	if req.Weight != nil {
+		if *req.Weight <= 0 {
+			c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "weight must be > 0"}})
+			return
+		}
+		next.Weight = *req.Weight
+	}
 	if req.Options != nil {
 		next.Options = *req.Options
 	}
@@ -556,6 +565,7 @@ LIMIT 1`
 		Type:       next.Type,
 		Stem:       next.Stem,
 		OrderNo:    next.OrderNo,
+		Weight:     &next.Weight,
 		Options:    next.Options,
 		Pairs:      next.MatchingPairs,
 		Answers:    next.ShortAnswers,
@@ -581,6 +591,7 @@ LIMIT 1`
 		Type:          in.Type,
 		Stem:          in.Stem,
 		OrderNo:       in.OrderNo,
+		Weight:        in.Weight,
 		Options:       in.Options,
 		MatchingPairs: in.MatchingPairs,
 		ShortAnswers:  in.ShortAnswers,
@@ -635,6 +646,13 @@ func validateAndBuildCreateQuestionInput(req createQuestionReq) (questionbankrep
 		Type:    qType,
 		Stem:    stem,
 		OrderNo: req.OrderNo,
+		Weight:  1,
+	}
+	if req.Weight != nil {
+		if *req.Weight <= 0 {
+			return questionbankrepo.CreateQuestionInput{}, fmt.Errorf("weight must be > 0")
+		}
+		in.Weight = *req.Weight
 	}
 
 	switch qType {

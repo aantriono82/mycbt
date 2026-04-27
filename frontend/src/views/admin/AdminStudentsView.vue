@@ -362,7 +362,7 @@ onMounted(async () => {
           <div v-if="isEditing" class="mb-6 flex flex-col items-center gap-4 border-b dark:border-slate-800 pb-6">
             <div class="relative group">
               <div class="h-24 w-24 overflow-hidden rounded-full border-4 border-blue-50 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 shadow-md">
-                <img :src="photoPreview || getStudentAvatar(form)" class="h-full w-full object-cover" alt="Student Photo" />
+                <img :src="photoPreview || getStudentAvatar(form)" class="h-full w-full object-cover" alt="Student Photo" loading="lazy" />
               </div>
               <label class="absolute bottom-0 right-0 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-all hover:scale-110 hover:bg-blue-700 ring-2 ring-white dark:ring-slate-900">
                 <BaseIcon :path="mdiCamera" size="16" />
@@ -511,7 +511,7 @@ onMounted(async () => {
                 <tr v-for="student in students" :key="student.id" class="border-b dark:border-slate-800 last:border-b-0 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors">
                   <td class="px-3 py-3">
                     <div class="h-10 w-10 overflow-hidden rounded-full border border-slate-200 dark:border-slate-700 bg-slate-100">
-                      <img :src="getStudentAvatar(student)" class="h-full w-full object-cover" alt="" />
+                      <img :src="getStudentAvatar(student)" class="h-full w-full object-cover" alt="" loading="lazy" />
                     </div>
                   </td>
                   <td class="px-3 py-3 font-medium dark:text-slate-200">{{ student.name }}</td>

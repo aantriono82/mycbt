@@ -3,15 +3,8 @@ import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   mdiClipboardTextOutline,
-  mdiPlayCircleOutline,
   mdiRefresh,
-  mdiTimerSand,
   mdiCheckCircleOutline,
-  mdiClockOutline,
-  mdiLockOutline,
-  mdiBookOpenVariant,
-  mdiMagnify,
-  mdiContentCopy,
   mdiDeleteOutline,
 } from '@mdi/js'
 import BaseIcon from '@/components/BaseIcon.vue'
@@ -127,25 +120,7 @@ const loadExams = async () => {
 
 const joinExam = async (exam) => {
   if (!exam?.id) return
-  isLoading.value = true
-  errorMessage.value = ''
-  try {
-    // If exam has active_token, we might need to ask for it, 
-    // but for now we try to join. The backend might allow it if session exists.
-    const { data } = await api.post(`/api/v1/student/exams/${exam.id}/join`, {
-      token: exam.active_token || ''
-    })
-    const sessionId = data?.data?.session_id
-    if (sessionId) {
-      router.push(`/student/workspace/${sessionId}`)
-    } else {
-      throw new Error('Gagal mendapatkan ID Sesi')
-    }
-  } catch (error) {
-    errorMessage.value = error?.response?.data?.error?.message || 'Gagal masuk ruang ujian. Pastikan token benar dan waktu masih tersedia.'
-  } finally {
-    isLoading.value = false
-  }
+  router.push(`/student/ujian/${exam.id}/token`)
 }
 
 const dismissCompletedExam = async (exam) => {
@@ -163,11 +138,6 @@ const dismissCompletedExam = async (exam) => {
   } finally {
     deletingExamId.value = ''
   }
-}
-
-const copyToken = (token) => {
-  navigator.clipboard.writeText(token)
-  alert('Token berhasil disalin: ' + token)
 }
 
 onMounted(() => {
@@ -391,27 +361,6 @@ onBeforeUnmount(() => {
                 </svg>
                 <span class="font-medium">Durasi:</span>
                 <span class="font-bold text-slate-700 dark:text-slate-200">{{ exam.duration_minutes ?? '-' }} menit</span>
-              </div>
-
-              <!-- Active Token Display -->
-              <div
-                v-if="exam.active_token"
-                class="flex items-center justify-between gap-2 rounded-lg border-2 border-dashed border-sky-100 bg-sky-50 px-3 py-2 dark:border-sky-900/30 dark:bg-sky-900/10"
-              >
-                <div class="flex items-center gap-2">
-                   <BaseIcon :path="mdiLockOutline" size="14" class="text-sky-600 dark:text-sky-400" />
-                   <span class="text-[10px] font-black uppercase tracking-widest text-sky-600 dark:text-sky-400">Token:</span>
-                </div>
-                <div class="flex items-center gap-2">
-                   <span class="font-mono text-sm font-black text-sky-700 dark:text-sky-400">{{ exam.active_token }}</span>
-                   <button 
-                     @click.stop="copyToken(exam.active_token)"
-                     class="text-sky-600 hover:text-sky-800 dark:text-sky-400 dark:hover:text-white transition-colors"
-                     title="Salin Token"
-                   >
-                     <BaseIcon :path="mdiContentCopy" size="14" />
-                   </button>
-                </div>
               </div>
 
               <!-- Countdown timer for active exams -->

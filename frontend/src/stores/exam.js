@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { api } from '@/services/api.js'
+import { debounce } from '@/utils/debounce.js'
 
 export const useExamStore = defineStore('exam', () => {
     const PERSIST_KEY = 'mycbt:exam-store'
@@ -52,9 +53,13 @@ export const useExamStore = defineStore('exam', () => {
         // ignore malformed persisted payload
     }
 
+    const debouncedPersist = debounce(() => {
+        persistNow()
+    }, 500)
+
     watch(
         [sessionId, startTime, questions, answers, currentQuestionIdx, examTitle, timeLeft],
-        persistNow,
+        debouncedPersist,
         { deep: true },
     )
 
@@ -141,19 +146,30 @@ export const useExamStore = defineStore('exam', () => {
         }
     }
 
+    const isSaving = ref(false)
+    const lastSavedAt = ref(null)
+
     const saveAnswer = async (questionId, answer = undefined) => {
         if (!sessionId.value || !questionId) return
         if (answer !== undefined) {
             answers.value[questionId] = answer
         }
         const payload = answers.value[questionId] ?? {}
+
+        isSaving.value = true
         try {
             await api.post(`/api/v1/student/sessions/${sessionId.value}/answers`, {
                 question_id: questionId,
                 answer_json: JSON.stringify(payload)
             })
+            lastSavedAt.value = new Date()
         } catch (err) {
             console.error('Failed to save answer:', err)
+        } finally {
+            // Add a small delay so the 'Saving' state is visible for micro-interaction
+            setTimeout(() => {
+                isSaving.value = false
+            }, 800)
         }
     }
 
@@ -181,6 +197,8 @@ export const useExamStore = defineStore('exam', () => {
         submitDone.value = false
         errorMessage.value = ''
         currentQuestionIdx.value = 0
+        isSaving.value = false
+        lastSavedAt.value = null
     }
 
     const finishExam = async () => {
@@ -197,6 +215,8 @@ export const useExamStore = defineStore('exam', () => {
         answers,
         timeLeft,
         isLoading,
+        isSaving,
+        lastSavedAt,
         errorMessage,
         submitDone,
         currentQuestion,

@@ -288,6 +288,16 @@ const exportItemAnalysis = async () => {
   }
 }
 
+import { debounce } from '@/utils/debounce.js'
+
+const debouncedLoadResults = debounce(() => {
+  loadResults()
+}, 500)
+
+watch(q, () => {
+  debouncedLoadResults()
+})
+
 watch(selectedExamId, async () => {
   await loadResults()
   await loadItemAnalysis()
@@ -381,10 +391,7 @@ onMounted(async () => {
           </div>
           <div class="flex-1">
             <label class="block mb-1 text-sm font-semibold text-slate-600 dark:text-slate-300">Cari Siswa <span class="font-normal text-slate-400 dark:text-slate-500">(nama/username/nis)</span></label>
-            <FormControl v-model="q" placeholder="Ketik lalu klik Terapkan" />
-          </div>
-          <div class="shrink-0">
-            <BaseButton color="info" label="Terapkan" :disabled="isLoadingResults" @click="loadResults" />
+            <FormControl v-model="q" placeholder="Cari otomatis saat mengetik..." />
           </div>
         </div>
         <div class="mt-3 flex gap-3 h-5 items-center">

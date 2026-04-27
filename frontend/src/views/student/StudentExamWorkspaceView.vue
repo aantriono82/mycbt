@@ -6,7 +6,12 @@ import {
   mdiInformationOutline,
   mdiAlert,
   mdiFullscreen,
-  mdiFullscreenExit
+  mdiFullscreenExit,
+  mdiCloudCheckOutline,
+  mdiCloudSyncOutline,
+  mdiWifi,
+  mdiWifiOff,
+  mdiViewGridOutline
 } from '@mdi/js'
 import BaseIcon from '@/components/BaseIcon.vue'
 import BaseButton from '@/components/BaseButton.vue'
@@ -14,7 +19,10 @@ import QuillEditor from '@/components/QuillEditor.vue'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
 import { useExamStore } from '@/stores/exam.js'
+import { useNotificationStore } from '@/stores/notification.js'
 import { storeToRefs } from 'pinia'
+
+const notificationStore = useNotificationStore()
 
 const route = useRoute()
 const router = useRouter()
@@ -27,6 +35,8 @@ const {
   answers, 
   timeLeft, 
   isLoading, 
+  isSaving,
+  lastSavedAt,
   errorMessage, 
   submitDone, 
   examTitle, 
@@ -53,6 +63,20 @@ const toggleFullscreen = () => {
 
 const handleFullscreenChange = () => {
   isFullscreen.value = !!document.fullscreenElement
+}
+
+const isOnline = ref(typeof navigator !== 'undefined' ? navigator.onLine : true)
+const updateOnlineStatus = () => {
+  isOnline.value = navigator.onLine
+}
+
+const formatLastSaved = (date) => {
+  if (!date) return ''
+  return new Intl.DateTimeFormat('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  }).format(date)
 }
 
 const cardScrollEl = ref(null)
@@ -468,6 +492,13 @@ onMounted(() => {
   }
   document.addEventListener('visibilitychange', handleVisibilityChange)
   document.addEventListener('fullscreenchange', handleFullscreenChange)
+  window.addEventListener('blur', handleWindowBlur)
+  document.addEventListener('contextmenu', preventDefault)
+  document.addEventListener('copy', preventDefault)
+  document.addEventListener('paste', preventDefault)
+  document.addEventListener('keydown', handleKeyPrevention)
+  window.addEventListener('online', updateOnlineStatus)
+  window.addEventListener('offline', updateOnlineStatus)
 })
 
 onUnmounted(() => {
@@ -476,14 +507,52 @@ onUnmounted(() => {
   if (textAnswerSaveTimer) clearTimeout(textAnswerSaveTimer)
   document.removeEventListener('visibilitychange', handleVisibilityChange)
   document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  window.removeEventListener('blur', handleWindowBlur)
+  document.removeEventListener('contextmenu', preventDefault)
+  document.removeEventListener('copy', preventDefault)
+  document.removeEventListener('paste', preventDefault)
+  document.removeEventListener('keydown', handleKeyPrevention)
+  window.removeEventListener('online', updateOnlineStatus)
+  window.removeEventListener('offline', updateOnlineStatus)
 })
 
 const handleVisibilityChange = () => {
   if (document.visibilityState === 'hidden' && sessionId.value && !submitDone.value) {
-    api.post(`/api/v1/student/sessions/${sessionId.value}/heartbeat`, {
-      type: 'focus_loss',
-      timestamp: new Date().toISOString()
-    }).catch(() => {})
+    recordFocusLoss('visibility_hidden')
+  }
+}
+
+const handleWindowBlur = () => {
+  if (sessionId.value && !submitDone.value) {
+    recordFocusLoss('window_blur')
+  }
+}
+
+const recordFocusLoss = (reason) => {
+  api.post(`/api/v1/student/sessions/${sessionId.value}/heartbeat`, {
+    type: 'focus_loss',
+    reason,
+    timestamp: new Date().toISOString()
+  }).catch(() => {})
+}
+
+const preventDefault = (e) => {
+  if (e.type === 'contextmenu' || e.type === 'copy' || e.type === 'paste') {
+    notificationStore.pushWarning('Aksi ini dilarang selama ujian demi keamanan.')
+  }
+  e.preventDefault()
+}
+
+const handleKeyPrevention = (e) => {
+  // Prevent F12, Ctrl+U, Ctrl+Shift+I, etc.
+  if (
+    e.key === 'F12' ||
+    (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+    (e.ctrlKey && e.shiftKey && e.key === 'J') ||
+    (e.ctrlKey && e.shiftKey && e.key === 'C') ||
+    (e.ctrlKey && e.key === 'u')
+  ) {
+    e.preventDefault()
   }
 }
 
@@ -601,8 +670,38 @@ const matchingRightOptions = computed(() => {
            {{ examTitle }}
          </div>
       </div>
-      <div class="flex items-center gap-3 md:gap-6">
-        <div class="hidden md:block text-right leading-tight">
+      <div class="flex items-center gap-3 md:gap-5">
+        <!-- Connection & Save Status Indicator -->
+        <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10">
+          <div class="flex items-center gap-1.5">
+             <BaseIcon 
+               :path="isOnline ? mdiWifi : mdiWifiOff" 
+               :size="16" 
+               :class="isOnline ? 'text-emerald-400' : 'text-rose-400'" 
+             />
+             <span class="text-[10px] font-black uppercase tracking-tighter">
+               {{ isOnline ? 'Terhubung' : 'Terputus' }}
+             </span>
+          </div>
+          <div class="w-px h-3 bg-white/20 mx-1"></div>
+          <div class="flex items-center gap-1.5 min-w-[100px]">
+             <BaseIcon 
+               :path="isSaving ? mdiCloudSyncOutline : mdiCloudCheckOutline" 
+               :size="16" 
+               :class="isSaving ? 'text-amber-400 animate-spin' : 'text-emerald-400'" 
+             />
+             <div class="flex flex-col">
+               <span class="text-[10px] font-black uppercase tracking-tighter leading-none">
+                 {{ isSaving ? 'Menyimpan...' : 'Tersimpan' }}
+               </span>
+               <span v-if="!isSaving && lastSavedAt" class="text-[8px] opacity-60 font-medium">
+                 {{ formatLastSaved(lastSavedAt) }}
+               </span>
+             </div>
+          </div>
+        </div>
+
+        <div class="hidden md:block text-right leading-tight min-w-[80px]">
           <div class="text-[10px] font-black uppercase opacity-70 tracking-widest">Peserta</div>
           <div class="text-xs font-bold">{{ participantName }}</div>
         </div>
@@ -1155,14 +1254,24 @@ const matchingRightOptions = computed(() => {
 .tka-timer { box-shadow: inset 0 0 0 2px #f59e0b; }
 .animate-fade-in { animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(30px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
-:deep(.prose) { max-width: none; }
-:deep(.prose img) { border-radius: 20px; display: block; margin: 40px auto; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); border: 8px solid #f8fafc; }
-:deep(.prose h1) { font-weight: 900; color: #0D47A1; }
-:deep(.prose table) { border-collapse: collapse; border: 2px solid #e2e8f0; width: 100%; border-radius: 12px; overflow: hidden; }
-:deep(.prose th) { background: #f8fafc; padding: 12px; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.1em; }
-:deep(.prose td) { padding: 12px; border: 1px solid #f1f5f9; }
 
-/* Font size presets for student exam view (applied to the scrollable card area). */
+:deep(.prose) { max-width: none; user-select: none; }
+:deep(.prose img) { border-radius: 20px; display: block; margin: 40px auto; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); border: 8px solid #f8fafc; }
+.dark :deep(.prose img) { border-color: #1e293b; }
+
+:deep(.prose h1) { font-weight: 900; color: #0D47A1; }
+.dark :deep(.prose h1) { color: #38bdf8; }
+
+:deep(.prose table) { border-collapse: collapse; border: 2px solid #e2e8f0; width: 100%; border-radius: 12px; overflow: hidden; }
+.dark :deep(.prose table) { border-color: #334155; }
+
+:deep(.prose th) { background: #f8fafc; padding: 12px; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.1em; color: #64748b; }
+.dark :deep(.prose th) { background: #1e293b; color: #94a3b8; }
+
+:deep(.prose td) { padding: 12px; border: 1px solid #f1f5f9; }
+.dark :deep(.prose td) { border-color: #1e293b; }
+
+/* Font size presets for student exam view */
 .tka-font-sm :deep(.prose) { font-size: 0.95rem; line-height: 1.65; }
 .tka-font-md :deep(.prose) { font-size: 1rem; line-height: 1.65; }
 .tka-font-lg :deep(.prose) { font-size: 1.125rem; line-height: 1.65; }

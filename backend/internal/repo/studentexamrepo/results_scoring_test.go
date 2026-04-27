@@ -103,3 +103,50 @@ func TestNormalizeText(t *testing.T) {
 		t.Fatalf("unexpected normalize result: %q", got)
 	}
 }
+
+func TestResolveQuestionWeightsEven(t *testing.T) {
+	qs := []qinfo{
+		{ID: "q1", Weight: 1},
+		{ID: "q2", Weight: 1},
+		{ID: "q3", Weight: 1},
+		{ID: "q4", Weight: 1},
+	}
+	w := resolveQuestionWeights(qs)
+	if len(w) != 4 {
+		t.Fatalf("unexpected weight size: %d", len(w))
+	}
+	if w["q1"] != 2500 || w["q2"] != 2500 || w["q3"] != 2500 || w["q4"] != 2500 {
+		t.Fatalf("unexpected even distribution: %+v", w)
+	}
+}
+
+func TestResolveQuestionWeightsOdd(t *testing.T) {
+	qs := []qinfo{
+		{ID: "q1", Weight: 1},
+		{ID: "q2", Weight: 1},
+		{ID: "q3", Weight: 1},
+	}
+	w := resolveQuestionWeights(qs)
+	if len(w) != 3 {
+		t.Fatalf("unexpected weight size: %d", len(w))
+	}
+	total := int(w["q1"] + w["q2"] + w["q3"])
+	if total != 10000 {
+		t.Fatalf("odd distribution must sum to 10000, got %d", total)
+	}
+	if !(w["q1"] == 3334 && w["q2"] == 3333 && w["q3"] == 3333) {
+		t.Fatalf("unexpected odd distribution: %+v", w)
+	}
+}
+
+func TestResolveQuestionWeightsCustom(t *testing.T) {
+	qs := []qinfo{
+		{ID: "q1", Weight: 2},
+		{ID: "q2", Weight: 3},
+		{ID: "q3", Weight: 5},
+	}
+	w := resolveQuestionWeights(qs)
+	if w["q1"] != 2 || w["q2"] != 3 || w["q3"] != 5 {
+		t.Fatalf("custom weight should be preserved, got %+v", w)
+	}
+}

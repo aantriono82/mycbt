@@ -133,6 +133,7 @@ type Question struct {
 	Type          string           `json:"type"` // mc_single, mc_multiple, matching, short_answer, essay, true_false
 	Stem          string           `json:"stem"`
 	OrderNo       int              `json:"order_no"`
+	Weight        int              `json:"weight"`
 	Options       []QuestionOption `json:"options,omitempty"`
 	MatchingPairs []MatchingPair   `json:"pairs,omitempty"`
 	ShortAnswers  []ShortAnswer    `json:"answers,omitempty"`
@@ -179,7 +180,7 @@ type Essay struct {
 
 func (r *Repo) ListQuestions(ctx context.Context, setID string) ([]Question, error) {
 	// Fetch questions first
-	rows, err := r.pool.Query(ctx, `SELECT id, question_set_id::text, type, stem, order_no FROM questions WHERE question_set_id = $1 ORDER BY order_no ASC, created_at ASC`, setID)
+	rows, err := r.pool.Query(ctx, `SELECT id, question_set_id::text, type, stem, order_no, COALESCE(weight, 1) FROM questions WHERE question_set_id = $1 ORDER BY order_no ASC, created_at ASC`, setID)
 	if err != nil {
 		return nil, fmt.Errorf("list questions: %w", err)
 	}
@@ -191,7 +192,7 @@ func (r *Repo) ListQuestions(ctx context.Context, setID string) ([]Question, err
 	byID := map[string]int{}
 	for rows.Next() {
 		var it Question
-		if err := rows.Scan(&it.ID, &it.QuestionSetID, &it.Type, &it.Stem, &it.OrderNo); err != nil {
+		if err := rows.Scan(&it.ID, &it.QuestionSetID, &it.Type, &it.Stem, &it.OrderNo, &it.Weight); err != nil {
 			return nil, fmt.Errorf("scan: %w", err)
 		}
 		it.Options = []QuestionOption{}
@@ -355,6 +356,7 @@ type CreateQuestionInput struct {
 	Type          string
 	Stem          string
 	OrderNo       int
+	Weight        int
 	Options       []QuestionOption
 	MatchingPairs []MatchingPair
 	ShortAnswers  []ShortAnswer
@@ -371,7 +373,7 @@ func (r *Repo) CreateQuestion(ctx context.Context, setID string, in CreateQuesti
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	var qID string
-	if err := tx.QueryRow(ctx, `INSERT INTO questions (question_set_id, type, stem, order_no) VALUES ($1,$2,$3,$4) RETURNING id`, setID, in.Type, in.Stem, in.OrderNo).Scan(&qID); err != nil {
+	if err := tx.QueryRow(ctx, `INSERT INTO questions (question_set_id, type, stem, order_no, weight) VALUES ($1,$2,$3,$4,$5) RETURNING id`, setID, in.Type, in.Stem, in.OrderNo, in.Weight).Scan(&qID); err != nil {
 		return Question{}, fmt.Errorf("insert question: %w", err)
 	}
 
@@ -399,7 +401,7 @@ func (r *Repo) CreateQuestionsBulk(ctx context.Context, setID string, items []Cr
 	out := make([]Question, 0, len(items))
 	for _, in := range items {
 		var qID string
-		if err := tx.QueryRow(ctx, `INSERT INTO questions (question_set_id, type, stem, order_no) VALUES ($1,$2,$3,$4) RETURNING id`, setID, in.Type, in.Stem, in.OrderNo).Scan(&qID); err != nil {
+		if err := tx.QueryRow(ctx, `INSERT INTO questions (question_set_id, type, stem, order_no, weight) VALUES ($1,$2,$3,$4,$5) RETURNING id`, setID, in.Type, in.Stem, in.OrderNo, in.Weight).Scan(&qID); err != nil {
 			return nil, fmt.Errorf("insert question: %w", err)
 		}
 
@@ -427,9 +429,9 @@ func (r *Repo) DeleteQuestion(ctx context.Context, id string) (bool, error) {
 }
 
 func (r *Repo) GetQuestion(ctx context.Context, id string) (Question, bool, error) {
-	const q = `SELECT id, question_set_id::text, type, stem, order_no FROM questions WHERE id = $1 LIMIT 1`
+	const q = `SELECT id, question_set_id::text, type, stem, order_no, COALESCE(weight, 1) FROM questions WHERE id = $1 LIMIT 1`
 	var it Question
-	err := r.pool.QueryRow(ctx, q, id).Scan(&it.ID, &it.QuestionSetID, &it.Type, &it.Stem, &it.OrderNo)
+	err := r.pool.QueryRow(ctx, q, id).Scan(&it.ID, &it.QuestionSetID, &it.Type, &it.Stem, &it.OrderNo, &it.Weight)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return Question{}, false, nil
@@ -533,6 +535,7 @@ type UpdateQuestionInput struct {
 	Type          string
 	Stem          string
 	OrderNo       int
+	Weight        int
 	Options       []QuestionOption
 	MatchingPairs []MatchingPair
 	ShortAnswers  []ShortAnswer
@@ -551,9 +554,9 @@ func (r *Repo) UpdateQuestion(ctx context.Context, id string, in UpdateQuestionI
 	var setID string
 	err = tx.QueryRow(ctx, `
 UPDATE questions
-SET type = $2, stem = $3, order_no = $4, updated_at = now()
+SET type = $2, stem = $3, order_no = $4, weight = $5, updated_at = now()
 WHERE id = $1
-RETURNING question_set_id::text`, id, in.Type, in.Stem, in.OrderNo).Scan(&setID)
+RETURNING question_set_id::text`, id, in.Type, in.Stem, in.OrderNo, in.Weight).Scan(&setID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return Question{}, false, nil
@@ -585,6 +588,7 @@ RETURNING question_set_id::text`, id, in.Type, in.Stem, in.OrderNo).Scan(&setID)
 		Type:          in.Type,
 		Stem:          in.Stem,
 		OrderNo:       in.OrderNo,
+		Weight:        in.Weight,
 		Options:       in.Options,
 		MatchingPairs: in.MatchingPairs,
 		ShortAnswers:  in.ShortAnswers,
@@ -609,6 +613,7 @@ func insertQuestionTypePayload(ctx context.Context, tx pgx.Tx, questionID string
 		Type:          in.Type,
 		Stem:          in.Stem,
 		OrderNo:       in.OrderNo,
+		Weight:        in.Weight,
 		Options:       []QuestionOption{},
 		MatchingPairs: []MatchingPair{},
 		ShortAnswers:  []ShortAnswer{},
@@ -703,7 +708,7 @@ RETURNING id`
 	}
 
 	// 3. Clone Questions
-	rows, err := tx.Query(ctx, `SELECT id, type, stem, order_no FROM questions WHERE question_set_id = $1`, id)
+	rows, err := tx.Query(ctx, `SELECT id, type, stem, order_no, COALESCE(weight, 1) FROM questions WHERE question_set_id = $1`, id)
 	if err != nil {
 		return "", fmt.Errorf("list original questions: %w", err)
 	}
@@ -714,11 +719,12 @@ RETURNING id`
 		qType   string
 		stem    string
 		orderNo int
+		weight  int
 	}
 	var originals []origQ
 	for rows.Next() {
 		var it origQ
-		if err := rows.Scan(&it.id, &it.qType, &it.stem, &it.orderNo); err != nil {
+		if err := rows.Scan(&it.id, &it.qType, &it.stem, &it.orderNo, &it.weight); err != nil {
 			return "", err
 		}
 		originals = append(originals, it)
@@ -733,7 +739,7 @@ RETURNING id`
 	var qs []qMap
 	for _, o := range originals {
 		var newQID string
-		if err := tx.QueryRow(ctx, `INSERT INTO questions (question_set_id, type, stem, order_no) VALUES ($1,$2,$3,$4) RETURNING id`, newID, o.qType, o.stem, o.orderNo).Scan(&newQID); err != nil {
+		if err := tx.QueryRow(ctx, `INSERT INTO questions (question_set_id, type, stem, order_no, weight) VALUES ($1,$2,$3,$4,$5) RETURNING id`, newID, o.qType, o.stem, o.orderNo, o.weight).Scan(&newQID); err != nil {
 			return "", err
 		}
 		qs = append(qs, qMap{o.id, newQID, o.qType})

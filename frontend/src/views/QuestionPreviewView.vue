@@ -11,7 +11,7 @@
           <BaseIcon :path="mdiArrowLeft" class="text-white" />
         </button>
         <div class="font-bold tracking-tight text-sm md:text-base uppercase select-none">
-          {{ questionSet?.name || 'TO TKA MTK SMP LAMPUNG TENGAH' }}
+          {{ previewHeaderTitle }}
         </div>
       </div>
       <div class="flex items-center gap-4">
@@ -429,6 +429,11 @@ const questionSet = ref(null)
 const answers = reactive({})
 const flagged = reactive({})
 const timeLeft = ref(3599) // 59:59 in seconds
+const previewHeaderTitle = computed(() => {
+  const raw = questionSet.value?.title || questionSet.value?.name || questionSet.value?.exam_title
+  const title = String(raw || '').trim()
+  return title || 'PRATINJAU UJIAN'
+})
 
 const formattedTime = computed(() => {
   const m = Math.floor(timeLeft.value / 60)
