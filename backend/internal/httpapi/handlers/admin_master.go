@@ -1112,7 +1112,7 @@ func (h *AdminMasterHandler) CreateTeacher(c *gin.Context) {
 		return
 	}
 
-	groupNames := splitCSVUpper(req.GroupNames)
+	groupNames := splitCSVTrim(req.GroupNames)
 	groupIDs, err := h.lookups.GroupIDsByNames(c.Request.Context(), groupNames)
 	if err != nil {
 		c.Error(err)
@@ -1120,7 +1120,7 @@ func (h *AdminMasterHandler) CreateTeacher(c *gin.Context) {
 		return
 	}
 
-	levelNames := splitCSVUpper(req.LevelNames)
+	levelNames := splitCSVTrim(req.LevelNames)
 	levelIDs, err := h.lookups.LevelIDsByNames(c.Request.Context(), levelNames)
 	if err != nil {
 		c.Error(err)
@@ -2173,6 +2173,22 @@ func splitCSVUpper(s string) []string {
 			continue
 		}
 		out = append(out, strings.ToUpper(p))
+	}
+	return out
+}
+
+func splitCSVTrim(s string) []string {
+	if strings.TrimSpace(s) == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		out = append(out, p)
 	}
 	return out
 }
