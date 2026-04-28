@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { mdiPrinterOutline, mdiRefresh, mdiUpload } from '@mdi/js'
+import { useRouter } from 'vue-router'
+import { mdiPrinterOutline, mdiRefresh, mdiUpload, mdiImageMultiple } from '@mdi/js'
 import FormFilePicker from '@/components/FormFilePicker.vue'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
@@ -13,12 +14,17 @@ import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
 
 const authStore = useAuthStore()
+const router = useRouter()
 
 const exams = ref([])
 const selectedExamId = ref('')
 const isLoading = ref(false)
 const errorMessage = ref('')
 const participantQuery = ref('')
+
+const participantsWithoutPhoto = computed(() => {
+  return cachedParticipants.value.filter((p) => !p.photo_url).length
+})
 const attendanceFilter = ref('all')
 const levelFilter = ref('all')
 const groupFilter = ref('all')
@@ -45,32 +51,11 @@ const templatePresets = [
     signatoryTitle: 'Kepala Sekolah',
   },
   {
-    value: 'default',
-    label: 'Default CBT',
-    cardTitle: 'KARTU UJIAN CBT',
-    cardSubtitle: 'Peserta resmi ujian berbasis komputer',
-    signatoryTitle: 'Panitia Ujian',
-  },
-  {
-    value: 'uts',
-    label: 'Template UTS',
-    cardTitle: 'KARTU UJIAN TENGAH SEMESTER',
-    cardSubtitle: 'Wajib dibawa saat pelaksanaan UTS',
-    signatoryTitle: 'Koordinator UTS',
-  },
-  {
-    value: 'uas',
-    label: 'Template UAS',
-    cardTitle: 'KARTU UJIAN AKHIR SEMESTER',
-    cardSubtitle: 'Wajib dibawa saat pelaksanaan UAS',
-    signatoryTitle: 'Koordinator UAS',
-  },
-  {
-    value: 'tryout',
-    label: 'Template Try Out',
-    cardTitle: 'KARTU TRY OUT',
-    cardSubtitle: 'Simulasi ujian dan evaluasi kesiapan',
-    signatoryTitle: 'Koordinator Try Out',
+    value: 'modern',
+    label: 'Kartu Modern (ID Card)',
+    cardTitle: 'KARTU PESERTA UJIAN',
+    cardSubtitle: 'Kartu identitas peserta ujian sekolah',
+    signatoryTitle: 'Kepala Sekolah',
   },
 ]
 const signatoryName = ref('')
@@ -87,9 +72,13 @@ const printCardConfig = ref({
   principalName: '',
   principalNip: '',
   schoolLogo2Url: '',
+  schoolStampUrl: '',
+  principalSignatureUrl: '',
 })
 const logoFile1 = ref(null)
 const logoFile2 = ref(null)
+const stampFile = ref(null)
+const signatureFile = ref(null)
 
 watch(logoFile1, (file) => {
   if (!file) return
@@ -105,6 +94,24 @@ watch(logoFile2, (file) => {
   const reader = new FileReader()
   reader.onload = (e) => {
     printCardConfig.value.schoolLogo2Url = e.target.result
+  }
+  reader.readAsDataURL(file)
+})
+
+watch(stampFile, (file) => {
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    printCardConfig.value.schoolStampUrl = e.target.result
+  }
+  reader.readAsDataURL(file)
+})
+
+watch(signatureFile, (file) => {
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    printCardConfig.value.principalSignatureUrl = e.target.result
   }
   reader.readAsDataURL(file)
 })
@@ -685,6 +692,310 @@ const printExamCards = async () => {
       return
     }
 
+    if (template.value === 'modern') {
+      const modernCardsHtml = participants
+        .map((participant) => {
+          const participantNo = participant.exam_no || participant.participant_no || participant.nis || '-'
+          const classLabel = `${participant.level_name || ''} ${participant.group_name || ''}`.trim() || '-'
+          const semester = printCardConfig.value.semester?.trim() || '-'
+          const schoolLine = printCardConfig.value.schoolLine?.trim() || (schoolIdentity.value.school_name || 'SEKOLAH')
+          const examLine = printCardConfig.value.examLine?.trim() || 'KARTU PESERTA UJIAN'
+          const academicYear = printCardConfig.value.academicYear?.trim() || '-'
+          const placeDate = printCardConfig.value.placeDateLine?.trim() || '-'
+          const principalName = printCardConfig.value.principalName?.trim() || signatureName
+          const principalNip = printCardConfig.value.principalNip?.trim() || '-'
+          const logoURL = resolveAssetURL(printCardConfig.value.schoolLogoUrl || schoolIdentity.value.logo_url)
+          const participantPhotoURL = resolveAssetURL(participant.photo_url)
+
+          const logoHtmlMod = logoURL
+            ? `<img src="${escapeHtml(logoURL)}" alt="Logo" class="mod-logo" />`
+            : `<div class="mod-logo-fallback">LOGO</div>`
+          const photoHtmlMod = participantPhotoURL
+            ? `<img src="${escapeHtml(participantPhotoURL)}" alt="Foto" class="mod-photo-img" />`
+            : `<div class="mod-photo-empty">FOTO<br/>PESERTA</div>`
+
+          return `
+            <div class="mod-card">
+              <!-- Colored Header Band -->
+              <div class="mod-header">
+                <div class="mod-header-logo">${logoHtmlMod}</div>
+                <div class="mod-header-text">
+                  <div class="mod-school">${escapeHtml(schoolLine)}</div>
+                  <div class="mod-exam-title">${escapeHtml(examLine)}</div>
+                  <div class="mod-year">Tahun Pelajaran ${escapeHtml(academicYear)} &bull; Semester ${escapeHtml(semester)}</div>
+                </div>
+              </div>
+
+              <!-- Body: data kiri + foto kanan -->
+              <div class="mod-body">
+                <div class="mod-data">
+                  <div class="mod-no-peserta">
+                    <span class="mod-no-label">No. Peserta</span>
+                    <span class="mod-no-value">${escapeHtml(participantNo)}</span>
+                  </div>
+                  <div class="mod-row"><span class="mod-key">Nama</span><span class="mod-sep">:</span><span class="mod-val bold">${escapeHtml(participant.name || '-')}</span></div>
+                  <div class="mod-row"><span class="mod-key">NIS</span><span class="mod-sep">:</span><span class="mod-val">${escapeHtml(participant.nis || '-')}</span></div>
+                  <div class="mod-row"><span class="mod-key">Kelas</span><span class="mod-sep">:</span><span class="mod-val">${escapeHtml(classLabel)}</span></div>
+                  <div class="mod-row"><span class="mod-key">Ujian</span><span class="mod-sep">:</span><span class="mod-val">${escapeHtml(selectedExamTitle())}</span></div>
+                </div>
+                <div class="mod-photo-wrap">
+                  <div class="mod-photo-box">${photoHtmlMod}</div>
+                  <div class="mod-photo-label">Pas Foto</div>
+                </div>
+              </div>
+
+              <!-- Footer: tanda tangan -->
+              <div class="mod-footer">
+                <div class="mod-sig">
+                  <div>${escapeHtml(placeDate)}</div>
+                  <div class="mod-sig-title">Kepala Sekolah,</div>
+                  <div class="mod-sig-space">
+                    <!-- Stempel overlap ke nama -->
+                    <div class="mod-stamp">${resolveAssetURL(printCardConfig.value.schoolStampUrl) ? `<img src="${escapeHtml(resolveAssetURL(printCardConfig.value.schoolStampUrl))}" alt="Stempel" class="mod-stamp-img" />` : '<span>STEMPEL</span>'}</div>
+                    <!-- Tanda tangan kepala sekolah -->
+                    ${resolveAssetURL(printCardConfig.value.principalSignatureUrl) ? `<img src="${escapeHtml(resolveAssetURL(printCardConfig.value.principalSignatureUrl))}" alt="TTD" class="mod-ttd-img" />` : ''}
+                  </div>
+                  <div class="mod-sig-name">${escapeHtml(principalName)}</div>
+                  <div class="mod-sig-nip">NIP. ${escapeHtml(principalNip)}</div>
+                </div>
+              </div>
+
+              <!-- Bottom accent stripe -->
+              <div class="mod-bottom-stripe"></div>
+            </div>
+          `
+        })
+        .join('')
+
+      openPrintWindow(
+        `Kartu Peserta Ujian - ${selectedExamTitle()}`,
+        `
+          <style>
+            @page { size: A4 portrait; margin: 8mm; }
+            body { margin: 0 !important; font-family: Arial, sans-serif; background: #f0f0f0; }
+            body > .meta { font-size: 9px; margin: 0 0 3mm; text-align: center; color: #555; }
+            .mod-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 3mm;
+            }
+            .mod-card {
+              background: #fff;
+              border-radius: 2mm;
+              overflow: hidden;
+              break-inside: avoid;
+              page-break-inside: avoid;
+              box-shadow: 0 0.5mm 1.5mm rgba(0,0,0,0.12);
+              display: flex;
+              flex-direction: column;
+              min-height: 68mm;
+              max-height: 72mm;
+              border: 0.5pt solid #c8d3e0;
+              position: relative;
+            }
+            /* === Header === */
+            .mod-header {
+              background: linear-gradient(135deg, #1a3a5c 0%, #1e5799 100%);
+              display: flex;
+              align-items: center;
+              gap: 2mm;
+              padding: 2mm 2.5mm;
+              min-height: 16mm;
+            }
+            .mod-header-logo {
+              flex-shrink: 0;
+              width: 13mm;
+              height: 13mm;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .mod-logo { width: 13mm; height: 13mm; object-fit: contain; }
+            .mod-logo-fallback {
+              width: 13mm;
+              height: 13mm;
+              background: rgba(255,255,255,0.15);
+              border: 0.5pt solid rgba(255,255,255,0.4);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 6pt;
+              color: #fff;
+              font-weight: bold;
+            }
+            .mod-header-text { flex: 1; }
+            .mod-school {
+              font-size: 8pt;
+              font-weight: 900;
+              color: #fff;
+              text-transform: uppercase;
+              letter-spacing: 0.3px;
+              line-height: 1.15;
+            }
+            .mod-exam-title {
+              font-size: 6.5pt;
+              font-weight: 700;
+              color: #ffe082;
+              text-transform: uppercase;
+              margin-top: 0.5mm;
+              line-height: 1.1;
+            }
+            .mod-year {
+              font-size: 5.5pt;
+              color: rgba(255,255,255,0.75);
+              margin-top: 0.5mm;
+            }
+            /* === Body === */
+            .mod-body {
+              display: flex;
+              flex: 1;
+              padding: 2mm 2.5mm;
+              gap: 2mm;
+              align-items: flex-start;
+            }
+            .mod-data { flex: 1; }
+            .mod-no-peserta {
+              display: flex;
+              flex-direction: column;
+              margin-bottom: 1.5mm;
+              padding-bottom: 1.5mm;
+              border-bottom: 0.5pt solid #d1d5db;
+            }
+            .mod-no-label {
+              font-size: 5.5pt;
+              color: #6b7280;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .mod-no-value {
+              font-size: 14pt;
+              font-weight: 900;
+              color: #1a3a5c;
+              line-height: 1;
+              letter-spacing: -0.5px;
+            }
+            .mod-row {
+              display: grid;
+              grid-template-columns: 10mm 3mm 1fr;
+              font-size: 7pt;
+              line-height: 1.3;
+              margin-bottom: 0.3mm;
+              color: #1f2937;
+            }
+            .mod-key { color: #6b7280; }
+            .mod-val.bold { font-weight: 700; }
+            .mod-photo-wrap {
+              flex-shrink: 0;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 0.5mm;
+            }
+            .mod-photo-box {
+              width: 18mm;
+              height: 23mm;
+              border: 1pt solid #1a3a5c;
+              overflow: hidden;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              background: #f8fafc;
+            }
+            .mod-photo-img { width: 100%; height: 100%; object-fit: cover; }
+            .mod-photo-empty {
+              font-size: 6pt;
+              color: #9ca3af;
+              text-align: center;
+              line-height: 1.4;
+            }
+            .mod-photo-label {
+              font-size: 5.5pt;
+              color: #9ca3af;
+              text-align: center;
+            }
+            /* === Footer === */
+            .mod-footer {
+              display: flex;
+              justify-content: flex-end;
+              align-items: flex-end;
+              padding: 1mm 2.5mm 1.5mm;
+              border-top: 0.5pt solid #d1d5db;
+            }
+            .mod-sig {
+              text-align: center;
+              font-size: 6pt;
+              color: #374151;
+              position: relative;
+            }
+            .mod-sig-title { font-size: 6.5pt; font-weight: 600; margin-top: 0.5mm; }
+            .mod-sig-space {
+              height: 10mm;
+              position: relative;
+            }
+            /* Stempel overlap ke kiri, menindih nama kepala sekolah */
+            .mod-stamp {
+              position: absolute;
+              left: -10mm;
+              bottom: -7mm;
+              width: 20mm;
+              height: 20mm;
+              border: 0.75pt dashed #9ca3af;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: #9ca3af;
+              font-size: 5.5pt;
+              overflow: hidden;
+              opacity: 0.85;
+              z-index: 2;
+            }
+            .mod-stamp-img {
+              width: 100%;
+              height: 100%;
+              object-fit: contain;
+              border-radius: 50%;
+            }
+            .mod-sig-name {
+              font-weight: 700;
+              text-decoration: underline;
+              font-size: 7pt;
+              position: relative;
+              z-index: 1;
+            }
+            .mod-sig-nip { font-size: 5.5pt; color: #6b7280; margin-top: 0.3mm; }
+            /* Tanda tangan kepala sekolah */
+            .mod-ttd-img {
+              position: absolute;
+              left: 50%;
+              transform: translateX(-50%);
+              bottom: 0;
+              height: 9mm;
+              max-width: 28mm;
+              object-fit: contain;
+              z-index: 3;
+              opacity: 0.88;
+            }
+            /* === Bottom accent === */
+            .mod-bottom-stripe {
+              height: 2mm;
+              background: linear-gradient(90deg, #1a3a5c 0%, #ffe082 50%, #1a3a5c 100%);
+            }
+          </style>
+          <div class="meta">
+            Ujian: <strong>${escapeHtml(selectedExamTitle())}</strong>
+            &bull; Total kartu: <strong>${participants.length}</strong>
+            ${levelFilter.value !== 'all' ? `&bull; Level: <strong>${escapeHtml(levelFilter.value)}</strong>` : ''}
+            ${groupFilter.value !== 'all' ? `&bull; Kelas: <strong>${escapeHtml(groupFilter.value)}</strong>` : ''}
+            ${sessionStatusFilter.value !== 'all' ? `&bull; Status sesi: <strong>${escapeHtml(sessionStatusFilter.value)}</strong>` : ''}
+          </div>
+          <div class="mod-grid">${modernCardsHtml || '<div>Tidak ada peserta untuk dicetak.</div>'}</div>
+        `,
+      )
+      return
+    }
+
     const cardsHtml = participants
       .map(
         (participant) => `
@@ -855,8 +1166,32 @@ watch(levelFilter, () => {
         {{ errorMessage }}
       </div>
 
+      <!-- Banner: ada peserta tanpa foto -->
+      <div
+        v-if="selectedExamId && !isLoadingParticipants && participantsWithoutPhoto > 0"
+        class="mb-4 flex items-center gap-3 rounded-xl border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-900/20 px-4 py-3"
+      >
+        <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-900/40">
+          <BaseIcon :path="mdiImageMultiple" size="20" class="text-violet-600 dark:text-violet-400" />
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold text-violet-800 dark:text-violet-200">
+            {{ participantsWithoutPhoto }} peserta belum punya foto
+          </p>
+          <p class="text-xs text-violet-600 dark:text-violet-400">
+            Foto akan muncul kosong pada kartu ujian. Upload sekarang sebelum mencetak.
+          </p>
+        </div>
+        <button
+          class="flex-shrink-0 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-violet-700 transition-colors"
+          @click="router.push('/admin/students')"
+        >
+          Import Foto &rarr;
+        </button>
+      </div>
+
       <CardBox>
-        <div class="p-5 mb-6 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/10">
+        <div class="p-3 md:p-5 mb-6 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/10">
           <h3 class="font-black text-slate-800 dark:text-slate-100 mb-5 uppercase tracking-tighter text-sm flex items-center gap-2">
             <div class="w-1.5 h-4 bg-info rounded-full"></div>
             Pengaturan & Filter Cetak
@@ -869,7 +1204,7 @@ watch(levelFilter, () => {
               />
             </FormField>
             <FormField label="Preset Template Kartu">
-              <div class="flex gap-3 items-center">
+              <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center">
                 <div class="flex-1">
                   <FormControl
                     v-model="selectedTemplate"
@@ -881,13 +1216,16 @@ watch(levelFilter, () => {
                     color="purple" 
                     label="Terapkan" 
                     @click="applyTemplatePreset" 
-                    class="!bg-purple-600 !border-purple-700 hover:!bg-purple-700 text-white font-bold shadow-md min-w-[100px]"
+                    class="!bg-purple-600 !border-purple-700 hover:!bg-purple-700 text-white font-bold shadow-md w-full sm:min-w-[100px]"
                   />
                 </div>
               </div>
             </FormField>
-            <FormField label="Filter Peserta (nama/username/NIS)">
-              <FormControl v-model="participantQuery" placeholder="Contoh: Budi / 10231" />
+            <FormField label="Cetak Kartu Siswa Tertentu (opsional)">
+              <FormControl v-model="participantQuery" placeholder="Ketik nama, username, atau NIS siswa..." />
+              <p class="mt-1.5 text-xs text-slate-400 dark:text-slate-500">
+                💡 <strong>Kosongkan</strong> untuk mencetak kartu seluruh kelas/sesi. Isi hanya jika ingin mencetak ulang kartu <strong>1 siswa tertentu</strong> (mis. kartu hilang/rusak).
+              </p>
             </FormField>
             <FormField label="Status Kehadiran">
               <FormControl
@@ -922,15 +1260,17 @@ watch(levelFilter, () => {
           </FormField>
         </div>
         <div
-          v-if="selectedTemplate === 'official'"
+          v-if="selectedTemplate === 'official' || selectedTemplate === 'modern'"
           class="mt-2 mb-4 rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-slate-50/70 dark:bg-slate-900/20"
         >
-          <h4 class="font-bold text-slate-700 dark:text-slate-100 mb-3">Form Kartu Ujian Resmi</h4>
+          <h4 class="font-bold text-slate-700 dark:text-slate-100 mb-3">
+            {{ selectedTemplate === 'modern' ? 'Form Kartu Modern' : 'Form Kartu Ujian Resmi' }}
+          </h4>
           <div class="grid gap-4 md:grid-cols-2">
-            <FormField label="Header Baris 1">
+            <FormField v-if="selectedTemplate === 'official'" label="Header Baris 1">
               <FormControl v-model="printCardConfig.govLine1" placeholder="PEMERINTAH KABUPATEN ..." />
             </FormField>
-            <FormField label="Header Baris 2">
+            <FormField v-if="selectedTemplate === 'official'" label="Header Baris 2">
               <FormControl v-model="printCardConfig.govLine2" placeholder="DINAS PENDIDIKAN ..." />
             </FormField>
             <FormField label="Nama Sekolah / UPTD">
@@ -942,10 +1282,45 @@ watch(levelFilter, () => {
                 <FormFilePicker v-model="logoFile1" label="Ambil dari Komputer" :icon="mdiUpload" accept=".png,.jpg,.jpeg,.webp" />
               </div>
             </FormField>
-            <FormField label="Logo 2 (Kanan)">
+            <FormField v-if="selectedTemplate === 'official'" label="Logo 2 (Kanan)">
               <div class="flex flex-col gap-2">
                 <FormControl v-model="printCardConfig.schoolLogo2Url" placeholder="URL Logo 2 atau upload di bawah" />
                 <FormFilePicker v-model="logoFile2" label="Ambil dari Komputer" :icon="mdiUpload" accept=".png,.jpg,.jpeg,.webp" />
+              </div>
+            </FormField>
+            <!-- Stempel sekolah — hanya untuk Kartu Modern -->
+            <FormField v-if="selectedTemplate === 'modern'" label="Stempel Sekolah">
+              <div class="flex flex-col gap-2">
+                <FormControl v-model="printCardConfig.schoolStampUrl" placeholder="URL Stempel atau upload di bawah" />
+                <FormFilePicker v-model="stampFile" label="Upload Stempel dari Komputer" :icon="mdiUpload" accept=".png,.jpg,.jpeg,.webp" />
+                <!-- Preview stempel -->
+                <div v-if="printCardConfig.schoolStampUrl" class="flex items-center gap-3 mt-1">
+                  <div class="w-14 h-14 rounded-full border-2 border-dashed border-slate-300 overflow-hidden flex items-center justify-center bg-slate-50 dark:bg-slate-800">
+                    <img :src="printCardConfig.schoolStampUrl" alt="Preview stempel" class="w-full h-full object-contain" />
+                  </div>
+                  <div class="text-xs text-slate-500 dark:text-slate-400">
+                    Preview stempel bulat
+                    <a href="#" class="block text-red-500 hover:underline mt-0.5" @click.prevent="printCardConfig.schoolStampUrl = ''; stampFile = null">× Hapus</a>
+                  </div>
+                </div>
+              </div>
+            </FormField>
+            <!-- Tanda tangan kepala sekolah — hanya untuk Kartu Modern -->
+            <FormField v-if="selectedTemplate === 'modern'" label="Tanda Tangan Kepala Sekolah">
+              <div class="flex flex-col gap-2">
+                <FormControl v-model="printCardConfig.principalSignatureUrl" placeholder="URL gambar TTD atau upload di bawah" />
+                <FormFilePicker v-model="signatureFile" label="Upload Tanda Tangan dari Komputer" :icon="mdiUpload" accept=".png,.jpg,.jpeg,.webp" />
+                <p class="text-xs text-slate-400 dark:text-slate-500">💡 Gunakan gambar TTD dengan latar <strong>transparan (PNG)</strong> agar terlihat alami di atas kartu.</p>
+                <!-- Preview TTD -->
+                <div v-if="printCardConfig.principalSignatureUrl" class="flex items-center gap-3 mt-1">
+                  <div class="h-12 px-3 border border-dashed border-slate-300 rounded-lg overflow-hidden flex items-center justify-center bg-white dark:bg-slate-800">
+                    <img :src="printCardConfig.principalSignatureUrl" alt="Preview TTD" class="h-full object-contain max-w-[120px]" />
+                  </div>
+                  <div class="text-xs text-slate-500 dark:text-slate-400">
+                    Preview tanda tangan
+                    <a href="#" class="block text-red-500 hover:underline mt-0.5" @click.prevent="printCardConfig.principalSignatureUrl = ''; signatureFile = null">× Hapus</a>
+                  </div>
+                </div>
               </div>
             </FormField>
             <FormField label="Nama Ujian">
@@ -968,12 +1343,13 @@ watch(levelFilter, () => {
             </FormField>
           </div>
         </div>
-        <div class="flex flex-wrap gap-3">
+        <div class="flex flex-col sm:flex-row flex-wrap gap-3">
           <BaseButton
             :icon="mdiPrinterOutline"
             color="info"
             label="Cetak Daftar Hadir"
             :disabled="isLoading || !selectedExamId"
+            class="w-full sm:w-auto"
             @click="printAttendance"
           />
           <BaseButton
@@ -981,6 +1357,7 @@ watch(levelFilter, () => {
             color="purple"
             label="Cetak Laporan Nilai"
             :disabled="isLoading || !selectedExamId"
+            class="w-full sm:w-auto"
             @click="printResults"
           />
           <BaseButton
@@ -988,6 +1365,7 @@ watch(levelFilter, () => {
             color="success"
             label="Cetak Kartu Ujian"
             :disabled="isLoading || !selectedExamId"
+            class="w-full sm:w-auto"
             @click="printExamCards"
           />
           <div v-if="isLoading" class="self-center text-sm text-slate-500 dark:text-slate-400 italic">Memuat daftar ujian...</div>

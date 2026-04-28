@@ -464,6 +464,26 @@ func (r *StudentsRepo) CreateStudent(ctx context.Context, username, passwordHash
 	return studentID, userID, nil
 }
 
+func (r *StudentsRepo) FindByNISOrUsername(ctx context.Context, key string) (Student, bool, error) {
+	const q = `
+SELECT s.id, u.id, u.username, u.name, COALESCE(u.email,''), COALESCE(u.phone,''), s.nis,
+       COALESCE(s.jenjang,''), COALESCE(s.program_id::text,''), COALESCE(s.level_id::text,''), COALESCE(s.group_id::text,''),
+       COALESCE(u.photo_url,''), u.is_active
+FROM students s
+JOIN users u ON u.id = s.user_id
+WHERE s.nis = $1 OR u.username = $1
+LIMIT 1`
+	var it Student
+	err := r.pool.QueryRow(ctx, q, key).Scan(&it.ID, &it.UserID, &it.Username, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.PhotoURL, &it.IsActive)
+	if err != nil {
+		if isNoRows(err) {
+			return Student{}, false, nil
+		}
+		return Student{}, false, fmt.Errorf("find student by nis/username: %w", err)
+	}
+	return it, true, nil
+}
+
 func (r *StudentsRepo) ListByTarget(ctx context.Context, levelID, groupID, studentID string) ([]Student, int, error) {
 	const base = `
 FROM students s
