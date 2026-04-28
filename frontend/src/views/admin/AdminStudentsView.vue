@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { mdiAccountSchool, mdiRefresh, mdiPlus, mdiDelete, mdiPencil, mdiContentSave, mdiEye, mdiContentCopy, mdiFileExcel, mdiDownload, mdiUpload, mdiAccountSwitch } from '@mdi/js'
+import { mdiAccountSchool, mdiRefresh, mdiPlus, mdiDelete, mdiPencil, mdiContentSave, mdiEye, mdiContentCopy, mdiFileExcel, mdiDownload, mdiUpload, mdiAccountSwitch, mdiImageMultiple, mdiClose, mdiCheckCircle, mdiAlertCircle, mdiHelpCircle, mdiMinus, mdiCamera } from '@mdi/js'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
@@ -28,6 +28,14 @@ const editingUserId = ref('')
 const photoFile = ref(null)
 const photoPreview = ref(null)
 const isUploadingPhoto = ref(false)
+
+// Bulk photo upload
+const showBulkPhotoModal = ref(false)
+const bulkPhotoFile = ref(null)
+const bulkPhotoFileName = ref('')
+const bulkPhotoUploading = ref(false)
+const bulkPhotoResult = ref(null)
+const bulkPhotoError = ref('')
 
 const programs = ref([])
 const levels = ref([])
@@ -332,6 +340,49 @@ const getStudentAvatar = (student) => {
   return `https://api.dicebear.com/7.x/initials/svg?seed=${student.username || 'Student'}&backgroundColor=0033ff`
 }
 
+const openBulkPhotoModal = () => {
+  showBulkPhotoModal.value = true
+  bulkPhotoFile.value = null
+  bulkPhotoFileName.value = ''
+  bulkPhotoResult.value = null
+  bulkPhotoError.value = ''
+}
+
+const closeBulkPhotoModal = () => {
+  showBulkPhotoModal.value = false
+  if (bulkPhotoResult.value) {
+    loadStudents()
+  }
+}
+
+const handleBulkPhotoFile = (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+  bulkPhotoFile.value = file
+  bulkPhotoFileName.value = file.name
+  bulkPhotoResult.value = null
+  bulkPhotoError.value = ''
+}
+
+const uploadBulkPhotos = async () => {
+  if (!bulkPhotoFile.value) return
+  bulkPhotoUploading.value = true
+  bulkPhotoError.value = ''
+  bulkPhotoResult.value = null
+  try {
+    const formData = new FormData()
+    formData.append('file', bulkPhotoFile.value)
+    const { data } = await api.post('/api/v1/admin/students/bulk-photos', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    bulkPhotoResult.value = data?.data || null
+  } catch (e) {
+    bulkPhotoError.value = e?.response?.data?.error?.message || 'Gagal mengunggah file ZIP'
+  } finally {
+    bulkPhotoUploading.value = false
+  }
+}
+
 onMounted(async () => {
   await loadLookups()
   await loadStudents()
@@ -342,13 +393,20 @@ onMounted(async () => {
   <LayoutAuthenticated>
     <SectionMain>
       <SectionTitleLineWithButton :icon="mdiAccountSchool" title="Siswa" main>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
           <BaseButton :icon="mdiDownload" color="purple" label="Template" @click="downloadTemplate" small />
           <label class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-emerald-600 bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 transition-colors">
             <BaseIcon :path="mdiUpload" size="16" class="mr-1" />
             Impor Excel
             <input type="file" class="hidden" accept=".xlsx" @change="uploadImport" />
           </label>
+          <button
+            class="inline-flex cursor-pointer items-center justify-center rounded-lg border border-violet-600 bg-violet-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-violet-700 transition-colors gap-1"
+            @click="openBulkPhotoModal"
+          >
+            <BaseIcon :path="mdiImageMultiple" size="16" />
+            Import Foto Massal
+          </button>
           <BaseButton :icon="mdiRefresh" color="info" label="Muat Ulang" @click="loadStudents" small />
         </div>
       </SectionTitleLineWithButton>
@@ -594,4 +652,191 @@ onMounted(async () => {
       </div>
     </SectionMain>
   </LayoutAuthenticated>
+
+  <!-- Modal Bulk Upload Foto -->
+  <Teleport to="body">
+    <Transition name="modal-fade">
+      <div
+        v-if="showBulkPhotoModal"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        @click.self="closeBulkPhotoModal"
+      >
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeBulkPhotoModal" />
+
+        <!-- Panel -->
+        <div class="relative z-10 w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-900 shadow-2xl ring-1 ring-slate-200 dark:ring-slate-700 overflow-hidden">
+          <!-- Header -->
+          <div class="flex items-center justify-between bg-gradient-to-r from-violet-600 to-purple-700 px-6 py-4">
+            <div class="flex items-center gap-3">
+              <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20">
+                <BaseIcon :path="mdiImageMultiple" size="20" class="text-white" />
+              </div>
+              <div>
+                <h2 class="text-base font-bold text-white">Import Foto Massal</h2>
+                <p class="text-xs text-violet-200">Upload ZIP berisi foto siswa sekaligus</p>
+              </div>
+            </div>
+            <button
+              class="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors"
+              @click="closeBulkPhotoModal"
+            >
+              <BaseIcon :path="mdiClose" size="18" />
+            </button>
+          </div>
+
+          <div class="p-6 space-y-5">
+            <!-- Panduan -->
+            <div class="rounded-xl border border-violet-100 dark:border-violet-900/40 bg-violet-50 dark:bg-violet-900/20 p-4 text-sm">
+              <p class="font-semibold text-violet-800 dark:text-violet-300 mb-2">📋 Cara penggunaan:</p>
+              <ol class="list-decimal list-inside space-y-1 text-violet-700 dark:text-violet-400">
+                <li>Siapkan foto-foto siswa dalam format <strong>JPG, PNG, atau WebP</strong></li>
+                <li>Beri nama file sesuai <strong>NIS</strong> atau <strong>username</strong> siswa<br/>
+                  <span class="ml-4 text-xs text-violet-500">Contoh: <code class="bg-violet-100 dark:bg-violet-900 px-1 rounded">1234567890.jpg</code> atau <code class="bg-violet-100 dark:bg-violet-900 px-1 rounded">budi.santoso.png</code></span>
+                </li>
+                <li>Kumpulkan semua foto ke dalam satu file <strong>ZIP</strong></li>
+                <li>Upload file ZIP tersebut di sini</li>
+              </ol>
+            </div>
+
+            <!-- Upload area -->
+            <div>
+              <label
+                class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-colors"
+                :class="bulkPhotoFile ? 'border-violet-400 bg-violet-50 dark:bg-violet-900/20' : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 hover:border-violet-400 hover:bg-violet-50/50 dark:hover:bg-violet-900/10'"
+              >
+                <div class="flex flex-col items-center gap-2 text-center px-4">
+                  <BaseIcon
+                    :path="bulkPhotoFile ? mdiCheckCircle : mdiUpload"
+                    size="28"
+                    :class="bulkPhotoFile ? 'text-violet-500' : 'text-slate-400'"
+                  />
+                  <div v-if="bulkPhotoFile">
+                    <p class="text-sm font-semibold text-violet-700 dark:text-violet-300">{{ bulkPhotoFileName }}</p>
+                    <p class="text-xs text-slate-400">Klik untuk ganti file</p>
+                  </div>
+                  <div v-else>
+                    <p class="text-sm font-medium text-slate-600 dark:text-slate-300">Klik atau seret file ZIP ke sini</p>
+                    <p class="text-xs text-slate-400">Maksimum 50 MB</p>
+                  </div>
+                </div>
+                <input type="file" class="hidden" accept=".zip" @change="handleBulkPhotoFile" />
+              </label>
+            </div>
+
+            <!-- Error -->
+            <div
+              v-if="bulkPhotoError"
+              class="flex items-start gap-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 px-4 py-3 text-sm text-red-700 dark:text-red-400"
+            >
+              <BaseIcon :path="mdiAlertCircle" size="18" class="flex-shrink-0 mt-0.5" />
+              <span>{{ bulkPhotoError }}</span>
+            </div>
+
+            <!-- Hasil -->
+            <div v-if="bulkPhotoResult" class="space-y-3">
+              <!-- Summary -->
+              <div class="grid grid-cols-3 gap-3">
+                <div class="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-900/40 p-3 text-center">
+                  <div class="text-2xl font-black text-emerald-600 dark:text-emerald-400">{{ bulkPhotoResult.uploaded }}</div>
+                  <div class="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Berhasil</div>
+                </div>
+                <div class="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 p-3 text-center">
+                  <div class="text-2xl font-black text-amber-600 dark:text-amber-400">{{ bulkPhotoResult.skipped }}</div>
+                  <div class="text-xs text-amber-700 dark:text-amber-400 font-medium">Dilewati</div>
+                </div>
+                <div class="rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 text-center">
+                  <div class="text-2xl font-black text-slate-600 dark:text-slate-300">{{ bulkPhotoResult.total_files }}</div>
+                  <div class="text-xs text-slate-500 font-medium">Total File</div>
+                </div>
+              </div>
+
+              <!-- Detail tabel -->
+              <div class="max-h-52 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700">
+                <table class="w-full text-xs">
+                  <thead class="sticky top-0 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                    <tr>
+                      <th class="px-3 py-2 text-left">File</th>
+                      <th class="px-3 py-2 text-left">Kunci (NIS/Username)</th>
+                      <th class="px-3 py-2 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="(item, idx) in bulkPhotoResult.results"
+                      :key="idx"
+                      class="border-t border-slate-100 dark:border-slate-800"
+                    >
+                      <td class="px-3 py-2 font-mono text-slate-500 truncate max-w-[160px]">{{ item.filename }}</td>
+                      <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{{ item.key || '-' }}</td>
+                      <td class="px-3 py-2 text-center">
+                        <span
+                          class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                          :class="{
+                            'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400': item.status === 'ok',
+                            'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': item.status === 'not_found' || item.status === 'skipped',
+                            'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400': item.status === 'error',
+                          }"
+                          :title="item.error || ''"
+                        >
+                          <BaseIcon
+                            :path="item.status === 'ok' ? mdiCheckCircle : item.status === 'error' ? mdiAlertCircle : mdiMinus"
+                            size="10"
+                          />
+                          {{ item.status === 'ok' ? 'OK' : item.status === 'not_found' ? 'Tidak ditemukan' : item.status === 'skipped' ? 'Dilewati' : 'Error' }}
+                        </span>
+                        <p v-if="item.error" class="text-[9px] text-red-400 mt-0.5">{{ item.error }}</p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center justify-end gap-3 pt-2">
+              <button
+                class="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                @click="closeBulkPhotoModal"
+              >
+                {{ bulkPhotoResult ? 'Tutup' : 'Batal' }}
+              </button>
+              <button
+                v-if="!bulkPhotoResult"
+                class="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-5 py-2 text-sm font-bold text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                :disabled="!bulkPhotoFile || bulkPhotoUploading"
+                @click="uploadBulkPhotos"
+              >
+                <BaseIcon v-if="!bulkPhotoUploading" :path="mdiUpload" size="16" />
+                <svg v-else class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                </svg>
+                {{ bulkPhotoUploading ? 'Memproses...' : 'Upload & Proses' }}
+              </button>
+              <button
+                v-else
+                class="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-5 py-2 text-sm font-bold text-white hover:bg-violet-700 transition-colors"
+                @click="() => { bulkPhotoResult = null; bulkPhotoFile = null; bulkPhotoFileName = '' }"
+              >
+                <BaseIcon :path="mdiUpload" size="16" />
+                Upload Lagi
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
+
+<style scoped>
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+</style>

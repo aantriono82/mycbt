@@ -491,6 +491,10 @@ func NewHandler(deps Deps) http.Handler {
 		admin.PATCH("/students/:id", h.UpdateStudent)
 		admin.DELETE("/students/:id", h.DeleteStudent)
 
+		// Bulk photo upload via ZIP
+		bulkPhotoH := handlers.NewBulkPhotoHandler(students, deps.Users, deps.ObjectStore)
+		admin.POST("/students/bulk-photos", middleware.LimitBodyBytes(55<<20), bulkPhotoH.BulkUploadPhotos)
+
 		// Switch role between teacher <-> student
 		admin.POST("/users/:id/switch-role", h.SwitchUserRole)
 
