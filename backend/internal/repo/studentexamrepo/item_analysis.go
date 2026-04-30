@@ -224,7 +224,10 @@ WHERE question_id::text = ANY($1::text[])`, saIDs)
 		rows, qErr := r.pool.Query(ctx, `
 SELECT question_id::text, id::text
 FROM question_matching_pairs
-WHERE question_id::text = ANY($1::text[])`, matchIDs)
+WHERE question_id::text = ANY($1::text[])
+  AND NULLIF(TRIM(left_content), '') IS NOT NULL 
+  AND TRIM(left_content) != '<p></p>'
+  AND TRIM(left_content) != '<p><br></p>'`, matchIDs)
 		if qErr != nil {
 			return nil, 0, fmt.Errorf("load matching keys for item analysis: %w", qErr)
 		}

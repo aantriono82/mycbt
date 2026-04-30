@@ -45,6 +45,30 @@ Run API:
 ../.tooling/go/bin/go run ./cmd/api
 ```
 
+## Cleanup Pre-Deploy (Hapus Data Uji)
+
+Sebelum go-live, gunakan cleanup agar akun guru/siswa dummy dan data ujian uji tidak ikut production.
+
+SQL langsung:
+
+```bash
+psql "$DATABASE_URL" -f scripts/cleanup_predeploy.sql
+```
+
+CLI Go (lebih aman karena default `dry-run`):
+
+```bash
+# hanya lihat jumlah data (tanpa hapus)
+go run ./cmd/cleanup
+
+# eksekusi hapus data
+go run ./cmd/cleanup --execute
+```
+
+Catatan:
+- Script ini mempertahankan user role `admin`.
+- Selalu backup database sebelum menjalankan mode `--execute`.
+
 Endpoints (core):
 
 - `GET /healthz`

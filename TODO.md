@@ -57,6 +57,17 @@ AtigaCBT is a premium computer-based testing platform designed for stability, ri
 ---
 **Current Focus:** Ready for Production.
 
+## Production Deployment Notes (VPS)
+
+- VPS `107.173.21.147` menggunakan **Dokploy + Traefik**.
+- Port `80/443` sudah dipegang container `dokploy-traefik` (`docker-proxy`), sehingga **Nginx host tidak bisa bind** ke port tersebut.
+- Keputusan deployment:
+- **Jangan gunakan Nginx host** sebagai reverse proxy utama selama Dokploy aktif.
+- Routing domain `cbt.aantriono.sch.id` dilakukan melalui **Traefik (Dokploy)**.
+- Backend MyCBT tetap jalan pada port internal (mis. `127.0.0.1:8080` / service internal container), lalu diproxy oleh Traefik.
+- Frontend dilayani sebagai service/app di Dokploy dan domain diarahkan lewat Traefik.
+- Jika ingin memaksa Nginx host, `dokploy-traefik` harus dimatikan (tidak direkomendasikan karena memutus routing Dokploy).
+
 ## Cara Login (Dev)
 
 Jika login selalu muncul pesan **network error**, biasanya karena frontend tidak bisa reach backend (API belum jalan atau base URL salah).

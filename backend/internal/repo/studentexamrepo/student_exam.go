@@ -935,7 +935,10 @@ ORDER BY order_no ASC, id ASC`, qids)
 		left := make([]StudentMatchingItem, 0, len(ps))
 		right := make([]StudentMatchingItem, 0, len(ps))
 		for _, p := range ps {
-			left = append(left, StudentMatchingItem{ID: p.ID + ":L", Content: p.Left, OrderNo: p.Order})
+			cleanLeft := strings.TrimSpace(p.Left)
+			if cleanLeft != "" && cleanLeft != "<p></p>" && cleanLeft != "<p><br></p>" {
+				left = append(left, StudentMatchingItem{ID: p.ID + ":L", Content: p.Left, OrderNo: p.Order})
+			}
 			right = append(right, StudentMatchingItem{ID: p.ID + ":R", Content: p.Right, OrderNo: p.Order})
 		}
 		if shuffleOptions {

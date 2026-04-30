@@ -18,6 +18,7 @@ import (
 	"mycbt/backend/internal/repo/studentexamrepo"
 	"mycbt/backend/internal/service/ltisvc"
 	"mycbt/backend/internal/service/notificationsvc"
+	"mycbt/backend/internal/util/simplepdf"
 )
 
 type ExamResultsHandler struct {
@@ -680,6 +681,108 @@ func (h *ExamResultsHandler) Export(c *gin.Context) {
 	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 	c.Header("Content-Disposition", `attachment; filename="`+filename+`"`)
 	c.Data(200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buf.Bytes())
+}
+
+func (h *ExamResultsHandler) ExportPDF(c *gin.Context) {
+	exam, ok := h.authorizeExam(c)
+	if !ok {
+		return
+	}
+	nowUTC := time.Now().UTC()
+	items, _, err := h.st.ListExamSessionsWithScore(c.Request.Context(), c.Param("id"), studentexamrepo.ListExamSessionsFilter{
+		Q:      "",
+		Limit:  5000,
+		Offset: 0,
+		NowUTC: nowUTC,
+	})
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+
+	doc := simplepdf.NewA4Landscape()
+	y := 570.0
+	lineH := 15.0
+
+	headers := []string{"No", "NIS", "Nama", "Status", "Benar", "Salah", "Kosong", "Skor", "Waktu Selesai", "Durasi"}
+	xs := []float64{24, 56, 120, 320, 382, 428, 474, 524, 570, 730}
+	drawHeader := func(pageNum int) float64 {
+		top := 570.0
+		doc.AddText(simplepdf.Text{X: 24, Y: top, Size: 16, Body: "Rekap Hasil Ujian"})
+		top -= 18
+		doc.AddText(simplepdf.Text{X: 24, Y: top, Size: 11, Body: "Ujian: " + exam.Title})
+		top -= 14
+		doc.AddText(simplepdf.Text{X: 24, Y: top, Size: 10, Body: "Generated (UTC): " + nowUTC.Format(time.RFC3339)})
+		doc.AddText(simplepdf.Text{X: 760, Y: top, Size: 10, Body: fmt.Sprintf("Hal: %d", pageNum)})
+		top -= 18
+		for i, htxt := range headers {
+			doc.AddText(simplepdf.Text{X: xs[i], Y: top, Size: 9, Body: htxt})
+		}
+		top -= 8
+		doc.AddLine(24, top, 818, top)
+		return top - 12
+	}
+
+	pageNum := 1
+	y = drawHeader(pageNum)
+
+	for i, row := range items {
+		if y < 26 {
+			doc.AddPage()
+			pageNum++
+			y = drawHeader(pageNum)
+		}
+		wrong := row.AutoScorable - row.CorrectCount
+		if wrong < 0 {
+			wrong = 0
+		}
+		blank := row.TotalQuestions - row.AnsweredQuestions
+		if blank < 0 {
+			blank = 0
+		}
+		finished := row.FinishedAt
+		if strings.TrimSpace(finished) == "" {
+			finished = "-"
+		}
+		doc.AddText(simplepdf.Text{X: xs[0], Y: y, Size: 8, Body: fmt.Sprintf("%d", i+1)})
+		doc.AddText(simplepdf.Text{X: xs[1], Y: y, Size: 8, Body: row.StudentNIS})
+		doc.AddText(simplepdf.Text{X: xs[2], Y: y, Size: 8, Body: truncateText(row.StudentName, 32)})
+		doc.AddText(simplepdf.Text{X: xs[3], Y: y, Size: 8, Body: row.Status})
+		doc.AddText(simplepdf.Text{X: xs[4], Y: y, Size: 8, Body: fmt.Sprintf("%d", row.CorrectCount)})
+		doc.AddText(simplepdf.Text{X: xs[5], Y: y, Size: 8, Body: fmt.Sprintf("%d", wrong)})
+		doc.AddText(simplepdf.Text{X: xs[6], Y: y, Size: 8, Body: fmt.Sprintf("%d", blank)})
+		doc.AddText(simplepdf.Text{X: xs[7], Y: y, Size: 8, Body: fmt.Sprintf("%d", row.Score)})
+		doc.AddText(simplepdf.Text{X: xs[8], Y: y, Size: 8, Body: truncateText(finished, 26)})
+		doc.AddText(simplepdf.Text{X: xs[9], Y: y, Size: 8, Body: formatDuration(row.DurationSeconds)})
+		y -= lineH
+	}
+
+	pdfBytes, err := doc.Bytes()
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "failed to generate pdf"}})
+		return
+	}
+	filename := fmt.Sprintf("exam-results-%s.pdf", url.QueryEscape(c.Param("id")))
+	c.Header("Content-Type", "application/pdf")
+	c.Header("Content-Disposition", `attachment; filename="`+filename+`"`)
+	c.Data(200, "application/pdf", pdfBytes)
+}
+
+func truncateText(s string, limit int) string {
+	if limit <= 3 || len(s) <= limit {
+		return s
+	}
+	return s[:limit-3] + "..."
+}
+
+func formatDuration(seconds int) string {
+	if seconds <= 0 {
+		return "-"
+	}
+	h := seconds / 3600
+	m := (seconds % 3600) / 60
+	s := seconds % 60
+	return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
 }
 
 func (h *ExamResultsHandler) ExportItemAnalysis(c *gin.Context) {
