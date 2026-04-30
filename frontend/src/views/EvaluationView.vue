@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { mdiChartBoxOutline, mdiDownload, mdiRefresh, mdiAccountGroup, mdiCheckCircleOutline, mdiClockAlertOutline, mdiChartLine, mdiSend, mdiCloudUploadOutline } from '@mdi/js'
+import { mdiChartBoxOutline, mdiDownload, mdiRefresh, mdiAccountGroup, mdiCheckCircleOutline, mdiClockAlertOutline, mdiChartLine, mdiSend, mdiCloudUploadOutline, mdiFilePdfBox } from '@mdi/js'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
@@ -60,12 +60,52 @@ const isSyncingLTI = ref(false)
 const blastChannels = ref(['email', 'whatsapp'])
 const showScoreDistribution = ref(true)
 const showItemAnalysis = ref(true)
+const passingScore = ref(75)
 
 const isEssayModalActive = ref(false)
 const selectedSessionForEssay = ref(null)
 const essayAttempts = ref([])
 
 const canLoad = computed(() => authStore.isAuthenticated)
+
+const clampPassingScore = () => {
+  const n = Number(passingScore.value)
+  if (!Number.isFinite(n)) {
+    passingScore.value = 75
+    return
+  }
+  passingScore.value = Math.max(0, Math.min(100, Math.round(n)))
+}
+
+const toDuration = (seconds) => {
+  const total = Number(seconds || 0)
+  if (!Number.isFinite(total) || total < 1) return '-'
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  const s = total % 60
+  const hh = String(h).padStart(2, '0')
+  const mm = String(m).padStart(2, '0')
+  const ss = String(s).padStart(2, '0')
+  return `${hh}:${mm}:${ss}`
+}
+
+const passLabel = (row) => {
+  const st = String(row?.status || '').toLowerCase()
+  if (st !== 'submitted') return 'Tidak Lulus'
+  return Number(row?.score || 0) >= Number(passingScore.value || 75) ? 'Lulus' : 'Tidak Lulus'
+}
+
+const wrongCount = (row) => {
+  const total = Number(row?.auto_scorable_questions ?? 0)
+  const correct = Number(row?.correct_count ?? 0)
+  return Math.max(0, total - correct)
+}
+
+const blankCount = (row) => {
+  const total = Number(row?.total_questions ?? 0)
+  const answered = Number(row?.answered_questions ?? 0)
+  return Math.max(0, total - answered)
+}
 
 const stats = computed(() => {
   const items = results.value || []
@@ -231,6 +271,28 @@ const exportResults = async () => {
   }
 }
 
+const exportResultsPdf = async () => {
+  if (!canLoad.value || !selectedExamId.value) return
+  errorMessage.value = ''
+  try {
+    const response = await api.get(`/api/v1/exams/${selectedExamId.value}/export.pdf`, {
+      responseType: 'blob',
+      params: { q: q.value },
+    })
+    const blob = new Blob([response.data], { type: 'application/pdf' })
+    const href = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = href
+    a.download = `exam-results-${selectedExamId.value}.pdf`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(href)
+  } catch (error) {
+    errorMessage.value = error?.response?.data?.error?.message || 'Gagal export PDF hasil ujian'
+  }
+}
+
 const blastResults = async () => {
   if (!selectedExamId.value) return
   if (!confirm('Kirim hasil nilai ke semua siswa (Email/WA) sesuai pengaturan?')) return
@@ -336,6 +398,20 @@ onMounted(async () => {
             :icon="mdiDownload" 
             color="purple" 
             small
+            label="Excel" 
+            @click="exportResults" 
+          />
+          <BaseButton 
+            :icon="mdiFilePdfBox" 
+            color="danger" 
+            small
+            label="PDF" 
+            @click="exportResultsPdf" 
+          />
+          <BaseButton 
+            :icon="mdiDownload" 
+            color="purple" 
+            small
             label="Analisis" 
             @click="exportItemAnalysis" 
           />
@@ -402,6 +478,23 @@ onMounted(async () => {
             Hasil Ujian: <span class="font-bold dark:text-slate-100">{{ meta.exam.title }}</span>
           </div>
         </div>
+        <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div class="text-xs text-slate-500 dark:text-slate-400">
+            Status lulus dihitung dari nilai akhir dan ambang batas lulus.
+          </div>
+          <div class="w-full sm:w-60">
+            <FormField label="Ambang Lulus">
+              <FormControl
+                v-model.number="passingScore"
+                type="number"
+                min="0"
+                max="100"
+                placeholder="75"
+                @blur="clampPassingScore"
+              />
+            </FormField>
+          </div>
+        </div>
       </CardBox>
 
       <div class="mb-8 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
@@ -429,28 +522,37 @@ onMounted(async () => {
           <table class="w-full text-left text-sm">
             <thead class="border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 uppercase text-xs tracking-wider font-bold">
               <tr>
+                <th class="px-3 py-3 text-center">No</th>
+                <th class="px-3 py-3 text-center">Attempt</th>
+                <th class="px-3 py-3 text-center">NIS</th>
                 <th class="px-3 py-3">Siswa</th>
                 <th class="px-3 py-3">Username</th>
-                <th class="px-3 py-3 text-center">NIS</th>
                 <th class="px-3 py-3 text-center">Status</th>
-                <th class="px-3 py-3">Dikumpulkan</th>
+                <th class="px-3 py-3">Waktu Mulai</th>
+                <th class="px-3 py-3">Waktu Selesai</th>
+                <th class="px-3 py-3 text-center">Durasi</th>
                 <th class="px-3 py-3 text-center">Benar</th>
+                <th class="px-3 py-3 text-center">Salah</th>
+                <th class="px-3 py-3 text-center">Kosong</th>
                 <th class="px-3 py-3 text-center">Nilai</th>
+                <th class="px-3 py-3 text-center">Lulus</th>
                 <th class="px-3 py-3 text-center">Grading</th>
               </tr>
             </thead>
             <tbody>
               <template v-if="isLoadingResults">
                 <tr v-for="i in 5" :key="i">
-                  <td v-for="j in 8" :key="j" class="px-3 py-4">
+                  <td v-for="j in 14" :key="j" class="px-3 py-4">
                     <BaseSkeleton width="w-full" height="h-4" />
                   </td>
                 </tr>
               </template>
-              <tr v-else v-for="row in results" :key="row.session_id" class="border-b dark:border-slate-800 last:border-b-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+              <tr v-else v-for="(row, idx) in results" :key="row.session_id" class="border-b dark:border-slate-800 last:border-b-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                <td class="px-3 py-3 text-center text-slate-500 dark:text-slate-400">{{ idx + 1 }}</td>
+                <td class="px-3 py-3 text-center font-semibold text-slate-600 dark:text-slate-300">{{ row.attempt_number || 1 }}</td>
+                <td class="px-3 py-3 text-center text-slate-500 dark:text-slate-400">{{ row.student_nis }}</td>
                 <td class="px-3 py-3 font-medium dark:text-slate-100">{{ row.student_name }}</td>
                 <td class="px-3 py-3 text-slate-500 dark:text-slate-400">{{ row.student_username }}</td>
-                <td class="px-3 py-3 text-center text-slate-500 dark:text-slate-400">{{ row.student_nis }}</td>
                 <td class="px-3 py-3 text-center">
                   <span
                     class="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight"
@@ -459,9 +561,21 @@ onMounted(async () => {
                     {{ row.status }}
                   </span>
                 </td>
+                <td class="px-3 py-3 text-slate-500 dark:text-slate-400 text-xs">{{ formatDateTime(row.started_at) }}</td>
                 <td class="px-3 py-3 text-slate-500 dark:text-slate-400 text-xs">{{ formatDateTime(row.finished_at) }}</td>
-                <td class="px-3 py-3 text-center text-slate-600 dark:text-slate-300 font-mono">{{ row.correct_count }}/{{ row.auto_scorable_questions }}</td>
+                <td class="px-3 py-3 text-center font-mono text-xs text-slate-600 dark:text-slate-300">{{ toDuration(row.duration_seconds) }}</td>
+                <td class="px-3 py-3 text-center text-emerald-700 dark:text-emerald-400 font-mono">{{ row.correct_count }}</td>
+                <td class="px-3 py-3 text-center text-rose-700 dark:text-rose-400 font-mono">{{ wrongCount(row) }}</td>
+                <td class="px-3 py-3 text-center text-slate-500 dark:text-slate-300 font-mono">{{ blankCount(row) }}</td>
                 <td class="px-3 py-3 text-center font-bold text-lg text-info dark:text-sky-400">{{ row.score }}</td>
+                <td class="px-3 py-3 text-center">
+                  <span
+                    class="inline-flex min-w-[96px] items-center justify-center rounded-full px-3 py-1 text-[11px] font-black tracking-tight text-white shadow-sm"
+                    :class="passLabel(row) === 'Lulus' ? 'bg-emerald-500' : 'bg-rose-500'"
+                  >
+                    {{ passLabel(row) }}
+                  </span>
+                </td>
                 <td class="px-3 py-3 text-center">
                   <div class="flex flex-col items-center gap-1">
                     <BaseButton
@@ -481,7 +595,7 @@ onMounted(async () => {
                 </td>
               </tr>
               <tr v-if="!results.length && !isLoadingResults">
-                <td colspan="7" class="px-3 py-10 text-center text-slate-400 dark:text-slate-500 italic">
+                <td colspan="14" class="px-3 py-10 text-center text-slate-400 dark:text-slate-500 italic">
                   Belum ada data peserta untuk ujian ini.
                 </td>
               </tr>

@@ -16,6 +16,7 @@ import {
 import BaseIcon from '@/components/BaseIcon.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import QuillEditor from '@/components/QuillEditor.vue'
+import PreviewMatchingBoard from '@/components/student/PreviewMatchingBoard.vue'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
 import { useExamStore } from '@/stores/exam.js'
@@ -446,10 +447,123 @@ const setMatchingPair = (leftId, rightId) => {
   const l = String(leftId || '').trim()
   const r = String(rightId || '').trim()
   if (!l) return
-  if (!r) delete pairs[l]
-  else pairs[l] = r
-  answers.value[q.id].pairs = pairs
+  if (!r) {
+    delete pairs[l]
+  } else {
+    // one-to-one mapping: if a right option already used by another left, move it.
+    for (const [k, v] of Object.entries(pairs)) {
+      if (k !== l && String(v) === r) delete pairs[k]
+    }
+    pairs[l] = r
+  }
+  answers.value[q.id] = {
+    ...(answers.value[q.id] && typeof answers.value[q.id] === 'object' ? answers.value[q.id] : {}),
+    pairs,
+  }
   examStore.saveAnswer(q.id)
+}
+
+const setMatchingPairs = (pairs) => {
+  const q = currentQuestion.value
+  if (!q?.id) return
+  ensureAnswerShapeForQuestion(q)
+  answers.value[q.id] = {
+    ...(answers.value[q.id] && typeof answers.value[q.id] === 'object' ? answers.value[q.id] : {}),
+    pairs: pairs && typeof pairs === 'object' && !Array.isArray(pairs) ? { ...pairs } : {},
+  }
+  examStore.saveAnswer(q.id)
+}
+
+const matchingBoardEl = ref(null)
+const activeMatchingLeftId = ref('')
+const matchingLines = ref([])
+let matchingRaf = 0
+const escapeAttrSelector = (value) => {
+  const raw = String(value ?? '')
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') return CSS.escape(raw)
+  return raw.replace(/["\\]/g, '\\$&')
+}
+
+const matchingPairsMap = computed(() => {
+  const q = currentQuestion.value
+  if (!q?.id || q.type !== 'matching') return {}
+  const raw = answers.value[q.id]?.pairs
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
+  return raw
+})
+
+const matchingLeftItems = computed(() => {
+  const q = currentQuestion.value
+  if (!q || q.type !== 'matching') return []
+  return Array.isArray(q.matching_left) ? q.matching_left : []
+})
+
+const matchingRightItems = computed(() => matchingRightOptions.value)
+
+const setActiveMatchingLeft = (leftId) => {
+  activeMatchingLeftId.value = String(leftId || '').trim()
+}
+
+const clearMatchingForLeft = (leftId) => {
+  setMatchingPair(leftId, '')
+  if (activeMatchingLeftId.value === String(leftId || '')) activeMatchingLeftId.value = ''
+  scheduleMatchingLines()
+}
+
+const onMatchingRightClick = (rightId) => {
+  let leftId = String(activeMatchingLeftId.value || '').trim()
+  if (!leftId) {
+    const firstUnpaired = matchingLeftItems.value.find((item) => !matchingPairsMap.value?.[String(item?.id || '')])
+    if (firstUnpaired?.id != null) leftId = String(firstUnpaired.id)
+  }
+  if (!leftId) return
+  setMatchingPair(leftId, rightId)
+  activeMatchingLeftId.value = ''
+  scheduleMatchingLines()
+}
+
+const scheduleMatchingLines = async () => {
+  if (matchingRaf) cancelAnimationFrame(matchingRaf)
+  await nextTick()
+  matchingRaf = requestAnimationFrame(() => {
+    try {
+      const root = matchingBoardEl.value
+      const q = currentQuestion.value
+      if (!root || !q || q.type !== 'matching') {
+        matchingLines.value = []
+        return
+      }
+      const rootRect = root.getBoundingClientRect()
+      const out = []
+      for (const [leftId, rightId] of Object.entries(matchingPairsMap.value || {})) {
+        const leftSel = escapeAttrSelector(leftId)
+        const rightSel = escapeAttrSelector(rightId)
+        const leftEl = root.querySelector(`[data-left-id="${leftSel}"]`)
+        const rightEl = root.querySelector(`[data-right-id="${rightSel}"]`)
+        if (!leftEl || !rightEl) continue
+        const lRect = leftEl.getBoundingClientRect()
+        const rRect = rightEl.getBoundingClientRect()
+        const x1 = lRect.right - rootRect.left
+        const y1 = lRect.top + lRect.height / 2 - rootRect.top
+        const x2 = rRect.left - rootRect.left
+        const y2 = rRect.top + rRect.height / 2 - rootRect.top
+        const bend = Math.max(36, Math.min(120, (x2 - x1) * 0.35))
+        const d = `M ${x1} ${y1} C ${x1 + bend} ${y1}, ${x2 - bend} ${y2}, ${x2} ${y2}`
+        out.push({
+          key: `${leftId}->${rightId}`,
+          x1,
+          x2,
+          d,
+          y1,
+          y2,
+          active: String(activeMatchingLeftId.value || '') === String(leftId),
+        })
+      }
+      matchingLines.value = out
+    } catch {
+      matchingLines.value = []
+    }
+  })
 }
 
 const isFlagged = (qid) => !!flagged.value[String(qid || '')]
@@ -470,15 +584,23 @@ watch(currentIndex, () => {
     const el = document.querySelector(`[data-qnav-idx="${currentIndex.value}"]`)
     if (el) el.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }, 50)
+  activeMatchingLeftId.value = ''
+  scheduleMatchingLines()
 }, { flush: 'post' })
 
 watch(
   () => currentQuestion.value?.id,
   () => {
     syncEditorModelByQuestion()
+    activeMatchingLeftId.value = ''
+    scheduleMatchingLines()
   },
   { immediate: true },
 )
+
+watch(matchingPairsMap, () => {
+  scheduleMatchingLines()
+}, { deep: true })
 
 onMounted(() => {
   const sid = route.params.sessionId
@@ -499,6 +621,8 @@ onMounted(() => {
   document.addEventListener('keydown', handleKeyPrevention)
   window.addEventListener('online', updateOnlineStatus)
   window.addEventListener('offline', updateOnlineStatus)
+  window.addEventListener('resize', scheduleMatchingLines)
+  window.addEventListener('scroll', scheduleMatchingLines, true)
 })
 
 onUnmounted(() => {
@@ -514,6 +638,9 @@ onUnmounted(() => {
   document.removeEventListener('keydown', handleKeyPrevention)
   window.removeEventListener('online', updateOnlineStatus)
   window.removeEventListener('offline', updateOnlineStatus)
+  window.removeEventListener('resize', scheduleMatchingLines)
+  window.removeEventListener('scroll', scheduleMatchingLines, true)
+  if (matchingRaf) cancelAnimationFrame(matchingRaf)
 })
 
 const handleVisibilityChange = () => {
@@ -576,7 +703,25 @@ const currentTextAnswer = computed({
   },
 })
 
-const stripHtml = (html) => String(html || '').replace(/<[^>]*>/g, '').trim()
+const stripHtml = (html) => {
+  const raw = String(html || '')
+  if (!raw.trim()) return ''
+  try {
+    const doc = new DOMParser().parseFromString(raw, 'text/html')
+    const text = String(doc.body.textContent || '')
+    return text
+      .replace(/\u00a0/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  } catch {
+    return raw
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+}
 const shortAnswerEditorHtml = ref('')
 const essayEditorHtml = ref('')
 let textAnswerSaveTimer = 0
@@ -655,6 +800,13 @@ const matchingRightOptions = computed(() => {
     orderNo: it.order_no ?? null,
   }))
 })
+
+const isMatchingLeftActive = (leftId) => String(activeMatchingLeftId.value) === String(leftId || '')
+const isMatchingLeftPaired = (leftId) => !!matchingPairsMap.value?.[String(leftId || '')]
+const isMatchingRightUsed = (rightId) => {
+  const r = String(rightId || '')
+  return Object.values(matchingPairsMap.value || {}).some((v) => String(v) === r)
+}
 
 </script>
 
@@ -843,7 +995,7 @@ const matchingRightOptions = computed(() => {
 	                </div>
 	             </div>
 
-		               <div ref="cardScrollEl" class="flex-1 overflow-auto scrollbar-styled-light dark:scrollbar-styled-dark" :class="fontClass">
+		               <div ref="cardScrollEl" @scroll="scheduleMatchingLines" class="flex-1 overflow-auto scrollbar-styled-light dark:scrollbar-styled-dark" :class="fontClass">
 	                <!-- STIMULUS / CONTENT -->
 	                <div class="p-6 md:p-10 prose prose-slate dark:prose-invert max-w-none text-base leading-relaxed text-slate-800 dark:text-slate-200">
 	                   <div class="flex justify-between items-start mb-6">
@@ -1009,40 +1161,12 @@ const matchingRightOptions = computed(() => {
                       Tidak ada pasangan untuk soal menjodohkan ini.
                    </div>
 
-                   <div v-else class="bg-white rounded-2xl border-2 border-slate-100 shadow-inner overflow-hidden">
-                      <div class="px-8 py-6 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
-                         <div class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">MENJODOHKAN</div>
-                         <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Pilih pasangan yang sesuai</div>
-                      </div>
-
-                      <div class="p-8 space-y-4">
-                         <div
-                           v-for="left in currentQuestion.matching_left"
-                           :key="left.id"
-                           class="grid md:grid-cols-[1fr_24px_1fr] gap-4 items-center p-6 rounded-2xl border-2 border-slate-100 bg-white"
-                         >
-                            <div class="font-black text-slate-900 text-lg leading-snug" v-html="renderHtml(left.content)"></div>
-                            <div class="text-center text-slate-300 font-black">→</div>
-
-                            <div class="space-y-2">
-                               <select
-                                 class="w-full p-4 rounded-xl border-2 border-slate-100 bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
-                                 :value="answers[currentQuestion.id]?.pairs?.[left.id] || ''"
-                                 @change="setMatchingPair(left.id, $event.target.value)"
-                               >
-                                  <option value="">Pilih pasangan...</option>
-                                  <option
-                                    v-for="opt in matchingRightOptions"
-                                    :key="opt.id"
-                                    :value="opt.id"
-                                  >
-                                    {{ opt.text || '(kosong)' }}
-                                  </option>
-                               </select>
-                            </div>
-                         </div>
-                      </div>
-                   </div>
+                   <PreviewMatchingBoard
+                     v-else
+                     :question="currentQuestion"
+                     :model-value="answers[currentQuestion.id]?.pairs || {}"
+                     @update:model-value="setMatchingPairs"
+                   />
                 </div>
 
                 <!-- Essay / Short Answer -->

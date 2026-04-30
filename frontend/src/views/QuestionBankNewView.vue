@@ -259,6 +259,14 @@ const summarizeText = (value, maxLen = 120) => {
   return `${text.slice(0, maxLen - 1)}…`
 }
 
+const normalizeRichHtmlForPayload = (value) => {
+  const raw = String(value ?? '')
+  if (!raw.trim()) return ''
+  const plain = stripHtml(raw).replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim()
+  if (!plain) return ''
+  return raw.trim()
+}
+
 const formatQuestionId = (value) => {
   const id = String(value || '').trim()
   if (!id) return '-'
@@ -611,8 +619,12 @@ const buildQuestionPayload = () => {
   }
   if (questionForm.type === 'matching') {
      payload.pairs = matchingPairs
-       .filter(p => p.left_content.trim() || p.right_content.trim())
-       .map((p, i) => ({ left_content: p.left_content.trim(), right_content: p.right_content.trim(), order_no: i + 1 }))
+       .map((p) => ({
+         left_content: normalizeRichHtmlForPayload(p.left_content),
+         right_content: normalizeRichHtmlForPayload(p.right_content),
+       }))
+       .filter((p) => p.left_content || p.right_content)
+       .map((p, i) => ({ ...p, order_no: i + 1 }))
   }
   if (questionForm.type === 'true_false') {
     payload.statements = trueFalseStatements
@@ -1845,7 +1857,7 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                                 v-model="pair.left_content"
                                 :height="120"
                                 :toolbar="optionToolbar"
-                                :placeholder="`Isi ruas kiri ${idx + 1}...`"
+                                :placeholder="`Kosongkan ini jika ingin jadikan ruas kanan sebagai distractor/pengecoh...`"
                               />
                             </div>
                           </div>
@@ -1883,7 +1895,8 @@ const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist nu
                   </button>
 
                   <div class="rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-4 mt-6">
-                    <p class="text-[11px] text-slate-500 italic">💡 Ruas kiri akan diacak saat ujian berlangsung. Pastikan ruas kanan berisi pasangan yang secara logika tepat untuk ruas kiri di kartu yang sama.</p>
+                    <p class="text-[11px] text-slate-500 italic mb-2">💡 Ruas kiri akan diacak saat ujian berlangsung. Pastikan ruas kanan berisi pasangan yang secara logika tepat untuk ruas kiri di kartu yang sama.</p>
+                    <p class="text-[11px] text-slate-500 italic">🔥 <strong>Tip Distraktor:</strong> Anda bisa membuat ruas kanan sebagai pengecoh (distraktor) dengan <strong>mengosongkan ruas kiri</strong>. Siswa akan melihat lebih banyak pilihan jawaban di ruas kanan daripada ruas kiri, membuat soal lebih menantang!</p>
                   </div>
               </div>
             </div>

@@ -270,46 +270,12 @@
                       Tidak ada pasangan (pairs) untuk soal menjodohkan ini.
                    </div>
 
-                   <div v-else class="bg-white rounded-2xl border-2 border-slate-100 shadow-inner overflow-hidden">
-                      <div class="px-8 py-6 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
-                         <div class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">MENJODOHKAN</div>
-                         <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Pilih pasangan yang sesuai</div>
-                      </div>
-
-                      <div class="p-8 space-y-4">
-                         <div
-                           v-for="pair in currentQuestion.pairs"
-                           :key="pair.id"
-                           class="grid md:grid-cols-[1fr_24px_1fr] gap-4 items-center p-6 rounded-2xl border-2 border-slate-100 bg-white"
-                           :class="[
-                             showCorrect && answers[currentQuestion.id]?.[pair.id] && answers[currentQuestion.id]?.[pair.id] !== pair.id ? '!border-red-200 bg-red-50/30' : '',
-                             showCorrect && answers[currentQuestion.id]?.[pair.id] === pair.id ? '!border-emerald-200 bg-emerald-50/30' : ''
-                           ]"
-                         >
-                            <div class="font-black text-slate-900 text-lg leading-snug" v-html="renderHtml(pair.left_content)"></div>
-                            <div class="text-center text-slate-300 font-black">→</div>
-
-                            <div class="space-y-2">
-                               <select
-                                 class="w-full p-4 rounded-xl border-2 border-slate-100 bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
-                                 :value="answers[currentQuestion.id]?.[pair.id] || ''"
-                                 @change="setMatching(currentQuestion.id, pair.id, $event.target.value)"
-                               >
-                                  <option value="" disabled>Pilih jawaban...</option>
-                                  <option v-for="opt in matchingRightOptions" :key="opt.id" :value="opt.id">
-                                     {{ stripHtml(opt.content).slice(0, 80) }}
-                                  </option>
-                               </select>
-
-                               <div v-if="showCorrect" class="text-[11px] font-black uppercase tracking-widest"
-                                 :class="answers[currentQuestion.id]?.[pair.id] === pair.id ? 'text-emerald-700' : 'text-slate-500'"
-                               >
-                                  Kunci: <span class="normal-case font-extrabold" v-html="renderHtml(pair.right_content)"></span>
-                               </div>
-                            </div>
-                         </div>
-                      </div>
-                   </div>
+                   <PreviewMatchingBoard
+                     v-else
+                     :question="currentQuestion"
+                     :model-value="answers[currentQuestion.id] || {}"
+                     @update:model-value="answers[currentQuestion.id] = $event"
+                   />
                 </div>
 
                 <!-- Unexpected Type -->
@@ -414,6 +380,7 @@ import {
 } from '@mdi/js'
 import BaseIcon from '@/components/BaseIcon.vue'
 import QuillEditor from '@/components/QuillEditor.vue'
+import PreviewMatchingBoard from '@/components/student/PreviewMatchingBoard.vue'
 import { api } from '@/services/api.js'
 
 const route = useRoute()
@@ -458,7 +425,25 @@ const cardScrollEl = ref(null)
 const shortAnswerEditorHtml = ref('')
 const essayEditorHtml = ref('')
 
-const stripHtml = (html) => String(html || '').replace(/<[^>]*>/g, '').trim()
+const stripHtml = (html) => {
+  const raw = String(html || '')
+  if (!raw.trim()) return ''
+  try {
+    const doc = new DOMParser().parseFromString(raw, 'text/html')
+    const text = String(doc.body.textContent || '')
+    return text
+      .replace(/\u00a0/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  } catch {
+    return raw
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+}
 const escapeHtml = (value) =>
   String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -566,13 +551,6 @@ const onEssayEditorUpdate = (html) => {
   answers[String(q.id || '')] = essayEditorHtml.value
 }
 
-const matchingRightOptions = computed(() => {
-  const q = currentQuestion.value
-  if (!q || q.type !== 'matching') return []
-  const pairs = Array.isArray(q.pairs) ? q.pairs : []
-  return pairs.map(p => ({ id: p.id, content: p.right_content }))
-})
-
 const toggleMulti = (questionId, optId) => {
   const qid = String(questionId || '')
   if (!qid) return
@@ -591,14 +569,6 @@ const setTFStatement = (questionId, statementId, val) => {
   if (!qid || !sid) return
   if (!answers[qid] || Array.isArray(answers[qid])) answers[qid] = {}
   answers[qid][sid] = !!val
-}
-
-const setMatching = (questionId, leftPairId, rightPickId) => {
-  const qid = String(questionId || '')
-  const pid = String(leftPairId || '')
-  if (!qid || !pid) return
-  if (!answers[qid] || Array.isArray(answers[qid])) answers[qid] = {}
-  answers[qid][pid] = String(rightPickId || '')
 }
 
 const setIndex = (idx) => {

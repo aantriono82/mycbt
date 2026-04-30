@@ -692,9 +692,16 @@ func validateAndBuildCreateQuestionInput(req createQuestionReq) (questionbankrep
 		pairs := make([]questionbankrepo.MatchingPair, 0, len(req.Pairs))
 		for i, p := range req.Pairs {
 			p.LeftContent = strings.TrimSpace(p.LeftContent)
+			if p.LeftContent == "<p></p>" || p.LeftContent == "<p><br></p>" {
+				p.LeftContent = ""
+			}
 			p.RightContent = strings.TrimSpace(p.RightContent)
-			if p.LeftContent == "" || p.RightContent == "" {
-				return questionbankrepo.CreateQuestionInput{}, fmt.Errorf("pair left/right required")
+			if p.RightContent == "<p></p>" || p.RightContent == "<p><br></p>" {
+				p.RightContent = ""
+			}
+
+			if p.RightContent == "" {
+				return questionbankrepo.CreateQuestionInput{}, fmt.Errorf("pair right_content required")
 			}
 			orderNo := p.OrderNo
 			if orderNo == 0 {

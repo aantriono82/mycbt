@@ -228,6 +228,7 @@ func NewHandler(deps Deps) http.Handler {
 		eg.GET("/exams/:id/item-analysis/suggestions", res.ItemSuggestions)
 		eg.GET("/exams/:id/score-distribution", res.ScoreDistribution)
 		eg.GET("/exams/:id/export", res.Export)
+		eg.GET("/exams/:id/export.pdf", res.ExportPDF)
 		eg.GET("/exams/:id/item-analysis/export", res.ExportItemAnalysis)
 		eg.GET("/exams/:id/attendance", res.Attendance)
 		eg.GET("/exams/:id/sessions/:sessionId/essays", res.ListEssays)

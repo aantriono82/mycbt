@@ -13,6 +13,8 @@ type ExamSessionRow struct {
 	Status          string `json:"status"`
 	StartedAt       string `json:"started_at"`
 	FinishedAt      string `json:"finished_at,omitempty"`
+	DurationSeconds int    `json:"duration_seconds"`
+	AttemptNumber   int    `json:"attempt_number"`
 	StudentID       string `json:"student_id"`
 	StudentName     string `json:"student_name"`
 	StudentUsername string `json:"student_username"`
@@ -43,6 +45,8 @@ SELECT s.id::text,
        s.status,
        to_char(s.started_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
        COALESCE(to_char(s.finished_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),'') AS finished_at,
+       COALESCE(GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (COALESCE(s.finished_at, NOW()) - s.started_at)))::int), 0) AS duration_seconds,
+       ROW_NUMBER() OVER (PARTITION BY s.student_id ORDER BY s.started_at ASC, s.id ASC) AS attempt_number,
        st.id::text,
        u.name,
        u.username,
@@ -65,7 +69,21 @@ LIMIT $3 OFFSET $4`, examID, strings.TrimSpace(f.Q), f.Limit, f.Offset)
 	for rows.Next() {
 		var it ExamSessionRow
 		var finished string
-		if err := rows.Scan(&it.SessionID, &it.ExamID, &it.Status, &it.StartedAt, &finished, &it.StudentID, &it.StudentName, &it.StudentUsername, &it.StudentNIS, &it.StudentEmail, &it.StudentPhone); err != nil {
+		if err := rows.Scan(
+			&it.SessionID,
+			&it.ExamID,
+			&it.Status,
+			&it.StartedAt,
+			&finished,
+			&it.DurationSeconds,
+			&it.AttemptNumber,
+			&it.StudentID,
+			&it.StudentName,
+			&it.StudentUsername,
+			&it.StudentNIS,
+			&it.StudentEmail,
+			&it.StudentPhone,
+		); err != nil {
 			return nil, 0, fmt.Errorf("scan: %w", err)
 		}
 		if finished != "" {
