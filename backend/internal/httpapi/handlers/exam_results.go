@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math"
 	"net/url"
@@ -11,26 +12,55 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/xuri/excelize/v2"
 
-	"mycbt/backend/internal/httpapi/middleware"
-	"mycbt/backend/internal/httpapi/params"
-	"mycbt/backend/internal/repo/examrepo"
-	"mycbt/backend/internal/repo/ltirepo"
-	"mycbt/backend/internal/repo/studentexamrepo"
-	"mycbt/backend/internal/service/ltisvc"
-	"mycbt/backend/internal/service/notificationsvc"
-	"mycbt/backend/internal/util/simplepdf"
+	"atigacbt/backend/internal/httpapi/middleware"
+	"atigacbt/backend/internal/httpapi/params"
+	"atigacbt/backend/internal/repo/examrepo"
+	"atigacbt/backend/internal/repo/ltirepo"
+	"atigacbt/backend/internal/repo/studentexamrepo"
+	"atigacbt/backend/internal/service/ltisvc"
+	"atigacbt/backend/internal/service/notificationsvc"
+	"atigacbt/backend/internal/util/simplepdf"
 )
 
 type ExamResultsHandler struct {
-	ex     *examrepo.Repo
-	lti    *ltirepo.Repo
-	ltiAGS *ltisvc.AGSService
-	st     *studentexamrepo.Repo
-	notif  *notificationsvc.Service
+	ex     examResultsExamRepo
+	lti    examResultsLTIRepo
+	ltiAGS agsPublisher
+	st     examResultsStudentRepo
+	notif  notificationSender
 }
 
 func NewExamResultsHandler(ex *examrepo.Repo, lti *ltirepo.Repo, ltiAGS *ltisvc.AGSService, st *studentexamrepo.Repo, notif *notificationsvc.Service) *ExamResultsHandler {
 	return &ExamResultsHandler{ex: ex, lti: lti, ltiAGS: ltiAGS, st: st, notif: notif}
+}
+
+type examResultsExamRepo interface {
+	Get(ctx context.Context, id string) (examrepo.Exam, bool, error)
+	TeacherIDByUserID(ctx context.Context, userID string) (string, bool, error)
+	SessionExamID(ctx context.Context, sessionID string) (string, bool, error)
+}
+
+type examResultsLTIRepo interface {
+	ListAGSScoreTargets(ctx context.Context, examID string) ([]ltirepo.AGSScoreTarget, error)
+}
+
+type examResultsStudentRepo interface {
+	ListExamSessionsWithScore(ctx context.Context, examID string, f studentexamrepo.ListExamSessionsFilter) ([]studentexamrepo.ExamSessionRow, int, error)
+	ListExamAttendanceParticipants(ctx context.Context, examID string, f studentexamrepo.ExamAttendanceFilter) (items []studentexamrepo.ExamAttendanceParticipant, total, targetedTotal, attendedTotal int, err error)
+	ComputeAutoScoreAny(ctx context.Context, sessionID string, nowUTC time.Time) (studentexamrepo.AutoScoreSummary, error)
+	ListExamItemAnalysis(ctx context.Context, examID string) ([]studentexamrepo.ExamItemAnalysisRow, int, error)
+	GetExamScoreDistribution(ctx context.Context, examID string, nowUTC time.Time) (studentexamrepo.ExamScoreDistribution, error)
+	ListEssayAttempts(ctx context.Context, sessionID string) ([]studentexamrepo.EssayAttempt, error)
+	SaveManualScoring(ctx context.Context, sessionID, questionID string, score int, feedback string) error
+}
+
+type agsPublisher interface {
+	PublishScore(ctx context.Context, in ltisvc.PublishScoreInput, scopeText string) error
+}
+
+type notificationSender interface {
+	SendEmail(ctx context.Context, to string, subject string, body string) error
+	SendWhatsApp(ctx context.Context, to string, message string) error
 }
 
 func (h *ExamResultsHandler) authorizeExam(c *gin.Context) (examrepo.Exam, bool) {
@@ -922,10 +952,12 @@ func (h *ExamResultsHandler) ListEssays(c *gin.Context) {
 	}
 
 	sessionID := c.Param("sessionId")
-	// Safety: check if session belongs to exam
-	var sessExamID string
-	err := h.ex.Pool().QueryRow(c.Request.Context(), `SELECT exam_id::text FROM exam_sessions WHERE id = $1`, sessionID).Scan(&sessExamID)
+	sessExamID, found, err := h.ex.SessionExamID(c.Request.Context(), sessionID)
 	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if !found {
 		c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "session not found"}})
 		return
 	}
@@ -949,10 +981,12 @@ func (h *ExamResultsHandler) SaveEssayScore(c *gin.Context) {
 	}
 
 	sessionID := c.Param("sessionId")
-	// Safety: check if session belongs to exam
-	var sessExamID string
-	err := h.ex.Pool().QueryRow(c.Request.Context(), `SELECT exam_id::text FROM exam_sessions WHERE id = $1`, sessionID).Scan(&sessExamID)
+	sessExamID, found, err := h.ex.SessionExamID(c.Request.Context(), sessionID)
 	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if !found {
 		c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "session not found"}})
 		return
 	}

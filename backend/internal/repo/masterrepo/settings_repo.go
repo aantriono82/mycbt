@@ -57,19 +57,36 @@ func NewSettings(pool *pgxpool.Pool) *SettingsRepo {
 }
 
 func defaultSchoolIdentity() SchoolIdentity {
-	return SchoolIdentity{
-		SchoolName: "MYCBT School",
-	}
+	return ensureSchoolIdentityDefaults(SchoolIdentity{
+		SchoolName: "AtigaCBT School",
+	})
 }
 
 func defaultSystemSettings() SystemSettings {
-	return SystemSettings{
+	return ensureSystemSettingsDefaults(SystemSettings{
 		Timezone:            "Asia/Jakarta",
 		TokenRequired:       true,
 		AllowResetLogin:     true,
 		MaxActiveSessions:   1,
 		AttendanceRequireIP: false,
+	})
+}
+
+func ensureSchoolIdentityDefaults(v SchoolIdentity) SchoolIdentity {
+	if v.SchoolName == "" {
+		v.SchoolName = "AtigaCBT School"
 	}
+	return v
+}
+
+func ensureSystemSettingsDefaults(v SystemSettings) SystemSettings {
+	if v.Timezone == "" {
+		v.Timezone = "Asia/Jakarta"
+	}
+	if v.MaxActiveSessions < 1 {
+		v.MaxActiveSessions = 1
+	}
+	return v
 }
 
 func (r *SettingsRepo) GetSchoolIdentity(ctx context.Context) (SchoolIdentity, error) {
@@ -81,16 +98,11 @@ func (r *SettingsRepo) GetSchoolIdentity(ctx context.Context) (SchoolIdentity, e
 	if !ok {
 		return defaultSchoolIdentity(), nil
 	}
-	if out.SchoolName == "" {
-		out.SchoolName = "MYCBT School"
-	}
-	return out, nil
+	return ensureSchoolIdentityDefaults(out), nil
 }
 
 func (r *SettingsRepo) UpsertSchoolIdentity(ctx context.Context, v SchoolIdentity) (SchoolIdentity, error) {
-	if v.SchoolName == "" {
-		v.SchoolName = "MYCBT School"
-	}
+	v = ensureSchoolIdentityDefaults(v)
 	if err := r.upsertJSON(ctx, SettingsKeySchoolIdentity, v); err != nil {
 		return SchoolIdentity{}, err
 	}
@@ -106,22 +118,11 @@ func (r *SettingsRepo) GetSystem(ctx context.Context) (SystemSettings, error) {
 	if !ok {
 		return defaultSystemSettings(), nil
 	}
-	if out.Timezone == "" {
-		out.Timezone = "Asia/Jakarta"
-	}
-	if out.MaxActiveSessions < 1 {
-		out.MaxActiveSessions = 1
-	}
-	return out, nil
+	return ensureSystemSettingsDefaults(out), nil
 }
 
 func (r *SettingsRepo) UpsertSystem(ctx context.Context, v SystemSettings) (SystemSettings, error) {
-	if v.Timezone == "" {
-		v.Timezone = "Asia/Jakarta"
-	}
-	if v.MaxActiveSessions < 1 {
-		v.MaxActiveSessions = 1
-	}
+	v = ensureSystemSettingsDefaults(v)
 	if err := r.upsertJSON(ctx, SettingsKeySystem, v); err != nil {
 		return SystemSettings{}, err
 	}

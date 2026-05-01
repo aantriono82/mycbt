@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -14,8 +15,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mycbt/backend/internal/repo/masterrepo"
-	"mycbt/backend/internal/repo/studentexamrepo"
+	"atigacbt/backend/internal/repo/masterrepo"
+	"atigacbt/backend/internal/repo/studentexamrepo"
 )
 
 type mockStudentExamRepo struct {
@@ -53,6 +54,14 @@ type mockStudentExamRepo struct {
 
 	dismissCalls map[string]int
 	dismissErr   error
+
+	verifyTokenErr  error
+	activeCount     int
+	activeCountErr  error
+	attemptsCount   int
+	attemptsErr     error
+	sessionExists   bool
+	sessionExistErr error
 }
 
 func (m *mockStudentExamRepo) StudentByUserID(ctx context.Context, userID string) (studentexamrepo.StudentInfo, bool, error) {
@@ -64,7 +73,7 @@ func (m *mockStudentExamRepo) ListAvailableForStudent(ctx context.Context, stude
 }
 
 func (m *mockStudentExamRepo) VerifyExamToken(ctx context.Context, examID, token string, nowUTC time.Time) error {
-	return nil
+	return m.verifyTokenErr
 }
 
 func (m *mockStudentExamRepo) DismissExamCard(ctx context.Context, examID, studentID string) error {
@@ -92,10 +101,16 @@ func (m *mockStudentExamRepo) GetSessionByExamStudent(ctx context.Context, examI
 }
 
 func (m *mockStudentExamRepo) CountInProgressSessionsByStudent(ctx context.Context, studentID string) (int, error) {
-	return 0, nil
+	return m.activeCount, m.activeCountErr
 }
 
 func (m *mockStudentExamRepo) CountAttemptsByExamStudent(ctx context.Context, examID, studentID string) (int, error) {
+	if m.attemptsErr != nil {
+		return 0, m.attemptsErr
+	}
+	if m.attemptsCount != 0 {
+		return m.attemptsCount, nil
+	}
 	if m.sessionByExamOK[examID] {
 		return 1, nil
 	}
@@ -123,7 +138,7 @@ func (m *mockStudentExamRepo) GetSessionState(ctx context.Context, sessionID, st
 }
 
 func (m *mockStudentExamRepo) SessionExists(ctx context.Context, sessionID string) (bool, error) {
-	return false, nil
+	return m.sessionExists, m.sessionExistErr
 }
 
 func (m *mockStudentExamRepo) ListSessionQuestions(ctx context.Context, sessionID, studentID string, shuffleOptions bool) ([]studentexamrepo.StudentQuestion, error) {
@@ -542,5 +557,145 @@ func TestStudentExamHandler_CompatStartQuestionsAnswersFinish(t *testing.T) {
 	r.ServeHTTP(recF2, httptest.NewRequest(http.MethodPost, "/api/v1/sessions/sess-compat/finish", nil))
 	if recF2.Code != http.StatusConflict {
 		t.Fatalf("finish-2 expected 409 got %d body=%s", recF2.Code, recF2.Body.String())
+	}
+}
+
+func TestStudentExamHandler_Join_TokenValidationAndMaxActiveSessions(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	mockRepo := &mockStudentExamRepo{
+		studentInfo:     studentexamrepo.StudentInfo{StudentID: "stu-1", LevelID: "lvl-1", GroupID: "grp-1", IsActive: true},
+		studentOK:       true,
+		examForJoin:     studentexamrepo.ExamForJoin{ID: "exam-1", Title: "Math", ShuffleQuestions: true, MaxAttempts: 2},
+		sessionByExam:   map[string]studentexamrepo.Session{},
+		sessionByExamOK: map[string]bool{},
+		createdSession: studentexamrepo.Session{
+			ID:        "sess-1",
+			ExamID:    "exam-1",
+			StudentID: "stu-1",
+			Status:    "in_progress",
+		},
+	}
+	h := NewStudentExamHandler(mockRepo, &mockSettingsRepo{sys: masterrepo.SystemSettings{Timezone: "Asia/Jakarta", TokenRequired: true, MaxActiveSessions: 1}})
+
+	r := gin.New()
+	r.Use(withAuthUser())
+	r.POST("/api/v1/student/exams/:id/join", h.Join)
+
+	recMissing := httptest.NewRecorder()
+	reqMissing := httptest.NewRequest(http.MethodPost, "/api/v1/student/exams/exam-1/join", strings.NewReader(`{}`))
+	reqMissing.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(recMissing, reqMissing)
+	if recMissing.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for missing token, got %d body=%s", recMissing.Code, recMissing.Body.String())
+	}
+
+	mockRepo.verifyTokenErr = studentexamrepo.ErrTokenExpired
+	recExpired := httptest.NewRecorder()
+	reqExpired := httptest.NewRequest(http.MethodPost, "/api/v1/student/exams/exam-1/join", strings.NewReader(`{"token":"ABC123"}`))
+	reqExpired.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(recExpired, reqExpired)
+	if recExpired.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for expired token, got %d body=%s", recExpired.Code, recExpired.Body.String())
+	}
+
+	mockRepo.verifyTokenErr = nil
+	mockRepo.activeCount = 1
+	recMax := httptest.NewRecorder()
+	reqMax := httptest.NewRequest(http.MethodPost, "/api/v1/student/exams/exam-1/join", strings.NewReader(`{"token":"ABC123"}`))
+	reqMax.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(recMax, reqMax)
+	if recMax.Code != http.StatusConflict {
+		t.Fatalf("expected 409 for max active sessions, got %d body=%s", recMax.Code, recMax.Body.String())
+	}
+}
+
+func TestStudentExamHandler_GetSession_NotOwnedOrMissing(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	mockRepo := &mockStudentExamRepo{
+		studentInfo:      studentexamrepo.StudentInfo{StudentID: "stu-1", IsActive: true},
+		studentOK:        true,
+		sessionStateByID: map[string]studentexamrepo.SessionState{},
+		sessionStateOK:   map[string]bool{},
+	}
+	h := NewStudentExamHandler(mockRepo, &mockSettingsRepo{sys: masterrepo.SystemSettings{Timezone: "Asia/Jakarta"}})
+
+	r := gin.New()
+	r.Use(withAuthUser())
+	r.GET("/api/v1/student/sessions/:id", h.GetSession)
+
+	mockRepo.sessionExists = true
+	recForbidden := httptest.NewRecorder()
+	r.ServeHTTP(recForbidden, httptest.NewRequest(http.MethodGet, "/api/v1/student/sessions/sess-owned-by-other", nil))
+	if recForbidden.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 when session exists but not owned, got %d body=%s", recForbidden.Code, recForbidden.Body.String())
+	}
+
+	mockRepo.sessionExists = false
+	recMissing := httptest.NewRecorder()
+	r.ServeHTTP(recMissing, httptest.NewRequest(http.MethodGet, "/api/v1/student/sessions/sess-missing", nil))
+	if recMissing.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 when session missing, got %d body=%s", recMissing.Code, recMissing.Body.String())
+	}
+}
+
+func TestStudentExamHandler_VerifyToken_StateAndTokenErrors(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	state := studentexamrepo.SessionState{}
+	state.Session = studentexamrepo.Session{ID: "sess-1", ExamID: "exam-1", StudentID: "stu-1", Status: "in_progress"}
+
+	mockRepo := &mockStudentExamRepo{
+		studentInfo:      studentexamrepo.StudentInfo{StudentID: "stu-1", IsActive: true},
+		studentOK:        true,
+		sessionStateByID: map[string]studentexamrepo.SessionState{"sess-1": state},
+		sessionStateOK:   map[string]bool{"sess-1": true},
+	}
+	h := NewStudentExamHandler(mockRepo, &mockSettingsRepo{sys: masterrepo.SystemSettings{Timezone: "Asia/Jakarta"}})
+
+	r := gin.New()
+	r.Use(withAuthUser())
+	r.POST("/api/v1/student/sessions/:id/verify-token", h.VerifyToken)
+
+	mockRepo.verifyTokenErr = studentexamrepo.ErrTokenInactive
+	recInactive := httptest.NewRecorder()
+	reqInactive := httptest.NewRequest(http.MethodPost, "/api/v1/student/sessions/sess-1/verify-token", strings.NewReader(`{"token":"ABC123"}`))
+	reqInactive.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(recInactive, reqInactive)
+	if recInactive.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for inactive token, got %d body=%s", recInactive.Code, recInactive.Body.String())
+	}
+
+	mockRepo.verifyTokenErr = nil
+	mockRepo.sessionStateByID["sess-1"] = studentexamrepo.SessionState{Session: studentexamrepo.Session{ID: "sess-1", ExamID: "exam-1", StudentID: "stu-1", Status: "submitted"}}
+	recState := httptest.NewRecorder()
+	reqState := httptest.NewRequest(http.MethodPost, "/api/v1/student/sessions/sess-1/verify-token", strings.NewReader(`{"token":"ABC123"}`))
+	reqState.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(recState, reqState)
+	if recState.Code != http.StatusConflict {
+		t.Fatalf("expected 409 for inactive session state, got %d body=%s", recState.Code, recState.Body.String())
+	}
+}
+
+func TestStudentExamHandler_SaveAnswer_InvalidAnswerJSONMapsBadRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	mockRepo := &mockStudentExamRepo{
+		studentInfo:     studentexamrepo.StudentInfo{StudentID: "stu-1", IsActive: true},
+		studentOK:       true,
+		upsertAnswerErr: errors.New("invalid answer_json: malformed payload"),
+	}
+	h := NewStudentExamHandler(mockRepo, &mockSettingsRepo{sys: masterrepo.SystemSettings{Timezone: "Asia/Jakarta"}})
+	r := gin.New()
+	r.Use(withAuthUser())
+	r.POST("/api/v1/student/sessions/:id/answers", h.SaveAnswer)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/student/sessions/sess-1/answers", bytes.NewBufferString(`{"question_id":"q-1","answer_json":{"selected":"A"}}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for invalid answer_json, got %d body=%s", rec.Code, rec.Body.String())
 	}
 }

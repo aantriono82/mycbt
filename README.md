@@ -1,12 +1,14 @@
-# mycbt
+# AtigaCBT
+
+[![Backend Tests](https://github.com/aantriono82/mycbt/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/aantriono82/mycbt/actions/workflows/backend-tests.yml)
 
 Scaffold aplikasi CBT (Computer Based Test) dengan:
 
 - Backend: Gin (Go) in `backend/`
 - Frontend: Admin One Vue Tailwind in `frontend/`
 
-Dokumen implementasi lengkap: lihat [docs/BLUEPRINT.md](/home/aantriono/dev/mycbt/docs/BLUEPRINT.md).
-Kontrak API awal (OpenAPI): [docs/openapi.yaml](/home/aantriono/dev/mycbt/docs/openapi.yaml).
+Dokumen implementasi lengkap: lihat [docs/BLUEPRINT.md](/home/aantriono/dev/atigacbt/docs/BLUEPRINT.md).
+Kontrak API awal (OpenAPI): [docs/openapi.yaml](/home/aantriono/dev/atigacbt/docs/openapi.yaml).
 
 ## Status Implementasi (2026-04-23)
 
@@ -57,11 +59,41 @@ Cara termudah untuk menjalankan aplikasi (DB, Backend, dan Frontend):
 ./run-local.sh
 ```
 
+## Testing Backend
+
+Untuk menjalankan suite backend dari root repo:
+
+```bash
+make test-backend
+```
+
+Integration test repo PostgreSQL bisa dijalankan dengan:
+
+```bash
+export TEST_DATABASE_URL='postgres://user:pass@localhost:5432/dbname?sslmode=disable'
+make test-backend-integration
+```
+
+Dokumentasi detail ada di [backend/README.md](/home/aantriono/dev/atigacbt/backend/README.md).
+
+## Branch Protection
+
+Rekomendasi minimum untuk branch `main`:
+- require pull request sebelum merge
+- block force push dan branch deletion
+- require status checks:
+  - `Unit and Handler Tests`
+  - `PostgreSQL Integration Tests`
+- require branch up to date sebelum merge jika tim sering merge paralel
+- require conversation resolution sebelum merge
+
+Kalau repo ini dipakai tim kecil dan ingin tetap cepat, saya tidak sarankan dulu mewajibkan banyak reviewer. Status check backend jauh lebih penting daripada approval count tinggi.
+
 Catatan (first time / DB baru): `run-local.sh` hanya menyalakan proses. Jika tabel belum ada atau user admin belum dibuat, jalankan migrate + seed sekali:
 
 ```bash
 cd backend
-export DATABASE_URL="postgres://mycbt:mycbt@localhost:5433/mycbt?sslmode=disable"
+export DATABASE_URL="postgres://atigacbt:atigacbt@localhost:5433/atigacbt?sslmode=disable"
 export JWT_SECRET="7f59f6b9c9f2b8e8a8b8c8d8e8f808182838485868788898a8b8c8d8e8f8081"
 
 ../.tooling/go/bin/go run ./cmd/migrate
@@ -82,7 +114,7 @@ docker compose up -d
 #### 2. Backend (migrate + seed)
 ```bash
 cd backend
-export DATABASE_URL="postgres://mycbt:mycbt@localhost:5433/mycbt?sslmode=disable"
+export DATABASE_URL="postgres://atigacbt:atigacbt@localhost:5433/atigacbt?sslmode=disable"
 export JWT_SECRET="7f59f6b9c9f2b8e8a8b8c8d8e8f808182838485868788898a8b8c8d8e8f8081"
 ../.tooling/go/bin/go run ./cmd/migrate
 
@@ -254,8 +286,8 @@ Siswa (ruang ujian; requires JWT role `student`):
 - `frontend/`: Vue 3 + Vite + Tailwind (template `admin-one-vue-tailwind`).
 - `scripts/install-go.sh`: installer Go lokal ke `.tooling/go`.
 - Dokumen tambahan:
-  - Backend: [backend/README.md](/home/aantriono/dev/mycbt/backend/README.md)
-  - Frontend: [frontend/README.md](/home/aantriono/dev/mycbt/frontend/README.md)
+  - Backend: [backend/README.md](/home/aantriono/dev/atigacbt/backend/README.md)
+  - Frontend: [frontend/README.md](/home/aantriono/dev/atigacbt/frontend/README.md)
 
 ## Menu & Role (Frontend)
 
