@@ -119,8 +119,8 @@ func TestMasterRepo_CRUDAndLookups(t *testing.T) {
 		t.Fatalf("expected empty code lookup miss, id=%q ok=%v err=%v", programID, ok, err)
 	}
 	programID, ok, err = lookups.ProgramIDByCode(ctx, "SCI")
-	if err != nil || !ok || programID != program.ID {
-		t.Fatalf("unexpected program lookup id=%q ok=%v err=%v", programID, ok, err)
+	if err != nil || ok || programID != "" {
+		t.Fatalf("expected old program code lookup miss, id=%q ok=%v err=%v", programID, ok, err)
 	}
 	levelID, ok, err := lookups.LevelIDByName(ctx, "Level A Updated")
 	if err != nil || !ok || levelID != level.ID {

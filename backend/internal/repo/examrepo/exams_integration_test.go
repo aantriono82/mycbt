@@ -190,6 +190,7 @@ func TestExamRepo_SessionLookups(t *testing.T) {
 		Title:       "Session Exam",
 		StartsAt:    time.Now().UTC(),
 		EndsAt:      time.Now().UTC().Add(time.Hour),
+		ScoringMode: "partial",
 		MaxAttempts: 1,
 	})
 	if err != nil {
