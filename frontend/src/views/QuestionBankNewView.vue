@@ -29,6 +29,7 @@ import BaseButtons from '@/components/BaseButtons.vue'
 import CardBoxModal from '@/components/CardBoxModal.vue'
 import RichEditor from '@/components/RichEditor.vue'
 import QuestionQuickAddCard from '@/components/QuestionQuickAddCard.vue'
+import { shortCode2 } from '@/utils/shortCode.js'
 
 
 const router = useRouter()
@@ -270,8 +271,7 @@ const normalizeRichHtmlForPayload = (value) => {
 const formatQuestionId = (value) => {
   const id = String(value || '').trim()
   if (!id) return '-'
-  if (id.length <= 16) return id
-  return `${id.slice(0, 8)}...${id.slice(-4)}`
+  return shortCode2(id)
 }
 
 const buildQuestionCardAnswerPreviewHtml = (item) => {
@@ -863,7 +863,7 @@ watch(
 // Soal: richer toolbar (2 lines expected if needed)
 const stemToolbar = 'undo redo | bold italic underline | fontfamily fontsize forecolor | alignleft aligncenter alignright | bullist numlist | table image media | math charmap code | fullscreen'
 // Jawaban: compact 1-line toolbar
-const optionToolbar = 'bold italic underline | fontsize | alignleft | bullist numlist | image math | charmap code'
+const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft | bullist numlist | image math | charmap code'
 
 </script>
 

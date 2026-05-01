@@ -12,6 +12,7 @@ import FormField from '@/components/FormField.vue'
 import FormControl from '@/components/FormControl.vue'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
+import { shortCode2 } from '@/utils/shortCode.js'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -113,6 +114,8 @@ const copyId = (id) => {
   alert('ID disalin ke clipboard')
 }
 
+const shortId = (id) => shortCode2(id)
+
 onMounted(() => {
   resetForm()
   loadItems()
@@ -188,7 +191,7 @@ watch(() => route.path, () => {
                   >
                     {{ field.label }}
                   </th>
-                  <th class="px-3 py-3 font-bold">ID (Internal)</th>
+                  <th class="px-3 py-3 font-bold">Kode ID</th>
                   <th class="px-3 py-3 font-bold text-center">Aksi</th>
                 </tr>
               </thead>
@@ -204,7 +207,7 @@ watch(() => route.path, () => {
                   </td>
                   <td class="px-3 py-3 font-mono text-[10px] text-slate-400">
                     <div class="flex items-center gap-2">
-                      <span class="truncate w-20">{{ item.id }}</span>
+                      <span class="truncate w-20 font-black">{{ shortId(item.id) }}</span>
                       <BaseButton :icon="mdiContentCopy" small color="whiteDark" outline @click="copyId(item.id)" title="Salin ID" />
                     </div>
                   </td>

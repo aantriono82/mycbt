@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, ref } from 'vue'
-import { mdiCogOutline, mdiRefresh, mdiContentSave, mdiDatabaseExport, mdiDatabaseImport, mdiAlert, mdiEmailOutline, mdiWhatsapp, mdiInformationOutline } from '@mdi/js'
+import { mdiCogOutline, mdiRefresh, mdiContentSave, mdiEmailOutline } from '@mdi/js'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
@@ -21,12 +21,7 @@ const isUploadingLogo = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const logoFile = ref(null)
-const restoreFile = ref(null)
-
-const isBackingUp = ref(false)
-const isRestoring = ref(false)
 const isSavingSMTP = ref(false)
-const isSavingWA = ref(false)
 
 const schoolIdentity = ref({
   school_name: '',
@@ -55,24 +50,16 @@ const smtpConfig = ref({
   use_tls: true,
 })
 
-const whatsappConfig = ref({
-  api_provider: 'wagw', // default is 'wagw'
-  api_url: '',
-  api_token: '',
-  sender_number: '',
-})
-
 const loadSettings = async () => {
   if (!authStore.isAuthenticated) return
   isLoading.value = true
   errorMessage.value = ''
   successMessage.value = ''
   try {
-    const [identityRes, systemRes, smtpRes, waRes] = await Promise.all([
+    const [identityRes, systemRes, smtpRes] = await Promise.all([
       api.get('/api/v1/settings/school-identity'),
       api.get('/api/v1/settings/system'),
       api.get('/api/v1/settings/smtp'),
-      api.get('/api/v1/settings/whatsapp'),
     ])
     schoolIdentity.value = { ...schoolIdentity.value, ...(identityRes?.data?.data || {}) }
     systemSettings.value = { ...systemSettings.value, ...(systemRes?.data?.data || {}) }
@@ -83,7 +70,6 @@ const loadSettings = async () => {
       port: Number(smtpData.port || smtpConfig.value.port || 587),
       use_tls: typeof smtpData.use_tls === 'boolean' ? smtpData.use_tls : smtpConfig.value.use_tls,
     }
-    whatsappConfig.value = { ...whatsappConfig.value, ...(waRes?.data?.data || {}) }
   } catch (error) {
     errorMessage.value = error?.response?.data?.error?.message || 'Gagal memuat settings'
   } finally {
@@ -111,21 +97,6 @@ const saveSMTP = async () => {
     errorMessage.value = error?.response?.data?.error?.message || 'Gagal menyimpan SMTP'
   } finally {
     isSavingSMTP.value = false
-  }
-}
-
-const saveWhatsApp = async () => {
-  if (!authStore.isAuthenticated) return
-  isSavingWA.value = true
-  errorMessage.value = ''
-  successMessage.value = ''
-  try {
-    await api.put('/api/v1/settings/whatsapp', whatsappConfig.value)
-    successMessage.value = 'Pengaturan WhatsApp berhasil disimpan.'
-  } catch (error) {
-    errorMessage.value = error?.response?.data?.error?.message || 'Gagal menyimpan WhatsApp'
-  } finally {
-    isSavingWA.value = false
   }
 }
 
@@ -198,72 +169,6 @@ const saveSystemSettings = async () => {
   }
 }
 
-const downloadBackup = async () => {
-  if (!authStore.isAuthenticated) return
-  isBackingUp.value = true
-  errorMessage.value = ''
-  successMessage.value = ''
-  try {
-    const response = await api.get('/api/v1/maintenance/backup', {
-      responseType: 'blob',
-    })
-    
-    // Create a download link
-    const url = window.URL.createObjectURL(new Blob([response.data]))
-    const link = document.createElement('a')
-    link.href = url
-    
-    const contentDisposition = response.headers['content-disposition']
-    let filename = `mycbt_backup_${new Date().toISOString().slice(0, 10)}.sql`
-    if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename=(.+)/)
-      if (filenameMatch.length > 1) {
-        filename = filenameMatch[1]
-      }
-    }
-    
-    link.setAttribute('download', filename)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    
-    successMessage.value = 'Database backup berhasil diunduh.'
-  } catch (error) {
-    errorMessage.value = 'Gagal melakukan backup database.'
-    console.error(error)
-  } finally {
-    isBackingUp.value = false
-  }
-}
-
-const restoreDatabase = async () => {
-  if (!authStore.isAuthenticated || !restoreFile.value) return
-  
-  if (!confirm('PERINGATAN: Restore akan menimpa database saat ini. Pastikan Anda sudah memiliki backup terbaru. Lanjutkan?')) {
-    return
-  }
-
-  isRestoring.value = true
-  errorMessage.value = ''
-  successMessage.value = ''
-  try {
-    const formData = new FormData()
-    formData.append('file', restoreFile.value)
-    await api.post('/api/v1/maintenance/restore', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
-    successMessage.value = 'Database berhasil di-restore. Silakan muat ulang halaman.'
-    restoreFile.value = null
-  } catch (error) {
-    errorMessage.value = error?.response?.data?.error?.message || 'Gagal restore database'
-    if (error?.response?.data?.error?.detail) {
-      console.error('Restore Error Detail:', error.response.data.error.detail)
-    }
-  } finally {
-    isRestoring.value = false
-  }
-}
-
 onMounted(loadSettings)
 </script>
 
@@ -284,8 +189,8 @@ onMounted(loadSettings)
         {{ successMessage }}
       </div>
 
-      <div class="grid gap-6 xl:grid-cols-2">
-        <CardBox>
+      <div class="grid gap-6 xl:grid-cols-12">
+        <CardBox class="xl:col-span-6">
           <h3 class="mb-4 text-lg font-semibold dark:text-slate-100">Identitas Sekolah</h3>
           <FormField label="Nama Sekolah">
             <FormControl v-model="schoolIdentity.school_name" placeholder="Nama sekolah" />
@@ -341,7 +246,7 @@ onMounted(loadSettings)
           </div>
         </CardBox>
 
-        <CardBox>
+        <CardBox class="xl:col-span-6">
           <h3 class="mb-4 text-lg font-semibold dark:text-slate-100">Pengaturan Sistem</h3>
           <FormField label="Timezone">
             <FormControl
@@ -385,12 +290,12 @@ onMounted(loadSettings)
           </div>
         </CardBox>
 
-        <CardBox>
-          <div class="flex items-center gap-2 mb-4">
+        <CardBox class="xl:col-span-12">
+          <div class="mb-4 flex items-center gap-2">
             <BaseIcon :path="mdiEmailOutline" class="text-blue-500" />
-            <h3 class="text-lg font-semibold dark:text-slate-100 uppercase tracking-tight">Konfigurasi Email (SMTP)</h3>
+            <h3 class="text-lg font-semibold dark:text-slate-100">Konfigurasi Email (SMTP)</h3>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+          <div class="grid grid-cols-1 gap-x-4 md:grid-cols-2">
             <FormField label="SMTP Host">
               <FormControl v-model="smtpConfig.host" placeholder="smtp.gmail.com" />
             </FormField>
@@ -425,107 +330,6 @@ onMounted(loadSettings)
           </div>
         </CardBox>
 
-        <CardBox>
-          <div class="flex items-center gap-2 mb-4">
-            <BaseIcon :path="mdiWhatsapp" class="text-emerald-500" />
-            <h3 class="text-lg font-semibold dark:text-slate-100 uppercase tracking-tight">Konfigurasi WhatsApp Gateway</h3>
-          </div>
-          
-          <div class="mb-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 flex gap-3">
-             <BaseIcon :path="mdiInformationOutline" class="text-blue-500 shrink-0" size="20" />
-             <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-               Gunakan provider WhatsApp Gateway lokal (WAGW/WAMD). <br/>
-               Format Request: POST ke <code>API URL</code> dengan payload JSON: <code>{"target": "number", "message": "msg"}</code> dan header Auth: <code>Authorization: api_token</code>.
-             </p>
-          </div>
-
-          <FormField label="Provider Template">
-            <FormControl
-              v-model="whatsappConfig.api_provider"
-              :options="[
-                { value: 'wagw', label: 'Custom HTTP API (Standard)' },
-                { value: 'wa-local', label: 'Local Server / Local Provider' },
-              ]"
-            />
-          </FormField>
-
-          <FormField label="API URL Endpoint">
-            <FormControl v-model="whatsappConfig.api_url" placeholder="https://api.wagw.com/send-message" />
-          </FormField>
-
-          <FormField label="API Token / Key">
-            <FormControl v-model="whatsappConfig.api_token" type="password" placeholder="Bearer your-token-here" />
-          </FormField>
-
-          <FormField label="Sender Number (Optional)">
-            <FormControl v-model="whatsappConfig.sender_number" placeholder="62812xxxx" />
-          </FormField>
-
-          <div class="flex items-center gap-3 mt-6">
-            <BaseButton
-              :icon="mdiContentSave"
-              color="info"
-              label="Simpan WhatsApp"
-              :disabled="isLoading || isSavingWA"
-              @click="saveWhatsApp"
-            />
-            <div v-if="isSavingWA" class="text-sm text-slate-500 dark:text-slate-400 italic">Menyimpan...</div>
-          </div>
-        </CardBox>
-
-        <CardBox class="xl:col-span-2">
-          <div class="flex items-center gap-2 mb-4">
-             <h3 class="text-lg font-semibold dark:text-slate-100 uppercase tracking-tight">Maintenance (Backup & Restore)</h3>
-             <span class="px-2 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded text-[10px] uppercase font-bold tracking-widest">Admin Only</span>
-          </div>
-
-          <div class="grid gap-6 md:grid-cols-2">
-            <div class="rounded-2xl border border-slate-100 p-6 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
-               <div class="flex items-center gap-4 mb-4">
-                  <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
-                     <BaseIcon :path="mdiDatabaseExport" size="24" />
-                  </div>
-                  <div>
-                    <h4 class="font-bold dark:text-slate-100">Ekspor Database</h4>
-                    <p class="text-xs text-slate-500">Unduh seluruh data dalam format SQL.</p>
-                  </div>
-               </div>
-               <BaseButton
-                 :icon="mdiDatabaseExport"
-                 color="info"
-                 label="Download Backup (.sql)"
-                 :disabled="isBackingUp || isRestoring"
-                 @click="downloadBackup"
-                 class="w-full"
-               />
-               <p v-if="isBackingUp" class="mt-2 text-center text-xs text-blue-600 animate-pulse font-bold uppercase tracking-widest">Mengekspor data...</p>
-            </div>
-
-            <div class="rounded-2xl border border-slate-100 p-6 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
-               <div class="flex items-center gap-4 mb-4">
-                  <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
-                     <BaseIcon :path="mdiDatabaseImport" size="24" />
-                  </div>
-                  <div>
-                    <h4 class="font-bold dark:text-slate-100">Impor Database</h4>
-                    <p class="text-xs text-slate-500 uppercase tracking-tight font-black text-amber-600">⚠ BERBAHAYA: Timpa Data</p>
-                  </div>
-               </div>
-               <div class="flex flex-col gap-3">
-                  <FormFilePicker v-model="restoreFile" label="Pilih File SQL" accept=".sql" class="w-full" />
-                  <BaseButton
-                    :icon="mdiAlert"
-                    color="danger"
-                    label="Restore Database Sekarang"
-                    :disabled="!restoreFile || isRestoring || isBackingUp"
-                    @click="restoreDatabase"
-                    class="w-full"
-                  />
-               </div>
-               <p v-if="isRestoring" class="mt-2 text-center text-xs text-amber-600 animate-pulse font-bold uppercase tracking-widest">Memulihkan data (Jangan tutup tab ini)...</p>
-            </div>
-          </div>
-        </CardBox>
       </div>
     </SectionMain>
   </LayoutAuthenticated>

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { mdiAccountCheckOutline, mdiRefresh, mdiCheck, mdiClose } from '@mdi/js'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
@@ -126,7 +126,15 @@ const bulkApproveByFilter = async () => {
   }
 }
 
-onMounted(loadRegistrations)
+watch(
+  () => authStore.isAuthenticated,
+  (isAuthenticated) => {
+    if (isAuthenticated) {
+      loadRegistrations()
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <template>

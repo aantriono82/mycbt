@@ -21,7 +21,7 @@ const formatDateIndonesian = (dateStr) => {
 
   return `${formatted} ${tz}`
 }
-  import { mdiClipboardTextOutline, mdiContentSave, mdiDelete, mdiPlus, mdiRefresh } from '@mdi/js'
+  import { mdiClipboardTextOutline, mdiContentCopy, mdiContentSave, mdiDelete, mdiPlus, mdiRefresh } from '@mdi/js'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
@@ -32,6 +32,7 @@ import FormField from '@/components/FormField.vue'
 import FormControl from '@/components/FormControl.vue'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
+import { shortCode2 } from '@/utils/shortCode.js'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -67,6 +68,7 @@ const selectedExamId = ref('')
 const selectedExamSessionId = ref('')
 const selectedExamScoringMode = ref('partial')
 const selectedExam = computed(() => exams.value.find((x) => x.id === selectedExamId.value) || null)
+const selectedExamShortId = computed(() => shortCode2(selectedExamId.value))
 
 const form = reactive({
   teacher_id: '',
@@ -164,19 +166,25 @@ watch(helperStudent, (val) => {
 
 const selectedLevelNames = computed(() => {
   const ids = parseCsvLines(targetForm.level_ids_text)
-  return ids.map((id) => levels.value.find((l) => l.id === id)?.name || id)
+  return ids.map((id) => {
+    const level = levels.value.find((l) => l.id === id)
+    return level ? `${shortCode2(level.id)} · ${level.name}` : id
+  })
 })
 
 const selectedGroupNames = computed(() => {
   const ids = parseCsvLines(targetForm.group_ids_text)
-  return ids.map((id) => groups.value.find((g) => g.id === id)?.name || id)
+  return ids.map((id) => {
+    const group = groups.value.find((g) => g.id === id)
+    return group ? `${shortCode2(group.id)} · ${group.name}` : id
+  })
 })
 
 const selectedStudentNames = computed(() => {
   const ids = parseCsvLines(targetForm.student_ids_text)
   return ids.map((id) => {
     const s = students.value.find((x) => x.id === id)
-    return s ? `${s.name} (${s.nis})` : id
+    return s ? `${shortCode2(s.id)} · ${s.name} (${s.nis})` : id
   })
 })
 
@@ -560,6 +568,24 @@ const saveTargets = async () => {
 const questionSetTitle = (id) =>
   questionSets.value.find((item) => item.id === id)?.title || id
 
+const shortId = (id) => shortCode2(id)
+
+const examOptionLabel = (exam) => {
+  const code = shortCode2(exam?.id)
+  return code && code !== '--' ? `${exam.title} · ${code}` : exam.title
+}
+
+const copyExamId = async (id) => {
+  const value = String(id || '').trim()
+  if (!value) return
+  try {
+    await navigator.clipboard.writeText(value)
+    successMessage.value = 'EXAM_ID disalin'
+  } catch {
+    errorMessage.value = `EXAM_ID: ${value}`
+  }
+}
+
 watch(selectedExamId, (newId) => {
   loadSelectedExamDetails()
   if (selectedExam.value) {
@@ -679,7 +705,7 @@ onMounted(async () => {
 	              <FormField label="Ujian Aktif">
 	                <FormControl
 	                  v-model="selectedExamId"
-	                  :options="exams.map((item) => ({ id: item.id, label: item.title }))"
+	                  :options="exams.map((item) => ({ id: item.id, label: examOptionLabel(item) }))"
 	                />
 	              </FormField>
 	            </div>
@@ -688,6 +714,24 @@ onMounted(async () => {
 	          <div v-if="selectedExamId" class="mb-4 rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-3 text-sm bg-slate-50/50 dark:bg-slate-800/30">
 	            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
 	              <div>
+                  <div class="mb-4 rounded-lg border border-sky-200 bg-white px-3 py-2 dark:border-sky-900/40 dark:bg-slate-900/50">
+                    <div class="text-[10px] font-black uppercase tracking-widest text-sky-600 dark:text-sky-400">EXAM_ID / ID Ujian</div>
+                    <div class="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <code class="block break-all rounded bg-slate-100 px-2 py-1 text-xs font-bold text-slate-800 dark:bg-slate-800 dark:text-slate-100">
+                        {{ selectedExamShortId }}
+                      </code>
+                      <BaseButton
+                        :icon="mdiContentCopy"
+                        color="info"
+                        small
+                        label="Salin"
+                        @click="copyExamId(selectedExamId)"
+                      />
+                    </div>
+                    <div class="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                      Format kode: 4 karakter
+                    </div>
+                  </div>
 	                <div class="text-slate-500 dark:text-slate-400 font-medium">Status Ujian</div>
 	                <div class="mt-1">
 	                  <span
@@ -802,7 +846,21 @@ onMounted(async () => {
                   class="border-b dark:border-slate-800 last:border-b-0 transition-colors"
                   :class="selectedExamId === exam.id ? 'bg-sky-50 dark:bg-sky-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800/20'"
                 >
-                  <td class="px-3 py-3 font-medium dark:text-slate-200">{{ exam.title }}</td>
+                  <td class="px-3 py-3 font-medium dark:text-slate-200">
+                    <div>{{ exam.title }}</div>
+                    <div class="mt-1 flex flex-wrap items-center gap-2">
+                      <code class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                        EXAM_ID: {{ shortId(exam.id) }}
+                      </code>
+                      <button
+                        type="button"
+                        class="text-[10px] font-black uppercase tracking-widest text-sky-600 hover:text-sky-800 dark:text-sky-400"
+                        @click="copyExamId(exam.id)"
+                      >
+                        Salin
+                      </button>
+                    </div>
+                  </td>
                   <td class="px-3 py-3 text-slate-500 dark:text-slate-400">{{ subjects.find(s => s.id === exam.subject_id)?.name || exam.subject_id }}</td>
                   <td class="px-3 py-3 text-slate-500 dark:text-slate-400">
                     <div v-if="exam.session_id" class="flex flex-col gap-1 items-start">
@@ -900,12 +958,12 @@ onMounted(async () => {
                       <div class="flex flex-col gap-2">
                         <FormControl
                           v-model="helperLevel"
-                          :options="[{ id: '', label: 'Pilih level...' }, ...levels.map(l => ({ id: l.id, label: l.name }))]"
+                          :options="[{ id: '', label: 'Pilih level...' }, ...levels.map((l) => ({ id: l.id, label: `${shortId(l.id)} · ${l.name}` }))]"
                         />
                         <FormControl
                           v-model="targetForm.level_ids_text"
                           type="textarea"
-                          placeholder="List UUID Level"
+                          placeholder="List LEVEL_ID (kode 4 karakter)"
                         />
                       </div>
                     </FormField>
@@ -921,12 +979,12 @@ onMounted(async () => {
                       <div class="flex flex-col gap-2">
                         <FormControl
                           v-model="helperGroup"
-                          :options="[{ id: '', label: 'Pilih group...' }, ...groups.map(g => ({ id: g.id, label: g.name }))]"
+                          :options="[{ id: '', label: 'Pilih group...' }, ...groups.map((g) => ({ id: g.id, label: `${shortId(g.id)} · ${g.name}` }))]"
                         />
                         <FormControl
                           v-model="targetForm.group_ids_text"
                           type="textarea"
-                          placeholder="List UUID Group"
+                          placeholder="List GROUP_ID (kode 4 karakter)"
                         />
                       </div>
                     </FormField>
@@ -942,12 +1000,12 @@ onMounted(async () => {
                       <div class="flex flex-col gap-2">
                         <FormControl
                           v-model="helperStudent"
-                          :options="[{ id: '', label: 'Pilih siswa...' }, ...students.map(s => ({ id: s.id, label: `${s.name} (${s.nis})` }))]"
+                          :options="[{ id: '', label: 'Pilih siswa...' }, ...students.map((s) => ({ id: s.id, label: `${shortId(s.id)} · ${s.name} (${s.nis})` }))]"
                         />
                         <FormControl
                           v-model="targetForm.student_ids_text"
                           type="textarea"
-                          placeholder="List UUID Siswa"
+                          placeholder="List SISWA_ID (kode 4 karakter)"
                         />
                       </div>
                     </FormField>
@@ -976,7 +1034,7 @@ onMounted(async () => {
                     class="rounded-lg bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-700"
                   >
                     <span class="font-mono text-[10px] break-all">
-                      Level: {{ item.level_id || '-' }} · Group: {{ item.group_id || '-' }} · Student: {{ item.student_id || '-' }}
+                      Level: {{ item.level_id ? shortId(item.level_id) : '-' }} · Group: {{ item.group_id ? shortId(item.group_id) : '-' }} · Student: {{ item.student_id ? shortId(item.student_id) : '-' }}
                     </span>
                   </div>
                   <div v-if="!targets.length" class="text-slate-500 dark:text-slate-500 italic">

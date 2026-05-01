@@ -1,0 +1,207 @@
+SUMATIF AKHIR SEMESTER JENJANG SMP - DRAFT IMPORT
+KABUPATEN LAMPUNG TENGAH
+TAHUN PELAJARAN 2024/2025
+Mata Pelajaran: MATEMATIKA
+Kelas: VII
+
+CATATAN:
+- File ini sudah disusun sesuai format parser import DOCX.
+- Bagian bertanda [LENGKAPI] perlu Anda isi dari naskah asli/gambar.
+- Untuk soal yang pakai gambar/diagram, tulis deskripsi teks atau upload gambar setelah import.
+
+
+1) Variabel bentuk aljabar adalah ... [mc_single]
+A. [LENGKAPI]
+B. [LENGKAPI]
+C. [LENGKAPI]
+D. [LENGKAPI]
+Answer: [LENGKAPI]
+
+2) Suku sejenis dari [LENGKAPI] adalah ... [mc_single]
+A. [LENGKAPI]
+B. [LENGKAPI]
+C. [LENGKAPI]
+D. [LENGKAPI]
+Answer: [LENGKAPI]
+
+3) Koefisien pada [LENGKAPI] adalah ... [mc_single]
+A. 7
+B. 8
+C. -8
+D. 9
+Answer: [LENGKAPI]
+
+4) Nilai dari [LENGKAPI] jika [LENGKAPI] adalah ... [mc_single]
+A. 23
+B. -23
+C. 5
+D. -5
+Answer: [LENGKAPI]
+
+5) Bentuk aljabar [LENGKAPI] ekuivalen dengan ... [mc_single]
+A. [LENGKAPI]
+B. [LENGKAPI]
+C. [LENGKAPI]
+D. [LENGKAPI]
+Answer: [LENGKAPI]
+
+6) Bentuk sederhana dari [LENGKAPI] adalah ... [short_answer]
+Answer: [LENGKAPI]
+
+7) Bentuk sederhana dari [LENGKAPI] adalah ... [short_answer]
+Answer: [LENGKAPI]
+
+8) Berdasarkan diagram batang, kenaikan tertinggi pengunjung taman wisata terjadi pada tahun ... [mc_single]
+A. 2021-2022
+B. 2020-2021
+C. 2022-2023
+D. 2021-2023
+Answer: [LENGKAPI]
+
+9) Manakah pernyataan yang salah? [mc_single]
+A. Pengunjung terendah ada di tahun 2020
+B. Pengunjung tertinggi ada di tahun 2023
+C. Kenaikan tertinggi pengunjung ada di tahun 2021-2022
+D. Penurunan pengunjung terjadi di tahun 2023
+Answer: [LENGKAPI]
+
+10) Jika banyak anak yang disurvei pengunduh aplikasi game 400 orang, maka jumlah anak yang mengunduh PUBG adalah ... orang [mc_single]
+A. 40
+B. 80
+C. 160
+D. 120
+Answer: [LENGKAPI]
+
+11) Besar [LENGKAPI] adalah ... [mc_single]
+A. 30°
+B. 40°
+C. 50°
+D. 60°
+Answer: [LENGKAPI]
+
+12) Besar [LENGKAPI] adalah ... [mc_single]
+A. 150°
+B. 120°
+C. 60°
+D. 30°
+Answer: [LENGKAPI]
+
+13) Besar [LENGKAPI] adalah ... [mc_single]
+A. 160°
+B. 150°
+C. 140°
+D. 120°
+Answer: [LENGKAPI]
+
+14) Besar penyiku sudut alpha adalah 47°. Maka besar pelurus sudut alpha adalah ... [mc_single]
+A. 137°
+B. 133°
+C. 43°
+D. 47°
+Answer: [LENGKAPI]
+
+15) Pada gambar berikut, garis A sejajar garis B dan dipotong garis C. Pasangan sudut dalam berseberangan adalah ... [mc_single]
+A. [LENGKAPI]
+B. [LENGKAPI]
+C. [LENGKAPI]
+D. [LENGKAPI]
+Answer: [LENGKAPI]
+
+16) Pernyataan yang tepat adalah ... [mc_single]
+A. ∠a sehadap dengan ∠g
+B. ∠b bertolak belakang dengan ∠c
+C. ∠c luar sepihak dengan ∠g
+D. ∠d sehadap dengan ∠h
+Answer: [LENGKAPI]
+
+17) Besar [LENGKAPI] adalah ... [mc_single]
+A. 70°
+B. 80°
+C. 120°
+D. 110°
+Answer: [LENGKAPI]
+
+18) Pasangan bangun yang saling kongruen adalah ... [mc_single]
+A. A-D
+B. B-C
+C. D-F
+D. C-F
+Answer: [LENGKAPI]
+
+19) Trapesium ABCD sebangun dengan EFGH. Panjang BC adalah ... cm [mc_single]
+A. 36
+B. 40
+C. 12
+D. 48
+Answer: [LENGKAPI]
+
+20) Lukisan 18 cm x 12 cm ditempatkan pada bingkai sebangun. Jarak tepi atas/kanan/kiri ke lukisan 3 cm dan jarak atas 2 cm. Jarak tepi bawah ke lukisan adalah ... [mc_single]
+A. 1
+B. 2
+C. 4
+D. 3
+Answer: [LENGKAPI]
+
+
+21) Besar uang Adi adalah 3 kali uang Amir dikurangi 100. Jika uang Amir = x, model matematika uang Adi adalah 3x + 100. [true_false]
+Answer: salah
+
+22) Diketahui sebuah lapangan berbentuk persegi panjang seperti gambar. Luas lapangan tersebut adalah 2a^2 + a - 6. [true_false]
+Answer: [LENGKAPI]
+
+23) Pertanyaan "Sebutkan nama kabupaten yang ada di Lampung?" memiliki jawaban berupa data kategorik. [true_false]
+Answer: benar
+
+24) Berdasarkan grafik suhu badan Diva, kenaikan tertinggi terjadi pada Kamis-Jumat. [true_false]
+Answer: [LENGKAPI]
+
+25) Garis l dan m sejajar dipotong garis k. Sudut luar berseberangan adalah ∠e dan ∠d. [true_false]
+Answer: [LENGKAPI]
+
+26) Jika besar ∠f = 125° maka besar ∠d = 125°. [true_false]
+Answer: [LENGKAPI]
+
+27) Dua bangun kongruen pasti sebangun. [true_false]
+Answer: benar
+
+28) Diketahui ΔABC dan ΔKLM sebangun, panjang sisi KM adalah 18 cm. [true_false]
+Answer: [LENGKAPI]
+
+
+29) Bentuk paling sederhana dari aljabar berikut adalah ... [matching]
+[LENGKAPI ruas kiri 1] => [LENGKAPI ruas kanan 1]
+[LENGKAPI ruas kiri 2] => [LENGKAPI ruas kanan 2]
+[LENGKAPI ruas kiri 3] => [LENGKAPI ruas kanan 3]
+
+30) Kenaikan tertinggi pengunjung perpustakaan adalah ... orang [matching]
+[LENGKAPI] => 20
+[LENGKAPI] => 25
+[LENGKAPI] => 30
+
+31) Besar pelurus sudut beta adalah 110°, maka penyiku sudut beta adalah ...° [short_answer]
+Answer: [LENGKAPI]
+
+32) Berdasarkan gambar di bawah ini, besar sudut u adalah ...° [short_answer]
+Answer: [LENGKAPI]
+
+
+33) Suku sejenis dari aljabar berikut adalah ... [short_answer]
+Answer: [LENGKAPI]
+
+34) Jumlah siswa yang menyukai bulu tangkis jika total siswa 80 orang adalah ... orang [short_answer]
+Answer: [LENGKAPI]
+
+35) Jika garis B dan C sejajar dipotong garis A, maka ∠B1 dan ∠C3 adalah sudut saling ... [short_answer]
+Answer: [LENGKAPI]
+
+36) Sisi yang bersesuaian dengan PR adalah ... [short_answer]
+Answer: [LENGKAPI]
+
+37) Panjang BD adalah ... cm [short_answer]
+Answer: [LENGKAPI]
+
+
+38) Berdasarkan diagram lingkaran, diketahui siswa yang menyukai Bahasa Indonesia 180 orang. Hitung jumlah siswa yang menyukai Matematika. [essay]
+
+39) Garis q sejajar r dan dipotong transversal p. Jika sudut 1 = 60° dan sudut 2 = 100°, hitung ∠3, ∠4, ∠5, dan ∠6. [essay]
+

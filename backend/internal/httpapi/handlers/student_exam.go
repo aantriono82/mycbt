@@ -24,7 +24,9 @@ type studentExamRepo interface {
 	VerifyExamToken(ctx context.Context, examID, token string, nowUTC time.Time) error
 	GetExamForStudentJoin(ctx context.Context, examID, studentID, levelID, groupID string, nowUTC time.Time, loc *time.Location) (studentexamrepo.ExamForJoin, error)
 	GetSessionByExamStudent(ctx context.Context, examID, studentID string) (studentexamrepo.Session, bool, error)
+	CountAttemptsByExamStudent(ctx context.Context, examID, studentID string) (int, error)
 	CountInProgressSessionsByStudent(ctx context.Context, studentID string) (int, error)
+	CreateSessionAttempt(ctx context.Context, examID, studentID string, clientIP net.IP, userAgent string) (studentexamrepo.Session, error)
 	GetOrCreateSession(ctx context.Context, examID, studentID string, clientIP net.IP, userAgent string) (studentexamrepo.Session, error)
 	EnsureSessionQuestions(ctx context.Context, sessionID, examID string, shuffleQuestions bool) (int, error)
 	GetSessionState(ctx context.Context, sessionID, studentID string, nowUTC time.Time) (studentexamrepo.SessionState, bool, error)
@@ -205,19 +207,19 @@ func (h *StudentExamHandler) Join(c *gin.Context) {
 	}
 	if ok {
 		if existing.Status != "in_progress" {
-			c.JSON(409, gin.H{"error": gin.H{"code": "conflict", "message": "session already finished"}})
-			return
-		}
-		if _, err := h.repo.EnsureSessionQuestions(c.Request.Context(), existing.ID, examID, ex.ShuffleQuestions); err != nil {
-			if errors.Is(err, studentexamrepo.ErrNoQuestionSets) {
-				c.JSON(409, gin.H{"error": gin.H{"code": "no_questions", "message": "Ujian ini belum memiliki bank soal. Silakan hubungi pengampu."}})
+			// finished/expired/forced: continue and create a new attempt if still allowed.
+		} else {
+			if _, err := h.repo.EnsureSessionQuestions(c.Request.Context(), existing.ID, examID, ex.ShuffleQuestions); err != nil {
+				if errors.Is(err, studentexamrepo.ErrNoQuestionSets) {
+					c.JSON(409, gin.H{"error": gin.H{"code": "no_questions", "message": "Ujian ini belum memiliki bank soal. Silakan hubungi pengampu."}})
+					return
+				}
+				c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
 				return
 			}
-			c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+			c.JSON(200, gin.H{"data": gin.H{"session": existing, "session_id": existing.ID, "exam": gin.H{"id": ex.ID, "title": ex.Title}}})
 			return
 		}
-		c.JSON(200, gin.H{"data": gin.H{"session": existing, "session_id": existing.ID, "exam": gin.H{"id": ex.ID, "title": ex.Title}}})
-		return
 	}
 
 	var req joinReq
@@ -273,9 +275,30 @@ func (h *StudentExamHandler) Join(c *gin.Context) {
 		})
 		return
 	}
+	attempts, err := h.repo.CountAttemptsByExamStudent(c.Request.Context(), examID, st.StudentID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if ex.MaxAttempts <= 0 {
+		ex.MaxAttempts = 1
+	}
+	if attempts >= ex.MaxAttempts {
+		c.JSON(409, gin.H{
+			"error": gin.H{
+				"code":    "max_attempts_reached",
+				"message": "maximum exam attempts reached",
+			},
+			"meta": gin.H{
+				"attempts_used": attempts,
+				"max_attempts":  ex.MaxAttempts,
+			},
+		})
+		return
+	}
 
 	ip := net.ParseIP(c.ClientIP())
-	sess, err := h.repo.GetOrCreateSession(c.Request.Context(), examID, st.StudentID, ip, c.GetHeader("User-Agent"))
+	sess, err := h.repo.CreateSessionAttempt(c.Request.Context(), examID, st.StudentID, ip, c.GetHeader("User-Agent"))
 	if err != nil {
 		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
 		return
@@ -358,8 +381,24 @@ func (h *StudentExamHandler) StartCompat(c *gin.Context) {
 		return
 	}
 
+	attempts, err := h.repo.CountAttemptsByExamStudent(c.Request.Context(), examID, st.StudentID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if ex.MaxAttempts <= 0 {
+		ex.MaxAttempts = 1
+	}
+	if attempts >= ex.MaxAttempts {
+		c.JSON(409, gin.H{
+			"error": gin.H{"code": "max_attempts_reached", "message": "maximum exam attempts reached"},
+			"meta":  gin.H{"attempts_used": attempts, "max_attempts": ex.MaxAttempts},
+		})
+		return
+	}
+
 	ip := net.ParseIP(c.ClientIP())
-	sess, err := h.repo.GetOrCreateSession(c.Request.Context(), examID, st.StudentID, ip, c.GetHeader("User-Agent"))
+	sess, err := h.repo.CreateSessionAttempt(c.Request.Context(), examID, st.StudentID, ip, c.GetHeader("User-Agent"))
 	if err != nil {
 		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
 		return

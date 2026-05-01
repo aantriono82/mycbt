@@ -10,6 +10,7 @@ import BaseIcon from '@/components/BaseIcon.vue'
 import FormField from '@/components/FormField.vue'
 import FormControl from '@/components/FormControl.vue'
 import { api } from '@/services/api.js'
+import { shortCode2 } from '@/utils/shortCode.js'
 
 const isLoading = ref(false)
 const errorMessage = ref('')
@@ -54,6 +55,8 @@ const fmtTime = (iso) => {
     return iso
   }
 }
+
+const shortId = (value) => shortCode2(value)
 
 const load = async () => {
   isLoading.value = true
@@ -242,7 +245,7 @@ onMounted(load)
                 </td>
                 <td class="px-3 py-3">
                   <div class="font-bold text-slate-800 dark:text-slate-200">{{ it.username }}</div>
-                  <div v-if="it.user_id" class="text-[10px] text-slate-400 font-mono">{{ it.user_id }}</div>
+                  <div v-if="it.user_id" class="text-[10px] text-slate-400 font-mono">{{ shortId(it.user_id) }}</div>
                 </td>
                 <td class="px-3 py-3">
                   <span class="inline-flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-2 py-1 text-[10px] font-black uppercase text-slate-500">

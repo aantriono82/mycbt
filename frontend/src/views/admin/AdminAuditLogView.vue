@@ -20,6 +20,7 @@ import FormField from '@/components/FormField.vue'
 import FormControl from '@/components/FormControl.vue'
 import CardBoxModal from '@/components/CardBoxModal.vue'
 import { api } from '@/services/api.js'
+import { shortCode2 } from '@/utils/shortCode.js'
 
 const isLoading = ref(false)
 const errorMessage = ref('')
@@ -209,6 +210,8 @@ const payloadPretty = computed(() => {
   }
 })
 
+const shortId = (value) => shortCode2(value)
+
 onMounted(load)
 </script>
 
@@ -231,11 +234,11 @@ onMounted(load)
               <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Actor</div>
               <div class="mt-1 font-bold text-slate-800 dark:text-slate-200">{{ detail.username || '-' }}</div>
               <div class="text-[11px] text-slate-500">{{ detail.name || '' }}</div>
-              <div class="mt-1 text-[11px] font-mono text-slate-400">{{ detail.user_id || '' }}</div>
+              <div class="mt-1 text-[11px] font-mono text-slate-400">{{ detail.user_id ? shortId(detail.user_id) : '' }}</div>
             </div>
             <div class="rounded-xl border border-slate-200 dark:border-slate-800 p-3">
               <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Request</div>
-              <div class="mt-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">{{ detail.request_id }}</div>
+              <div class="mt-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">{{ shortId(detail.request_id) }}</div>
               <div class="mt-1 text-slate-600 dark:text-slate-300">
                 <span class="font-black">{{ detail.method }}</span>
                 <span class="ml-2">{{ detail.path }}</span>
@@ -370,7 +373,7 @@ onMounted(load)
                   <div class="text-[10px] text-slate-400 uppercase font-black">{{ it.role || '-' }}</div>
                 </td>
                 <td class="px-3 py-3 text-[11px] font-mono text-slate-500 max-w-[220px]">
-                  <div class="truncate" :title="it.request_id">{{ it.request_id }}</div>
+                  <div class="truncate" :title="it.request_id">{{ shortId(it.request_id) }}</div>
                 </td>
                 <td class="px-3 py-3">
                   <span class="inline-flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-2 py-1 text-[10px] font-black uppercase text-slate-600">

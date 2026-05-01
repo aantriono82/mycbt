@@ -317,12 +317,12 @@ onMounted(async () => {
         <BaseButton :icon="mdiRefresh" color="info" label="Muat Ulang" @click="loadAnnouncements" />
       </SectionTitleLineWithButton>
 
-      <div class="mb-6 grid gap-6 xl:grid-cols-5">
-        <CardBox class="xl:col-span-2">
+      <div class="mb-6 grid min-w-0 gap-6 xl:grid-cols-5">
+        <CardBox class="min-w-0 overflow-hidden xl:col-span-2">
           <h3 class="mb-4 text-xl font-black uppercase tracking-tight dark:text-slate-100">
             {{ isEditing ? 'Edit Pengumuman' : 'Tambah Pengumuman' }}
           </h3>
-          <div class="grid gap-4">
+          <div class="flex flex-col min-w-0 gap-4">
             <FormField label="Judul">
               <FormControl v-model="form.title" placeholder="Contoh: Jadwal Ujian Diperbarui" />
             </FormField>
@@ -381,7 +381,7 @@ onMounted(async () => {
           </div>
         </CardBox>
 
-        <CardBox class="xl:col-span-3">
+        <CardBox class="min-w-0 overflow-hidden xl:col-span-3">
           <div class="mb-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h3 class="text-xl font-black uppercase tracking-tight dark:text-slate-100">Daftar Pengumuman</h3>

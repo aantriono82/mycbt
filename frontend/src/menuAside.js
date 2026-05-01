@@ -73,7 +73,7 @@ export const getMenuAsideMain = (role) => {
         icon: mdiChartBoxOutline,
         menu: [
           { to: '/teacher/evaluasi', label: 'Hasil Ujian', icon: mdiChartBoxOutline },
-          { to: '/admin/analytics', label: 'Analitik & Tren', icon: mdiChartLine },
+          { to: '/teacher/evaluasi', label: 'Analitik & Tren', icon: mdiChartLine },
         ],
       },
       { to: '/teacher/profil', icon: mdiAccountTie, label: 'Profil' },
@@ -128,7 +128,6 @@ export const getMenuAsideMain = (role) => {
         { to: '/admin/ujian/token', label: 'Token', icon: mdiKeyVariant },
         { to: '/admin/ujian/monitor-ujian', label: 'Monitor Ujian', icon: mdiMonitorEye },
         { to: '/admin/ujian/monitor-peserta', label: 'Mon. Peserta', icon: mdiAccountSearchOutline },
-        { to: '/admin/ujian/absensi', label: 'Absensi', icon: mdiCalendarCheckOutline },
         { to: '/admin/ujian/reset-login', label: 'Reset Login', icon: mdiAccountSwitchOutline },
       ],
     },
@@ -140,13 +139,7 @@ export const getMenuAsideMain = (role) => {
         { to: '/admin/analytics', label: 'Analitik & Tren', icon: mdiChartLine }
       ]
     },
-    {
-      label: 'Cetak',
-      icon: mdiPrinterOutline,
-      menu: [
-        { to: '/admin/cetak', label: 'Kartu & Absensi', icon: mdiPrinterOutline }
-      ]
-    },
+    { to: '/admin/cetak', label: 'Cetak', icon: mdiPrinterOutline },
     {
       label: 'Config',
       icon: mdiCogOutline,
@@ -155,7 +148,6 @@ export const getMenuAsideMain = (role) => {
         { to: '/admin/settings/activity-log', label: 'Log Aktivitas', icon: mdiHistory },
         { to: '/admin/settings/audit-log', label: 'Audit Log', icon: mdiClipboardTextSearchOutline },
         { to: '/admin/lms', label: 'Integrasi LMS', icon: mdiDatabaseExportOutline },
-        { to: '/admin/lti', label: 'LTI Platforms', icon: mdiLinkVariant },
       ]
     },
   ]

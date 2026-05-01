@@ -95,6 +95,17 @@ func (m *mockStudentExamRepo) CountInProgressSessionsByStudent(ctx context.Conte
 	return 0, nil
 }
 
+func (m *mockStudentExamRepo) CountAttemptsByExamStudent(ctx context.Context, examID, studentID string) (int, error) {
+	if m.sessionByExamOK[examID] {
+		return 1, nil
+	}
+	return 0, nil
+}
+
+func (m *mockStudentExamRepo) CreateSessionAttempt(ctx context.Context, examID, studentID string, clientIP net.IP, userAgent string) (studentexamrepo.Session, error) {
+	return m.createdSession, m.createErr
+}
+
 func (m *mockStudentExamRepo) GetOrCreateSession(ctx context.Context, examID, studentID string, clientIP net.IP, userAgent string) (studentexamrepo.Session, error) {
 	return m.createdSession, m.createErr
 }
