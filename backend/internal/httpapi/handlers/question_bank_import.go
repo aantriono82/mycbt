@@ -12,8 +12,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mycbt/backend/internal/httpapi/middleware"
-	"mycbt/backend/internal/repo/questionbankrepo"
+	"atigacbt/backend/internal/httpapi/middleware"
+	"atigacbt/backend/internal/repo/questionbankrepo"
 )
 
 const maxDocxBytes = 20 << 20 // 20MB

@@ -10,7 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mycbt/backend/internal/repo/auditrepo"
+	"atigacbt/backend/internal/repo/auditrepo"
 )
 
 type AuditLogsHandler struct {

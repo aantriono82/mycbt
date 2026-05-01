@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"mycbt/backend/internal/config"
-	"mycbt/backend/internal/migrate"
+	"atigacbt/backend/internal/config"
+	"atigacbt/backend/internal/migrate"
 )
 
 func main() {

@@ -7,11 +7,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 
-	"mycbt/backend/internal/httpapi/middleware"
-	"mycbt/backend/internal/httpapi/params"
-	"mycbt/backend/internal/httpapi/pgerr"
-	"mycbt/backend/internal/repo/examrepo"
-	"mycbt/backend/internal/repo/masterrepo"
+	"atigacbt/backend/internal/httpapi/middleware"
+	"atigacbt/backend/internal/httpapi/params"
+	"atigacbt/backend/internal/httpapi/pgerr"
+	"atigacbt/backend/internal/repo/examrepo"
+	"atigacbt/backend/internal/repo/masterrepo"
 )
 
 type ExamsHandler struct {

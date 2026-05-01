@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"mycbt/backend/internal/repo/studentexamrepo"
+	"atigacbt/backend/internal/repo/studentexamrepo"
 )
 
 type AnalyticsHandler struct {

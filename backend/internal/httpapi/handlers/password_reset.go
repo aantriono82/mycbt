@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mycbt/backend/internal/service/authsvc"
+	"atigacbt/backend/internal/service/authsvc"
 )
 
 type PasswordResetHandler struct {

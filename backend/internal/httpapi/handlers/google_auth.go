@@ -12,11 +12,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mycbt/backend/internal/config"
-	"mycbt/backend/internal/model"
-	"mycbt/backend/internal/repo/masterrepo"
-	"mycbt/backend/internal/repo/userrepo"
-	"mycbt/backend/internal/service/authsvc"
+	"atigacbt/backend/internal/config"
+	"atigacbt/backend/internal/model"
+	"atigacbt/backend/internal/repo/masterrepo"
+	"atigacbt/backend/internal/repo/userrepo"
+	"atigacbt/backend/internal/service/authsvc"
 )
 
 type GoogleAuthHandler struct {

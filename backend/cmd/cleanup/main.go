@@ -7,8 +7,8 @@ import (
 	"log"
 	"strings"
 
-	"mycbt/backend/internal/config"
-	"mycbt/backend/internal/db"
+	"atigacbt/backend/internal/config"
+	"atigacbt/backend/internal/db"
 )
 
 type rowCount struct {

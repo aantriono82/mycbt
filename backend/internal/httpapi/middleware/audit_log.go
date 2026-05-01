@@ -9,7 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mycbt/backend/internal/repo/auditrepo"
+	"atigacbt/backend/internal/repo/auditrepo"
 )
 
 func AuditLogger(audit *auditrepo.Repo) gin.HandlerFunc {

@@ -14,14 +14,14 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"mycbt/backend/internal/cache"
-	"mycbt/backend/internal/config"
-	"mycbt/backend/internal/db"
-	"mycbt/backend/internal/httpapi"
-	"mycbt/backend/internal/httpapi/middleware"
-	"mycbt/backend/internal/repo/userrepo"
-	"mycbt/backend/internal/service/authsvc"
-	"mycbt/backend/internal/storage"
+	"atigacbt/backend/internal/cache"
+	"atigacbt/backend/internal/config"
+	"atigacbt/backend/internal/db"
+	"atigacbt/backend/internal/httpapi"
+	"atigacbt/backend/internal/httpapi/middleware"
+	"atigacbt/backend/internal/repo/userrepo"
+	"atigacbt/backend/internal/service/authsvc"
+	"atigacbt/backend/internal/storage"
 )
 
 func main() {

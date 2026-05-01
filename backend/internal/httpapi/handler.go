@@ -12,21 +12,21 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
-	"mycbt/backend/internal/config"
-	"mycbt/backend/internal/httpapi/handlers"
-	"mycbt/backend/internal/httpapi/middleware"
-	"mycbt/backend/internal/repo/auditrepo"
-	"mycbt/backend/internal/repo/examrepo"
-	"mycbt/backend/internal/repo/loginlogrepo"
-	"mycbt/backend/internal/repo/ltirepo"
-	"mycbt/backend/internal/repo/masterrepo"
-	"mycbt/backend/internal/repo/questionbankrepo"
-	"mycbt/backend/internal/repo/studentexamrepo"
-	"mycbt/backend/internal/repo/userrepo"
-	"mycbt/backend/internal/service/authsvc"
-	"mycbt/backend/internal/service/ltisvc"
-	"mycbt/backend/internal/service/notificationsvc"
-	"mycbt/backend/internal/storage"
+	"atigacbt/backend/internal/config"
+	"atigacbt/backend/internal/httpapi/handlers"
+	"atigacbt/backend/internal/httpapi/middleware"
+	"atigacbt/backend/internal/repo/auditrepo"
+	"atigacbt/backend/internal/repo/examrepo"
+	"atigacbt/backend/internal/repo/loginlogrepo"
+	"atigacbt/backend/internal/repo/ltirepo"
+	"atigacbt/backend/internal/repo/masterrepo"
+	"atigacbt/backend/internal/repo/questionbankrepo"
+	"atigacbt/backend/internal/repo/studentexamrepo"
+	"atigacbt/backend/internal/repo/userrepo"
+	"atigacbt/backend/internal/service/authsvc"
+	"atigacbt/backend/internal/service/ltisvc"
+	"atigacbt/backend/internal/service/notificationsvc"
+	"atigacbt/backend/internal/storage"
 )
 
 type Deps struct {
@@ -70,7 +70,7 @@ func NewHandler(deps Deps) http.Handler {
 	}
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			"name":   "MyCBT API",
+			"name":   "AtigaCBT API",
 			"status": "running",
 			"env":    cfg.Env,
 		})

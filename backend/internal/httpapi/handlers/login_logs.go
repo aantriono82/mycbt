@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mycbt/backend/internal/repo/loginlogrepo"
+	"atigacbt/backend/internal/repo/loginlogrepo"
 )
 
 type LoginLogsHandler struct {

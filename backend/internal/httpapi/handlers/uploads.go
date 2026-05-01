@@ -11,8 +11,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mycbt/backend/internal/httpapi/middleware"
-	"mycbt/backend/internal/storage"
+	"atigacbt/backend/internal/httpapi/middleware"
+	"atigacbt/backend/internal/storage"
 )
 
 type UploadsHandler struct {

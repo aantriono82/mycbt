@@ -18,11 +18,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 
-	"mycbt/backend/internal/httpapi/pgerr"
-	"mycbt/backend/internal/model"
-	"mycbt/backend/internal/repo/ltirepo"
-	"mycbt/backend/internal/repo/userrepo"
-	"mycbt/backend/internal/service/authsvc"
+	"atigacbt/backend/internal/httpapi/pgerr"
+	"atigacbt/backend/internal/model"
+	"atigacbt/backend/internal/repo/ltirepo"
+	"atigacbt/backend/internal/repo/userrepo"
+	"atigacbt/backend/internal/service/authsvc"
 )
 
 type LTIHandler struct {
@@ -450,7 +450,7 @@ func (h *LTIHandler) SubmitDeepLink(c *gin.Context) {
 					"scoreMaximum": 100,
 					"label":        req.Title,
 					"resourceId":   req.ExamID,
-					"tag":          "mycbt-exam",
+					"tag":          "atigacbt-exam",
 				},
 				"custom": map[string]string{
 					"exam_id": req.ExamID,

@@ -1,4 +1,4 @@
-module mycbt/backend
+module atigacbt/backend
 
 go 1.25.0
 

@@ -14,13 +14,13 @@ import (
 	"github.com/xuri/excelize/v2"
 	"golang.org/x/crypto/bcrypt"
 
-	"mycbt/backend/internal/httpapi/middleware"
-	"mycbt/backend/internal/httpapi/params"
-	"mycbt/backend/internal/httpapi/pgerr"
-	"mycbt/backend/internal/repo/masterrepo"
-	"mycbt/backend/internal/repo/userrepo"
-	"mycbt/backend/internal/service/authsvc"
-	"mycbt/backend/internal/service/notificationsvc"
+	"atigacbt/backend/internal/httpapi/middleware"
+	"atigacbt/backend/internal/httpapi/params"
+	"atigacbt/backend/internal/httpapi/pgerr"
+	"atigacbt/backend/internal/repo/masterrepo"
+	"atigacbt/backend/internal/repo/userrepo"
+	"atigacbt/backend/internal/service/authsvc"
+	"atigacbt/backend/internal/service/notificationsvc"
 )
 
 type AdminMasterHandler struct {
