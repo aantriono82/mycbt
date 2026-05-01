@@ -13,3 +13,6 @@ backend/api_bin
 
 # OS
 .DS_Store
+
+# Local test/build caches
+.tmp/

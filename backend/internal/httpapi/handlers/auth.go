@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -9,18 +10,36 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 
-	"mycbt/backend/internal/httpapi/middleware"
-	"mycbt/backend/internal/repo/loginlogrepo"
-	"mycbt/backend/internal/repo/userrepo"
-	"mycbt/backend/internal/service/authsvc"
-	"mycbt/backend/internal/storage"
+	"atigacbt/backend/internal/httpapi/middleware"
+	"atigacbt/backend/internal/model"
+	"atigacbt/backend/internal/repo/loginlogrepo"
+	"atigacbt/backend/internal/repo/userrepo"
+	"atigacbt/backend/internal/service/authsvc"
+	"atigacbt/backend/internal/storage"
 )
 
 type AuthHandler struct {
-	auth      *authsvc.Service
-	users     *userrepo.Repo
-	loginLogs *loginlogrepo.Repo
+	auth      authService
+	users     userStore
+	loginLogs loginLogStore
 	store     storage.ObjectStore
+}
+
+type authService interface {
+	Login(ctx context.Context, username, password string) (token string, expiresAt time.Time, user model.User, err error)
+	RevokeToken(ctx context.Context, tokenString string) error
+}
+
+type userStore interface {
+	GetByID(ctx context.Context, id string) (model.User, bool, error)
+	UpdateProfile(ctx context.Context, id, name, email string) error
+	UpdatePassword(ctx context.Context, id string, hash string) error
+	UpdatePhoto(ctx context.Context, id string, photoURL string) error
+}
+
+type loginLogStore interface {
+	Insert(ctx context.Context, in loginlogrepo.LoginLog) error
+	PruneOlderThan(ctx context.Context, days int) (int64, error)
 }
 
 func NewAuthHandler(auth *authsvc.Service, users *userrepo.Repo, loginLogs *loginlogrepo.Repo, store storage.ObjectStore) *AuthHandler {

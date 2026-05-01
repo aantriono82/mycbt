@@ -1,6 +1,6 @@
 # Backend (Gin)
 
-OpenAPI baseline spec: [docs/openapi.yaml](/home/aantriono/dev/mycbt/docs/openapi.yaml)
+OpenAPI baseline spec: [docs/openapi.yaml](/home/aantriono/dev/atigacbt/docs/openapi.yaml)
 
 ## Quickstart
 
@@ -21,7 +21,7 @@ cd backend
 Set env (example):
 
 ```bash
-export DATABASE_URL="postgres://mycbt:mycbt@localhost:5433/mycbt?sslmode=disable"
+export DATABASE_URL="postgres://atigacbt:atigacbt@localhost:5433/atigacbt?sslmode=disable"
 export JWT_SECRET="$(openssl rand -hex 32)"
 ```
 
@@ -44,6 +44,71 @@ Run API:
 ```bash
 ../.tooling/go/bin/go run ./cmd/api
 ```
+
+## Testing
+
+Backend sekarang punya kombinasi unit test, handler/service test, dan integration test PostgreSQL untuk repo yang query-heavy.
+
+Perintah paling sederhana dari root repo:
+
+```bash
+make test-backend
+```
+
+Atau langsung lewat script:
+
+```bash
+./scripts/test-backend.sh
+```
+
+Mode default menjalankan:
+
+```bash
+cd backend
+go test ./...
+```
+
+Catatan:
+- suite ini aman dijalankan tanpa database test tambahan
+- integration test repo yang butuh PostgreSQL akan `skip` otomatis saat `TEST_DATABASE_URL` belum diset
+
+Untuk menjalankan integration test PostgreSQL secara eksplisit:
+
+```bash
+export TEST_DATABASE_URL='postgres://user:pass@localhost:5432/dbname?sslmode=disable'
+make test-backend-integration
+```
+
+Atau:
+
+```bash
+TEST_DATABASE_URL='postgres://user:pass@localhost:5432/dbname?sslmode=disable' ./scripts/test-backend.sh integration
+```
+
+CI yang menjalankan suite ini ada di:
+- [backend-tests.yml](/home/aantriono/dev/atigacbt/.github/workflows/backend-tests.yml)
+  - job `test-backend` untuk `make test-backend`
+  - job `test-backend-integration` untuk `make test-backend-integration` dengan service PostgreSQL
+
+Perilaku harness integration test:
+- setiap test run membuat schema acak sendiri
+- semua file migrasi `backend/migrations/*.up.sql` diterapkan ke schema itu
+- schema dibersihkan otomatis saat test selesai
+- database yang dipakai harus PostgreSQL yang bisa diakses oleh `TEST_DATABASE_URL`
+
+Area backend yang sekarang sudah punya coverage bermakna:
+- auth handler + auth service
+- student exam + exam results handler
+- scoring helper dan manual grading helper
+- LTI service dan notification service
+- object storage lokal, config helper, db helper, migrate helper, PDF helper, cache helper, params helper, pg error helper
+- integration test repo untuk `auditrepo`, `examrepo`, `loginlogrepo`, `ltirepo`, `masterrepo`, `questionbankrepo`, dan `userrepo`
+
+Area yang sengaja tidak diprioritaskan untuk unit test detail:
+- `cmd/*` entrypoints
+- `internal/model`
+- package root yang sangat tipis atau hanya wiring
+- script operasional di `scripts/`
 
 ## Cleanup Pre-Deploy (Hapus Data Uji)
 

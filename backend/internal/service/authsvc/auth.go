@@ -1,8 +1,8 @@
 package authsvc
 
 import (
-	"crypto/sha256"
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -13,9 +13,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 
-	"mycbt/backend/internal/config"
-	"mycbt/backend/internal/model"
-	"mycbt/backend/internal/repo/userrepo"
+	"atigacbt/backend/internal/config"
+	"atigacbt/backend/internal/model"
+	"atigacbt/backend/internal/repo/userrepo"
 )
 
 var (
@@ -25,13 +25,17 @@ var (
 )
 
 type Service struct {
-	users *userrepo.Repo
+	users userReader
 
 	secret []byte
 	issuer string
 	ttl    time.Duration
 
 	blocklist TokenBlocklist
+}
+
+type userReader interface {
+	GetByUsername(ctx context.Context, username string) (model.User, bool, error)
 }
 
 type Claims struct {

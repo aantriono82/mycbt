@@ -20,6 +20,19 @@ func New(pool *pgxpool.Pool) *Repo { return &Repo{pool: pool} }
 
 func (r *Repo) Pool() *pgxpool.Pool { return r.pool }
 
+func (r *Repo) SessionExamID(ctx context.Context, sessionID string) (string, bool, error) {
+	const q = `SELECT exam_id::text FROM exam_sessions WHERE id = $1`
+	var examID string
+	err := r.pool.QueryRow(ctx, q, sessionID).Scan(&examID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return "", false, nil
+		}
+		return "", false, fmt.Errorf("session exam lookup: %w", err)
+	}
+	return examID, true, nil
+}
+
 func (r *Repo) TeacherIDByUserID(ctx context.Context, userID string) (string, bool, error) {
 	const q = `SELECT id FROM teachers WHERE user_id = $1 LIMIT 1`
 	var id string
@@ -292,16 +305,7 @@ type CreateTokenInput struct {
 }
 
 func (r *Repo) CreateToken(ctx context.Context, in CreateTokenInput) (ExamToken, error) {
-	length := in.Length
-	if length <= 0 {
-		length = 6
-	}
-	if length < 4 {
-		length = 4
-	}
-	if length > 12 {
-		length = 12
-	}
+	length := normalizeTokenLength(in.Length)
 
 	// Try multiple times in case of collision.
 	var lastErr error
@@ -404,16 +408,7 @@ func (r *Repo) RotateToken(ctx context.Context, in RotateTokenInput) (ExamToken,
 	}
 
 	// Generate new token (same constraints as CreateToken).
-	length := in.Length
-	if length <= 0 {
-		length = 6
-	}
-	if length < 4 {
-		length = 4
-	}
-	if length > 12 {
-		length = 12
-	}
+	length := normalizeTokenLength(in.Length)
 
 	var lastErr error
 	for i := 0; i < 10; i++ {
@@ -453,6 +448,19 @@ RETURNING id::text, exam_id::text, token,
 }
 
 const tokenAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // avoid 0,O,1,I
+
+func normalizeTokenLength(n int) int {
+	if n <= 0 {
+		return 6
+	}
+	if n < 4 {
+		return 4
+	}
+	if n > 12 {
+		return 12
+	}
+	return n
+}
 
 func randToken(n int) (string, error) {
 	var sb strings.Builder
