@@ -82,6 +82,7 @@ type createExamReq struct {
 	ShuffleQuestions bool   `json:"shuffle_questions"`
 	ShuffleOptions   bool   `json:"shuffle_options"`
 	ScoringMode      string `json:"scoring_mode"` // partial|absolute
+	MaxAttempts      *int   `json:"max_attempts"`
 }
 
 func (h *ExamsHandler) Create(c *gin.Context) {
@@ -103,6 +104,14 @@ func (h *ExamsHandler) Create(c *gin.Context) {
 	}
 	if req.DurationMinutes != nil && *req.DurationMinutes <= 0 {
 		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "duration_minutes must be > 0"}})
+		return
+	}
+	maxAttempts := 1
+	if req.MaxAttempts != nil {
+		maxAttempts = *req.MaxAttempts
+	}
+	if maxAttempts <= 0 {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "max_attempts must be > 0"}})
 		return
 	}
 	scoringMode := strings.TrimSpace(strings.ToLower(req.ScoringMode))
@@ -176,6 +185,7 @@ func (h *ExamsHandler) Create(c *gin.Context) {
 		ShuffleQuestions: req.ShuffleQuestions,
 		ShuffleOptions:   req.ShuffleOptions,
 		ScoringMode:      scoringMode,
+		MaxAttempts:      maxAttempts,
 	})
 	if err != nil {
 		if pgerr.Code(err) == pgerr.CodeForeignKeyViolation {
@@ -226,6 +236,7 @@ type patchExamReq struct {
 	ShuffleQuestions *bool   `json:"shuffle_questions"`
 	ShuffleOptions   *bool   `json:"shuffle_options"`
 	ScoringMode      *string `json:"scoring_mode"` // partial|absolute
+	MaxAttempts      *int    `json:"max_attempts"`
 	Status           *string `json:"status"`       // draft|published|archived
 }
 
@@ -329,6 +340,17 @@ func (h *ExamsHandler) Patch(c *gin.Context) {
 		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "invalid scoring_mode"}})
 		return
 	}
+	maxAttempts := cur.MaxAttempts
+	if maxAttempts <= 0 {
+		maxAttempts = 1
+	}
+	if req.MaxAttempts != nil {
+		maxAttempts = *req.MaxAttempts
+	}
+	if maxAttempts <= 0 {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "max_attempts must be > 0"}})
+		return
+	}
 	status := cur.Status
 	if req.Status != nil {
 		status = strings.TrimSpace(*req.Status)
@@ -360,6 +382,7 @@ func (h *ExamsHandler) Patch(c *gin.Context) {
 		ShuffleQuestions: shQ,
 		ShuffleOptions:   shO,
 		ScoringMode:      scoringMode,
+		MaxAttempts:      maxAttempts,
 		Status:           status,
 	})
 	if err != nil {

@@ -205,6 +205,13 @@ const initEditor = async () => {
     toolbar: normalizeToolbar(props.toolbar),
     toolbar_mode: 'wrap',
     min_height: props.height,
+    font_family_formats: [
+      'Plus Jakarta Sans=Plus Jakarta Sans,Inter,Helvetica,Arial,sans-serif',
+      'Amiri Arabic=Amiri,Noto Naskh Arabic,serif',
+      'Arial=arial,helvetica,sans-serif',
+      'Times New Roman=times new roman,times,serif',
+      'Courier New=courier new,courier,monospace',
+    ].join(';'),
     custom_elements: customMathElements,
     extended_valid_elements: [
       'span[class|data-latex|data-display|contenteditable]',
@@ -212,11 +219,12 @@ const initEditor = async () => {
       extendedMathElements,
     ].join(','),
     valid_children: '+span[math],+div[math],+math[semantics|mrow|mi|mn|mo|msqrt|mroot|mfrac|msub|msup|msubsup|munder|mover|munderover|mtable|mtr|mtd|mstyle|mspace|mtext|mpadded|menclose|mfenced]',
-    content_css: ['default'],
+    content_css: ['default', '/fonts/amiri/amiri.css'],
     content_style: `
-      body { font-family:Inter,Helvetica,Arial,sans-serif; font-size:14px; color: #475569; padding: 10px; }
+      body { font-family:"Plus Jakarta Sans",Inter,Helvetica,Arial,sans-serif; font-size:14px; color: #475569; padding: 10px; }
       body[dir="rtl"] { text-align: right; font-family: "Noto Naskh Arabic", "Amiri", Arial, sans-serif; }
       [dir="rtl"] { direction: rtl; text-align: right; font-family: "Noto Naskh Arabic", "Amiri", Arial, sans-serif; }
+      [style*="Amiri"], .font-amiri { font-family: "Amiri", "Noto Naskh Arabic", serif; }
       .math-tex { display: inline-flex; align-items: center; vertical-align: middle; white-space: nowrap; cursor: pointer; }
       .math-tex math { font-size: 1em; line-height: 1.2; }
       .math-tex[data-display="1"] { display: block; white-space: normal; margin: 0.5rem 0; }

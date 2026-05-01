@@ -1,0 +1,33 @@
+@font-face {
+  font-family: "Amiri";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("/fonts/amiri/amiri-arabic-400-normal.woff2") format("woff2");
+  unicode-range: U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+0897-08E1,U+08E3-08FF,U+FB50-FDFF,U+FE70-FEFC;
+}
+
+@font-face {
+  font-family: "Amiri";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url("/fonts/amiri/amiri-arabic-700-normal.woff2") format("woff2");
+  unicode-range: U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+0897-08E1,U+08E3-08FF,U+FB50-FDFF,U+FE70-FEFC;
+}
+
+@font-face {
+  font-family: "Amiri";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("/fonts/amiri/amiri-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Amiri";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url("/fonts/amiri/amiri-latin-700-normal.woff2") format("woff2");
+}

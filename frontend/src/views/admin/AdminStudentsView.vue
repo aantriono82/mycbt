@@ -12,6 +12,7 @@ import FormField from '@/components/FormField.vue'
 import FormControl from '@/components/FormControl.vue'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
+import { shortCode2 } from '@/utils/shortCode.js'
 
 const authStore = useAuthStore()
 
@@ -292,6 +293,8 @@ const copyId = (id) => {
   alert('ID disalin ke clipboard')
 }
 
+const shortId = (id) => shortCode2(id)
+
 const handlePhotoUpload = (e) => {
   const file = e.target.files[0]
   if (file) {
@@ -560,7 +563,7 @@ onMounted(async () => {
                   <th class="px-3 py-3">NIS</th>
                   <th class="px-3 py-3">Jenjang</th>
                   <th class="px-3 py-3">Email</th>
-                  <th class="px-3 py-3">ID Internal</th>
+                  <th class="px-3 py-3">SISWA_ID</th>
                   <th class="px-3 py-3 text-center">Status</th>
                   <th class="px-3 py-3">Aksi</th>
                 </tr>
@@ -590,7 +593,7 @@ onMounted(async () => {
                   <td class="px-3 py-3 text-slate-500 dark:text-slate-400">{{ student.email || '-' }}</td>
                   <td class="px-3 py-3 font-mono text-[10px] text-slate-400">
                     <div class="flex items-center gap-2">
-                       <span class="truncate w-16">{{ student.id }}</span>
+                       <span class="truncate w-16 font-black">{{ shortId(student.id) }}</span>
                        <BaseIcon :path="mdiContentCopy" size="14" class="cursor-pointer hover:text-blue-500" @click="copyId(student.id)" title="Salin ID" />
                     </div>
                   </td>

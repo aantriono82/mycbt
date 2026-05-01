@@ -277,6 +277,7 @@ type ExamForJoin struct {
 	DurationMinutes  *int
 	ShuffleQuestions bool
 	ShuffleOptions   bool
+	MaxAttempts      int
 	Status           string
 	SessionID        *string
 	SessionStart     *string
@@ -295,6 +296,7 @@ SELECT e.id::text,
        e.duration_minutes,
        e.shuffle_questions,
        e.shuffle_options,
+       e.max_attempts,
        e.status,
        e.session_id::text,
        COALESCE(to_char(sess.start_time, 'HH24:MI'), ''),
@@ -325,6 +327,7 @@ LIMIT 1`
 		&ex.DurationMinutes,
 		&ex.ShuffleQuestions,
 		&ex.ShuffleOptions,
+		&ex.MaxAttempts,
 		&ex.Status,
 		&ex.SessionID,
 		&ex.SessionStart,
@@ -375,6 +378,7 @@ type Session struct {
 	StartedAt  string `json:"started_at"`
 	FinishedAt string `json:"finished_at,omitempty"`
 	LastSeenAt string `json:"last_seen_at,omitempty"`
+	AttemptNo  int    `json:"attempt_no,omitempty"`
 }
 
 func (r *Repo) GetSessionByExamStudent(ctx context.Context, examID, studentID string) (Session, bool, error) {
@@ -382,13 +386,15 @@ func (r *Repo) GetSessionByExamStudent(ctx context.Context, examID, studentID st
 SELECT id::text, exam_id::text, student_id::text, status,
        to_char(started_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
        COALESCE(to_char(finished_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),'') AS finished_at,
-       COALESCE(to_char(last_seen_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),'') AS last_seen_at
+       COALESCE(to_char(last_seen_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),'') AS last_seen_at,
+       attempt_no
 FROM exam_sessions
 WHERE exam_id = $1 AND student_id = $2
+ORDER BY started_at DESC, id DESC
 LIMIT 1`
 	var it Session
 	var finished, lastSeen string
-	if err := r.pool.QueryRow(ctx, q, examID, studentID).Scan(&it.ID, &it.ExamID, &it.StudentID, &it.Status, &it.StartedAt, &finished, &lastSeen); err != nil {
+	if err := r.pool.QueryRow(ctx, q, examID, studentID).Scan(&it.ID, &it.ExamID, &it.StudentID, &it.Status, &it.StartedAt, &finished, &lastSeen, &it.AttemptNo); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return Session{}, false, nil
 		}
@@ -401,6 +407,15 @@ LIMIT 1`
 		it.LastSeenAt = lastSeen
 	}
 	return it, true, nil
+}
+
+func (r *Repo) CountAttemptsByExamStudent(ctx context.Context, examID, studentID string) (int, error) {
+	const q = `SELECT COUNT(*) FROM exam_sessions WHERE exam_id = $1 AND student_id = $2`
+	var total int
+	if err := r.pool.QueryRow(ctx, q, examID, studentID).Scan(&total); err != nil {
+		return 0, fmt.Errorf("count attempts: %w", err)
+	}
+	return total, nil
 }
 
 func (r *Repo) CountInProgressSessionsByStudent(ctx context.Context, studentID string) (int, error) {
@@ -547,24 +562,28 @@ VALUES ($1::uuid, 'expired', '{}'::jsonb)`, sessionID); err != nil {
 	return true, nil
 }
 
-func (r *Repo) GetOrCreateSession(ctx context.Context, examID, studentID string, clientIP net.IP, userAgent string) (Session, error) {
+func (r *Repo) CreateSessionAttempt(ctx context.Context, examID, studentID string, clientIP net.IP, userAgent string) (Session, error) {
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return Session{}, fmt.Errorf("begin: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	// Race-safe: UNIQUE(exam_id, student_id) ensures only one session exists.
-	// We avoid a read-then-insert race by using an upsert.
-	const upsert = `
-INSERT INTO exam_sessions (exam_id, student_id, client_ip, user_agent, last_seen_at)
-VALUES ($1::uuid, $2::uuid, NULLIF($3,'')::inet, NULLIF($4,''), now())
-ON CONFLICT (exam_id, student_id)
-DO UPDATE SET last_seen_at = now(), updated_at = now()
+	const insertAttempt = `
+INSERT INTO exam_sessions (exam_id, student_id, attempt_no, client_ip, user_agent, last_seen_at)
+VALUES (
+	$1::uuid,
+	$2::uuid,
+	COALESCE((SELECT MAX(es.attempt_no) + 1 FROM exam_sessions es WHERE es.exam_id = $1::uuid AND es.student_id = $2::uuid), 1),
+	NULLIF($3,'')::inet,
+	NULLIF($4,''),
+	now()
+)
 RETURNING id::text, exam_id::text, student_id::text, status,
        to_char(started_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
        COALESCE(to_char(finished_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),'') AS finished_at,
-       COALESCE(to_char(last_seen_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),'') AS last_seen_at`
+       COALESCE(to_char(last_seen_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),'') AS last_seen_at,
+       attempt_no`
 
 	var it Session
 	var finished, lastSeen string
@@ -572,8 +591,8 @@ RETURNING id::text, exam_id::text, student_id::text, status,
 	if clientIP != nil {
 		ipStr = clientIP.String()
 	}
-	if err := tx.QueryRow(ctx, upsert, examID, studentID, ipStr, strings.TrimSpace(userAgent)).Scan(&it.ID, &it.ExamID, &it.StudentID, &it.Status, &it.StartedAt, &finished, &lastSeen); err != nil {
-		return Session{}, fmt.Errorf("upsert session: %w", err)
+	if err := tx.QueryRow(ctx, insertAttempt, examID, studentID, ipStr, strings.TrimSpace(userAgent)).Scan(&it.ID, &it.ExamID, &it.StudentID, &it.Status, &it.StartedAt, &finished, &lastSeen, &it.AttemptNo); err != nil {
+		return Session{}, fmt.Errorf("insert session attempt: %w", err)
 	}
 	if finished != "" {
 		it.FinishedAt = finished
@@ -585,6 +604,17 @@ RETURNING id::text, exam_id::text, student_id::text, status,
 		return Session{}, fmt.Errorf("commit: %w", err)
 	}
 	return it, nil
+}
+
+func (r *Repo) GetOrCreateSession(ctx context.Context, examID, studentID string, clientIP net.IP, userAgent string) (Session, error) {
+	existing, ok, err := r.GetSessionByExamStudent(ctx, examID, studentID)
+	if err != nil {
+		return Session{}, err
+	}
+	if ok && existing.Status == "in_progress" {
+		return existing, nil
+	}
+	return r.CreateSessionAttempt(ctx, examID, studentID, clientIP, userAgent)
 }
 
 func (r *Repo) EnsureSessionQuestions(ctx context.Context, sessionID, examID string, shuffleQuestions bool) (int, error) {

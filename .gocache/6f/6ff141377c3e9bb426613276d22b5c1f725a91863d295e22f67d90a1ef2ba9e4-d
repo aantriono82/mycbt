@@ -1,0 +1,15 @@
+./announcement_repo.go
+./attendance_session_repo.go
+./group_repo.go
+./level_repo.go
+./lookup.go
+./pgx_err.go
+./program_repo.go
+./registration_repo.go
+./session_repo.go
+./settings_repo.go
+./subject_repo.go
+./teacher_groups_repo.go
+./teacher_levels_repo.go
+./teacher_student_repo.go
+./teacher_subjects_repo.go

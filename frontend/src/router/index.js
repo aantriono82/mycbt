@@ -69,6 +69,14 @@ const routes = [
   },
   {
     meta: {
+      title: 'Menu Master Data',
+    },
+    path: '/admin/master-data-menu',
+    name: 'admin-master-data-menu',
+    component: () => import('@/views/SubmenuIndexView.vue'),
+  },
+  {
+    meta: {
       title: 'Guru',
     },
     path: '/admin/master-data/guru',
@@ -195,6 +203,46 @@ const routes = [
     meta: {
       title: 'Semua Bank Soal',
     },
+    path: '/admin/bank-soal-menu',
+    name: 'admin-bank-soal-menu',
+    component: () => import('@/views/SubmenuIndexView.vue'),
+  },
+  {
+    meta: {
+      title: 'Menu Ujian',
+    },
+    path: '/admin/ujian-menu',
+    name: 'admin-ujian-menu',
+    component: () => import('@/views/SubmenuIndexView.vue'),
+  },
+  {
+    meta: {
+      title: 'Menu Evaluasi',
+    },
+    path: '/admin/evaluasi-menu',
+    name: 'admin-evaluasi-menu',
+    component: () => import('@/views/SubmenuIndexView.vue'),
+  },
+  {
+    meta: {
+      title: 'Menu Cetak',
+    },
+    path: '/admin/cetak-menu',
+    name: 'admin-cetak-menu',
+    component: () => import('@/views/SubmenuIndexView.vue'),
+  },
+  {
+    meta: {
+      title: 'Menu Config',
+    },
+    path: '/admin/config-menu',
+    name: 'admin-config-menu',
+    component: () => import('@/views/SubmenuIndexView.vue'),
+  },
+  {
+    meta: {
+      title: 'Semua Bank Soal',
+    },
     path: '/admin/bank-soal',
     name: 'admin-bank-soal',
     component: () => import('@/views/QuestionBankView.vue'),
@@ -255,20 +303,6 @@ const routes = [
   },
   {
     meta: {
-      title: 'Absensi Peserta',
-    },
-    path: '/admin/ujian/absensi',
-    name: 'admin-ujian-absensi',
-    component: () => import('@/views/monitor/AttendanceMonitorView.vue'),
-  },
-  {
-    meta: { title: 'Generate QR Absensi' },
-    path: '/admin/ujian/absensi/qr/:id',
-    name: 'admin-ujian-absensi-qr',
-    component: () => import('@/views/monitor/AttendanceQRView.vue'),
-  },
-  {
-    meta: {
       title: 'Reset Login',
     },
     path: '/admin/ujian/reset-login',
@@ -315,14 +349,6 @@ const routes = [
     name: 'admin-lms',
     component: () => import('@/views/admin/AdminLMSView.vue'),
   },
-  {
-    meta: {
-      title: 'LTI Platforms',
-    },
-    path: '/admin/lti',
-    name: 'admin-lti',
-    component: () => import('@/views/admin/AdminLTIView.vue'),
-  },
 
   // Teacher
   {
@@ -330,6 +356,24 @@ const routes = [
     path: '/teacher/dashboard',
     name: 'teacher-dashboard',
     component: () => import('@/views/dashboards/TeacherDashboardView.vue'),
+  },
+  {
+    meta: { title: 'Semua Bank Soal'},
+    path: '/teacher/bank-soal-menu',
+    name: 'teacher-bank-soal-menu',
+    component: () => import('@/views/SubmenuIndexView.vue'),
+  },
+  {
+    meta: { title: 'Menu Ujian'},
+    path: '/teacher/ujian-menu',
+    name: 'teacher-ujian-menu',
+    component: () => import('@/views/SubmenuIndexView.vue'),
+  },
+  {
+    meta: { title: 'Menu Evaluasi'},
+    path: '/teacher/evaluasi-menu',
+    name: 'teacher-evaluasi-menu',
+    component: () => import('@/views/SubmenuIndexView.vue'),
   },
   {
     meta: { title: 'Semua Bank Soal'},

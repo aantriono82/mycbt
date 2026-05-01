@@ -1,0 +1,12 @@
+./announcements.go
+./attendance.go
+./exam_attendance_stats.go
+./exam_results.go
+./item_analysis.go
+./manual_scoring.go
+./monitor.go
+./monitor_participants.go
+./results.go
+./score_distribution.go
+./student_exam.go
+./results_scoring_test.go

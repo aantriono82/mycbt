@@ -62,6 +62,36 @@
 }
 
 @layer components {
+  .ql-font-arial,
+  [style*='Arial'] {
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  .ql-font-calibri,
+  [style*='Calibri'] {
+    font-family: Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif;
+  }
+
+  .ql-font-times-new-roman,
+  [style*='Times New Roman'] {
+    font-family: 'Times New Roman', Times, serif;
+  }
+
+  .ql-font-courier-new,
+  [style*='Courier New'] {
+    font-family: 'Courier New', Courier, monospace;
+  }
+
+  .ql-font-amiri,
+  .font-amiri,
+  [style*="Amiri"] {
+    font-family: 'Amiri', 'Noto Naskh Arabic', serif;
+  }
+
+  .ql-font-noto-naskh-arabic {
+    font-family: 'Noto Naskh Arabic', 'Amiri', serif;
+  }
+
   .section-title {
     @apply text-2xl font-black mb-6 flex items-center gap-3 tracking-tighter;
     font-family: var(--font-heading);

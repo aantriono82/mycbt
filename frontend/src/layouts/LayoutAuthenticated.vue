@@ -1,5 +1,5 @@
 <script setup>
-import { mdiForwardburger, mdiBackburger, mdiMenu, mdiAccountCircleOutline, mdiBellOutline, mdiClipboardTextClockOutline } from '@mdi/js'
+import { mdiForwardburger, mdiBackburger, mdiMenu, mdiAccountCircleOutline, mdiBellOutline, mdiClipboardTextClockOutline, mdiMagnify, mdiCloseCircle } from '@mdi/js'
 import { computed, onMounted, ref, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getMenuAsideMain, menuAsideBottom } from '@/menuAside.js'
@@ -15,8 +15,6 @@ import BackendHealthBanner from '@/components/BackendHealthBanner.vue'
 import BottomNavigation from '@/components/BottomNavigation.vue'
 import { api } from '@/services/api.js'
 
-const layoutAsidePadding = 'xl:pl-60'
-
 const darkModeStore = useDarkModeStore()
 const authStore = useAuthStore()
 
@@ -24,11 +22,100 @@ const router = useRouter()
 
 const isAsideMobileExpanded = ref(false)
 const isAsideLgActive = ref(false)
+const isAsideDesktopHidden = ref(false)
+const searchQuery = ref('')
+const isSearchFocused = ref(false)
+const activeSearchIndex = ref(0)
+
+const flattenSearchItems = (items = [], parents = []) => {
+  const results = []
+  for (const item of items) {
+    const currentLabel = item?.label ? [...parents, item.label] : [...parents]
+    if (item?.to && item?.label) {
+      results.push({
+        key: `${item.to}-${item.label}`,
+        label: item.label,
+        to: item.to,
+        breadcrumbs: currentLabel.join(' > '),
+      })
+    }
+    if (Array.isArray(item?.menu) && item.menu.length) {
+      results.push(...flattenSearchItems(item.menu, currentLabel))
+    }
+  }
+  return results
+}
+
+const searchItems = computed(() => {
+  const base = flattenSearchItems(menuAsideMain.value)
+  const dashboardRoute = homeRouteForRole(authStore.role)
+  if (!base.some((item) => item.to === dashboardRoute)) {
+    base.unshift({
+      key: `${dashboardRoute}-dashboard`,
+      label: 'Dashboard',
+      to: dashboardRoute,
+      breadcrumbs: 'Dashboard',
+    })
+  }
+  return base
+})
+
+const filteredSearchItems = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query) return searchItems.value.slice(0, 8)
+  return searchItems.value
+    .filter((item) =>
+      [item.label, item.breadcrumbs, item.to].some((value) =>
+        String(value || '').toLowerCase().includes(query),
+      ),
+    )
+    .slice(0, 8)
+})
+
+const selectSearchItem = (item) => {
+  if (!item?.to) return
+  isSearchFocused.value = false
+  searchQuery.value = item.label
+  activeSearchIndex.value = 0
+  if (router.currentRoute.value.path !== item.to) {
+    router.push(item.to)
+  }
+}
+
+const onSearchKeydown = (event) => {
+  if (!filteredSearchItems.value.length) return
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    activeSearchIndex.value = (activeSearchIndex.value + 1) % filteredSearchItems.value.length
+    return
+  }
+  if (event.key === 'ArrowUp') {
+    event.preventDefault()
+    activeSearchIndex.value = (activeSearchIndex.value - 1 + filteredSearchItems.value.length) % filteredSearchItems.value.length
+    return
+  }
+  if (event.key === 'Enter') {
+    event.preventDefault()
+    selectSearchItem(filteredSearchItems.value[activeSearchIndex.value] || filteredSearchItems.value[0])
+  }
+}
+
+const clearSearch = () => {
+  searchQuery.value = ''
+  activeSearchIndex.value = 0
+}
+
+const toggleDesktopAside = () => {
+  isAsideDesktopHidden.value = !isAsideDesktopHidden.value
+}
 
 router.beforeEach(() => {
   isAsideMobileExpanded.value = false
   isAsideLgActive.value = false
+  isSearchFocused.value = false
 })
+
+const layoutAsidePadding = computed(() => (isAsideDesktopHidden.value ? '' : 'xl:pl-60'))
 
 const menuAsideMain = computed(() => getMenuAsideMain(authStore.role))
 const menuNavBar = computed(() => getMenuNavBar(authStore.role, authStore.userDisplayName))
@@ -204,6 +291,68 @@ const menuClick = (event, item) => {
         <NavBarItemPlain display="hidden lg:flex xl:hidden" @click.prevent="isAsideLgActive = true">
           <BaseIcon :path="mdiMenu" size="24" />
         </NavBarItemPlain>
+        <button
+          type="button"
+          class="hidden lg:flex h-14 items-center px-3 text-slate-600 hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-400 transition"
+          @click="toggleDesktopAside"
+          aria-label="Toggle sidebar"
+          title="Toggle Sidebar"
+        >
+          <BaseIcon :path="isAsideDesktopHidden ? mdiForwardburger : mdiBackburger" size="22" />
+        </button>
+        <div class="hidden md:flex flex-1 items-center justify-center px-4">
+          <div class="relative w-full max-w-xl">
+            <label class="sr-only" for="global-search-input">Pencarian data</label>
+            <BaseIcon
+              :path="mdiMagnify"
+              size="18"
+              class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
+            />
+            <input
+              id="global-search-input"
+              v-model="searchQuery"
+              type="text"
+              autocomplete="off"
+              placeholder="Cari data/menu..."
+              class="h-9 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-10 text-sm font-semibold text-slate-700 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-blue-500 dark:focus:ring-blue-900/50"
+              @focus="isSearchFocused = true"
+              @blur="setTimeout(() => { isSearchFocused = false }, 120)"
+              @keydown="onSearchKeydown"
+            />
+            <button
+              v-if="searchQuery"
+              type="button"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+              @click="clearSearch"
+              aria-label="Hapus pencarian"
+            >
+              <BaseIcon :path="mdiCloseCircle" size="16" />
+            </button>
+
+            <div
+              v-if="isSearchFocused"
+              class="absolute z-50 mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900"
+            >
+              <div v-if="filteredSearchItems.length" class="max-h-80 overflow-y-auto py-1">
+                <button
+                  v-for="(item, idx) in filteredSearchItems"
+                  :key="item.key"
+                  type="button"
+                  class="flex w-full flex-col px-3 py-2 text-left transition"
+                  :class="idx === activeSearchIndex ? 'bg-blue-50 dark:bg-blue-900/30' : 'hover:bg-slate-50 dark:hover:bg-slate-800/70'"
+                  @mouseenter="activeSearchIndex = idx"
+                  @click="selectSearchItem(item)"
+                >
+                  <span class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ item.label }}</span>
+                  <span class="text-[11px] text-slate-500 dark:text-slate-400">{{ item.breadcrumbs }}</span>
+                </button>
+              </div>
+              <div v-else class="px-3 py-3 text-xs text-slate-500 dark:text-slate-400">
+                Data tidak ditemukan
+              </div>
+            </div>
+          </div>
+        </div>
 
         <template #right>
           <div v-if="authStore.role === 'student'" class="relative flex items-center h-14 mr-4">
@@ -292,6 +441,7 @@ const menuClick = (event, item) => {
       <AsideMenu
         :is-aside-mobile-expanded="isAsideMobileExpanded"
         :is-aside-lg-active="isAsideLgActive"
+        :is-aside-desktop-hidden="isAsideDesktopHidden"
         :menu="menuAsideMain"
         :menu-bottom="menuAsideBottom"
         @menu-click="menuClick"
