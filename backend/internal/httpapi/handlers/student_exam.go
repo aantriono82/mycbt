@@ -11,10 +11,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mycbt/backend/internal/httpapi/middleware"
-	"mycbt/backend/internal/httpapi/params"
-	"mycbt/backend/internal/repo/masterrepo"
-	"mycbt/backend/internal/repo/studentexamrepo"
+	"atigacbt/backend/internal/httpapi/middleware"
+	"atigacbt/backend/internal/httpapi/params"
+	"atigacbt/backend/internal/repo/masterrepo"
+	"atigacbt/backend/internal/repo/studentexamrepo"
 )
 
 type studentExamRepo interface {

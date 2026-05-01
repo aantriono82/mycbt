@@ -83,7 +83,7 @@ func UseRedisRateLimiter(client *redis.Client, prefix string) {
 	}
 	prefix = strings.TrimSpace(prefix)
 	if prefix == "" {
-		prefix = "mycbt"
+		prefix = "atigacbt"
 	}
 	globalRedisRateLimiter = &redisRateLimiter{
 		client: client,

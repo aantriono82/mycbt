@@ -9,8 +9,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mycbt/backend/internal/repo/masterrepo"
-	"mycbt/backend/internal/storage"
+	"atigacbt/backend/internal/repo/masterrepo"
+	"atigacbt/backend/internal/storage"
 )
 
 type SettingsHandler struct {

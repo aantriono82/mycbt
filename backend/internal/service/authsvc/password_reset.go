@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"mycbt/backend/internal/repo/userrepo"
-	"mycbt/backend/internal/service/notificationsvc"
+	"atigacbt/backend/internal/repo/userrepo"
+	"atigacbt/backend/internal/service/notificationsvc"
 )
 
 type PasswordResetService struct {

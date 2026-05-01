@@ -64,7 +64,7 @@ func Load() Config {
 		RedisAddr:     getenv("REDIS_ADDR", ""),
 		RedisPassword: getenv("REDIS_PASSWORD", ""),
 		RedisDB:       getenv("REDIS_DB", "0"),
-		RedisPrefix:   getenv("REDIS_PREFIX", "mycbt"),
+		RedisPrefix:   getenv("REDIS_PREFIX", "atigacbt"),
 
 		UploadProvider:      getenv("UPLOAD_PROVIDER", "local"),
 		UploadLocalDir:      getenv("UPLOAD_LOCAL_DIR", "uploads"),
@@ -77,7 +77,7 @@ func Load() Config {
 		RustFSKeyPrefix:     getenvAny([]string{"RUSTFS_KEY_PREFIX", "MINIO_KEY_PREFIX"}, ""),
 
 		JWTSecret:     getenv("JWT_SECRET", ""),
-		JWTIssuer:     getenv("JWT_ISSUER", "mycbt"),
+		JWTIssuer:     getenv("JWT_ISSUER", "atigacbt"),
 		JWTTTLMinutes: getenv("JWT_TTL_MINUTES", "120"),
 
 		AdminUsername:      getenv("ADMIN_USERNAME", "admin"),
@@ -91,7 +91,7 @@ func Load() Config {
 		SMTPPort:           getenv("SMTP_PORT", "587"),
 		SMTPUser:           getenv("SMTP_USER", ""),
 		SMTPPass:           getenv("SMTP_PASS", ""),
-		SMTPFrom:           getenv("SMTP_FROM", "no-reply@mycbt.com"),
+		SMTPFrom:           getenv("SMTP_FROM", "no-reply@atigacbt.com"),
 	}
 }
 

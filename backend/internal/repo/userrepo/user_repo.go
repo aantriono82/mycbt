@@ -6,7 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"mycbt/backend/internal/model"
+	"atigacbt/backend/internal/model"
 )
 
 type Repo struct {

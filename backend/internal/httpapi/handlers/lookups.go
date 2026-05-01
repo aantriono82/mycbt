@@ -5,8 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mycbt/backend/internal/httpapi/middleware"
-	"mycbt/backend/internal/repo/masterrepo"
+	"atigacbt/backend/internal/httpapi/middleware"
+	"atigacbt/backend/internal/repo/masterrepo"
 )
 
 type LookupsHandler struct {

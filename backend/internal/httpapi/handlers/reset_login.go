@@ -4,10 +4,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 
-	"mycbt/backend/internal/httpapi/middleware"
-	"mycbt/backend/internal/repo/examrepo"
-	"mycbt/backend/internal/repo/masterrepo"
-	"mycbt/backend/internal/repo/studentexamrepo"
+	"atigacbt/backend/internal/httpapi/middleware"
+	"atigacbt/backend/internal/repo/examrepo"
+	"atigacbt/backend/internal/repo/masterrepo"
+	"atigacbt/backend/internal/repo/studentexamrepo"
 )
 
 type ResetLoginHandler struct {

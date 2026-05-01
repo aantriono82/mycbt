@@ -25,7 +25,7 @@ func (h *MaintenanceHandler) Backup(c *gin.Context) {
 	cmd := exec.Command("pg_dump", "--dbname="+h.dbURL, "--no-owner", "--no-acl")
 	
 	// Set headers for file download
-	filename := fmt.Sprintf("mycbt_backup_%s.sql", time.Now().Format("20060102_150405"))
+	filename := fmt.Sprintf("atigacbt_backup_%s.sql", time.Now().Format("20060102_150405"))
 	c.Header("Content-Description", "File Transfer")
 	c.Header("Content-Transfer-Encoding", "binary")
 	c.Header("Content-Disposition", "attachment; filename="+filename)

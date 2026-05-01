@@ -14,17 +14,17 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gin-contrib/cors"
 
-	"mycbt/backend/internal/config"
-	"mycbt/backend/internal/httpapi/middleware"
-	"mycbt/backend/internal/model"
-	"mycbt/backend/internal/service/authsvc"
+	"atigacbt/backend/internal/config"
+	"atigacbt/backend/internal/httpapi/middleware"
+	"atigacbt/backend/internal/model"
+	"atigacbt/backend/internal/service/authsvc"
 )
 
 func makeAuthService(t *testing.T) *authsvc.Service {
 	t.Helper()
 	svc, err := authsvc.New(config.Config{
 		JWTSecret:     "test-secret-key-123",
-		JWTIssuer:     "mycbt-test",
+		JWTIssuer:     "atigacbt-test",
 		JWTTTLMinutes: "120",
 	}, nil)
 	if err != nil {
@@ -93,7 +93,7 @@ func TestScenarioAuthMiddlewareJWT(t *testing.T) {
 	})
 
 	t.Run("expired token", func(t *testing.T) {
-		expired := issueExpiredToken(t, "test-secret-key-123", "mycbt-test")
+		expired := issueExpiredToken(t, "test-secret-key-123", "atigacbt-test")
 		req := httptest.NewRequest(http.MethodGet, "/protected", nil)
 		req.Header.Set("Authorization", "Bearer "+expired)
 		rec := httptest.NewRecorder()

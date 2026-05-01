@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"mycbt/backend/internal/config"
-	"mycbt/backend/internal/db"
-	"mycbt/backend/internal/model"
-	"mycbt/backend/internal/repo/userrepo"
-	"mycbt/backend/internal/service/authsvc"
+	"atigacbt/backend/internal/config"
+	"atigacbt/backend/internal/db"
+	"atigacbt/backend/internal/model"
+	"atigacbt/backend/internal/repo/userrepo"
+	"atigacbt/backend/internal/service/authsvc"
 )
 
 func main() {

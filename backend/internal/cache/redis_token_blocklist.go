@@ -17,7 +17,7 @@ type RedisTokenBlocklist struct {
 func NewRedisTokenBlocklist(client *redis.Client, prefix string) *RedisTokenBlocklist {
 	prefix = strings.TrimSpace(prefix)
 	if prefix == "" {
-		prefix = "mycbt"
+		prefix = "atigacbt"
 	}
 	return &RedisTokenBlocklist{
 		client: client,

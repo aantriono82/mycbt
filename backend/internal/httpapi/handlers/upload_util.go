@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"mycbt/backend/internal/storage"
+	"atigacbt/backend/internal/storage"
 )
 
 func uploadImageToStore(ctx context.Context, store storage.ObjectStore, file *multipart.FileHeader, dirPrefix, namePrefix string) (string, error) {

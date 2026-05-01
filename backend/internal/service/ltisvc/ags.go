@@ -16,7 +16,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
-	"mycbt/backend/internal/repo/ltirepo"
+	"atigacbt/backend/internal/repo/ltirepo"
 )
 
 const AGSScoreScope = "https://purl.imsglobal.org/spec/lti-ags/scope/score"

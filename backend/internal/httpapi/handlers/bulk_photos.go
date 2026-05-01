@@ -13,10 +13,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mycbt/backend/internal/httpapi/middleware"
-	"mycbt/backend/internal/repo/masterrepo"
-	"mycbt/backend/internal/repo/userrepo"
-	"mycbt/backend/internal/storage"
+	"atigacbt/backend/internal/httpapi/middleware"
+	"atigacbt/backend/internal/repo/masterrepo"
+	"atigacbt/backend/internal/repo/userrepo"
+	"atigacbt/backend/internal/storage"
 )
 
 type BulkPhotoHandler struct {

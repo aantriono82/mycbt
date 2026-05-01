@@ -3,7 +3,7 @@ package handlers
 import (
 	"testing"
 
-	"mycbt/backend/internal/repo/questionbankrepo"
+	"atigacbt/backend/internal/repo/questionbankrepo"
 )
 
 func TestValidateMatching_AllowsEmptyLeftForDistractor(t *testing.T) {

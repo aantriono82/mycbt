@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"mycbt/backend/internal/httpapi/middleware"
-	"mycbt/backend/internal/httpapi/pgerr"
-	"mycbt/backend/internal/repo/masterrepo"
-	"mycbt/backend/internal/repo/studentexamrepo"
+	"atigacbt/backend/internal/httpapi/middleware"
+	"atigacbt/backend/internal/httpapi/pgerr"
+	"atigacbt/backend/internal/repo/masterrepo"
+	"atigacbt/backend/internal/repo/studentexamrepo"
 )
 
 type AttendanceHandler struct {
