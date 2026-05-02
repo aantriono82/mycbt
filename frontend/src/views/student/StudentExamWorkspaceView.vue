@@ -16,8 +16,10 @@ import {
 import BaseIcon from '@/components/BaseIcon.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import QuillEditor from '@/components/QuillEditor.vue'
+import QuestionStimulusViewer from '@/components/QuestionStimulusViewer.vue'
 import PreviewMatchingBoard from '@/components/student/PreviewMatchingBoard.vue'
 import { api } from '@/services/api.js'
+import { resolveBackendAssetUrl } from '@/utils/assetUrl.js'
 import { useAuthStore } from '@/stores/auth.js'
 import { useExamStore } from '@/stores/exam.js'
 import { useNotificationStore } from '@/stores/notification.js'
@@ -81,8 +83,9 @@ const formatLastSaved = (date) => {
 }
 
 const cardScrollEl = ref(null)
+const stimulusZoom = ref(1)
 
-const FONT_KEY = 'mycbt_exam_font_size'
+const FONT_KEY = 'atigacbt_exam_font_size'
 const fontSize = ref('md') // sm | md | lg
 try {
   const saved = localStorage.getItem(FONT_KEY)
@@ -115,7 +118,8 @@ const tokenVerified = ref(false)
 const tokenValue = ref('')
 const tokenError = ref('')
 const tokenChecking = ref(false)
-const TOKEN_OK_KEY = computed(() => `mycbt_session_token_ok_${String(sessionId.value || '')}`)
+const activeSessionKey = computed(() => String(route.params.sessionId || sessionId.value || ''))
+const TOKEN_OK_KEY = computed(() => `atigacbt_session_token_ok_${activeSessionKey.value}`)
 
 const verifyToken = async () => {
   if (!route.params.sessionId) return
@@ -254,7 +258,11 @@ const renderHtml = (html) => {
       for (const attr of Array.from(el.attributes || [])) {
         if (/^on/i.test(attr.name)) el.removeAttribute(attr.name)
       }
-      if (el.tagName === 'IMG') el.setAttribute('loading', 'lazy')
+      if (el.tagName === 'IMG') {
+        const src = el.getAttribute('src')
+        if (src) el.setAttribute('src', resolveBackendAssetUrl(src))
+        el.setAttribute('loading', 'lazy')
+      }
       const style = el.getAttribute && el.getAttribute('style')
       if (style) {
         const parts = style.split(';').map(s => s.trim()).filter(Boolean)
@@ -591,11 +599,11 @@ watch(currentIndex, () => {
 watch(
   () => currentQuestion.value?.id,
   () => {
+    stimulusZoom.value = 1
     syncEditorModelByQuestion()
     activeMatchingLeftId.value = ''
     scheduleMatchingLines()
   },
-  { immediate: true },
 )
 
 watch(matchingPairsMap, () => {
@@ -748,7 +756,7 @@ const quillHtmlToPlainText = (html) => {
   }
 }
 
-const syncEditorModelByQuestion = () => {
+function syncEditorModelByQuestion() {
   const q = currentQuestion.value
   if (!q?.id) {
     shortAnswerEditorHtml.value = ''
@@ -964,45 +972,55 @@ const isMatchingRightUsed = (rightId) => {
           <!-- LEFT COLUMN: Main Card -->
 	          <div :class="['bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl flex-1 flex flex-col transition-all duration-500', sidebarHidden ? 'w-full' : 'lg:w-3/4']">
 	             <!-- Card Header -->
-	             <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-white">
+	             <div class="relative z-10 px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-white">
 	                <span class="text-[#0B7EA1] font-bold uppercase text-sm tracking-wide">SOAL NOMOR: {{ currentIndex + 1 }}</span>
-	                <div class="flex items-center gap-4 text-[11px] font-bold text-slate-500">
+	                <div class="relative z-20 isolate flex items-center gap-3 text-[11px] font-bold text-slate-500">
 	                   <span class="uppercase opacity-60">Ukuran Font:</span>
-	                   <button
+                     <div class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1 shadow-sm">
+	                     <button
 	                     type="button"
-	                     class="h-6 w-8 flex items-center justify-center border rounded font-bold leading-none transition-colors"
+	                     class="relative z-30 flex h-7 w-8 shrink-0 cursor-pointer select-none items-center justify-center rounded border bg-slate-50 font-bold leading-none text-slate-700 transition-colors pointer-events-auto"
 	                     :class="fontSize === 'sm' ? 'border-2 border-[#0B7EA1] bg-white text-[#0B7EA1]' : 'border-slate-300 bg-slate-50 text-slate-700 hover:border-slate-400'"
-	                     @click="setFontSize('sm')"
+	                     @click.stop="setFontSize('sm')"
 	                   >
 	                     A
 	                   </button>
 	                   <button
 	                     type="button"
-	                     class="h-7 w-9 flex items-center justify-center border rounded font-black leading-none transition-colors"
+	                     class="relative z-30 flex h-8 w-9 shrink-0 cursor-pointer select-none items-center justify-center rounded border bg-slate-50 font-black leading-none text-slate-700 transition-colors pointer-events-auto"
 	                     :class="fontSize === 'md' ? 'border-2 border-[#0B7EA1] bg-white text-[#0B7EA1]' : 'border-slate-300 bg-slate-50 text-slate-700 hover:border-slate-400'"
-	                     @click="setFontSize('md')"
+	                     @click.stop="setFontSize('md')"
 	                   >
 	                     A
 	                   </button>
 	                   <button
 	                     type="button"
-	                     class="h-7 w-10 flex items-center justify-center border rounded font-bold leading-none transition-colors text-base"
+	                     class="relative z-30 flex h-8 w-10 shrink-0 cursor-pointer select-none items-center justify-center rounded border bg-slate-50 text-base font-bold leading-none text-slate-700 transition-colors pointer-events-auto"
 	                     :class="fontSize === 'lg' ? 'border-2 border-[#0B7EA1] bg-white text-[#0B7EA1]' : 'border-slate-300 bg-slate-50 text-slate-700 hover:border-slate-400'"
-	                     @click="setFontSize('lg')"
+	                     @click.stop="setFontSize('lg')"
 	                   >
 	                     A
 	                   </button>
+                     </div>
 	                </div>
 	             </div>
 
-		               <div ref="cardScrollEl" @scroll="scheduleMatchingLines" class="flex-1 overflow-auto scrollbar-styled-light dark:scrollbar-styled-dark" :class="fontClass">
+		               <div
+                     ref="cardScrollEl"
+                     @scroll="scheduleMatchingLines"
+                     class="flex-1 overflow-auto scrollbar-styled-light dark:scrollbar-styled-dark"
+                     :class="['tka-font-zone', fontClass]"
+                   >
 	                <!-- STIMULUS / CONTENT -->
-	                <div class="p-6 md:p-10 prose prose-slate dark:prose-invert max-w-none text-base leading-relaxed text-slate-800 dark:text-slate-200">
-	                   <div class="flex justify-between items-start mb-6">
-	                      <div class="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[10px] font-black uppercase text-slate-500 tracking-[0.2em]">STIMULUS / SOAL UTAMA</div>
-	                   </div>
+	                <QuestionStimulusViewer
+	                  v-model:zoom="stimulusZoom"
+	                  :content-key="currentQuestion.id"
+	                  title="STIMULUS / SOAL UTAMA"
+	                  title-class="bg-slate-100 dark:bg-slate-800 text-slate-500"
+	                  content-class="p-6 md:p-10 prose prose-slate dark:prose-invert max-w-none text-slate-800 dark:text-slate-200"
+	                >
 	                   <div class="tka-question-content" v-html="renderHtml(currentQuestion.stem)"></div>
-	                </div>
+	                </QuestionStimulusViewer>
 
 	                <!-- INTERACTION / ANSWERS -->
 		                <div :key="currentQuestion.id + ':' + currentQuestion.type" class="px-6 pb-10 pt-6 border-t border-slate-200 bg-white">
@@ -1033,7 +1051,7 @@ const isMatchingRightUsed = (rightId) => {
                         :checked="answers[currentQuestion.id]?.selected_option_id === String(opt.id)"
                         @change="() => { answers[currentQuestion.id] = { selected_option_id: String(opt.id) }; saveAnswer(currentQuestion) }"
                       />
-	                      <div class="grow text-slate-700 dark:text-slate-300 font-medium text-sm md:text-base leading-relaxed tka-option-text" v-html="renderHtml(opt.content)"></div>
+	                      <div class="grow text-slate-700 dark:text-slate-300 font-medium leading-relaxed tka-option-text" v-html="renderHtml(opt.content)"></div>
 	                   </label>
 	                </div>
 
@@ -1053,7 +1071,7 @@ const isMatchingRightUsed = (rightId) => {
                       >
                          {{ String.fromCharCode(65 + idx) }}
                       </div>
-	                      <div class="grow text-slate-700 dark:text-slate-300 font-medium text-sm md:text-base leading-relaxed tka-option-text" v-html="renderHtml(opt.content)"></div>
+	                      <div class="grow text-slate-700 dark:text-slate-300 font-medium leading-relaxed tka-option-text" v-html="renderHtml(opt.content)"></div>
                        <div class="flex-none">
                           <div
                             class="h-5 w-5 rounded-lg border-2 flex items-center justify-center transition-all"
@@ -1396,13 +1414,33 @@ const isMatchingRightUsed = (rightId) => {
 .dark :deep(.prose td) { border-color: #1e293b; }
 
 /* Font size presets for student exam view */
-.tka-font-sm :deep(.prose) { font-size: 0.95rem; line-height: 1.65; }
-.tka-font-md :deep(.prose) { font-size: 1rem; line-height: 1.65; }
-.tka-font-lg :deep(.prose) { font-size: 1.125rem; line-height: 1.65; }
+.tka-font-zone {
+  --tka-content-font-size: 1rem;
+  --tka-content-line-height: 1.65;
+}
 
-.tka-font-sm .tka-option-text { font-size: 0.95rem; }
-.tka-font-md .tka-option-text { font-size: 1rem; }
-.tka-font-lg .tka-option-text { font-size: 1.125rem; }
+.tka-font-zone.tka-font-sm {
+  --tka-content-font-size: 0.95rem;
+}
+
+.tka-font-zone.tka-font-md {
+  --tka-content-font-size: 1rem;
+}
+
+.tka-font-zone.tka-font-lg {
+  --tka-content-font-size: 1.125rem;
+}
+
+.tka-font-zone :deep(.prose),
+.tka-font-zone .tka-question-content,
+.tka-font-zone .tka-option-text {
+  font-size: var(--tka-content-font-size);
+  line-height: var(--tka-content-line-height);
+}
+
+.tka-font-zone .tka-question-content :deep(*) {
+  line-height: var(--tka-content-line-height);
+}
 
 /* Question swap transition */
 .qswap-enter-active,

@@ -5,7 +5,7 @@ Target versi yang dikelola: `frontend/package.json`
 
 ## Cara Menjalankan
 
-Jalankan dari root project (`/home/aantriono/dev/mycbt`):
+Jalankan dari root project (`/home/aantriono/dev/atigacbt`):
 
 ```bash
 ./scripts/version.sh dump

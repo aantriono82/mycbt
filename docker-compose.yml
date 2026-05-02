@@ -2,13 +2,13 @@ services:
   db:
     image: postgres:16
     environment:
-      POSTGRES_DB: mycbt
-      POSTGRES_USER: mycbt
-      POSTGRES_PASSWORD: mycbt
+      POSTGRES_DB: atigacbt
+      POSTGRES_USER: atigacbt
+      POSTGRES_PASSWORD: atigacbt
     ports:
       - "5433:5432"
     volumes:
-      - mycbt_pgdata:/var/lib/postgresql/data
+      - atigacbt_pgdata:/var/lib/postgresql/data
 
   redis:
     image: redis:7-alpine
@@ -16,7 +16,7 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - mycbt_redisdata:/data
+      - atigacbt_redisdata:/data
 
   rustfs:
     image: rustfs/rustfs:latest
@@ -24,11 +24,11 @@ services:
       - "9000:9000"
       - "9001:9001"
     volumes:
-      - mycbt_rustfs_data:/data
-      - mycbt_rustfs_logs:/logs
+      - atigacbt_rustfs_data:/data
+      - atigacbt_rustfs_logs:/logs
 
 volumes:
-  mycbt_pgdata:
-  mycbt_redisdata:
-  mycbt_rustfs_data:
-  mycbt_rustfs_logs:
+  atigacbt_pgdata:
+  atigacbt_redisdata:
+  atigacbt_rustfs_data:
+  atigacbt_rustfs_logs:

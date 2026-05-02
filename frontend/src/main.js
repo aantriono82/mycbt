@@ -6,14 +6,7 @@ import router from './router'
 import { useAuthStore } from '@/stores/auth.js'
 import { createPersistedStatePlugin } from '@/stores/plugins/persistedstate.js'
 
-import '@fontsource/plus-jakarta-sans/200.css'
-import '@fontsource/plus-jakarta-sans/400.css'
-import '@fontsource/plus-jakarta-sans/500.css'
-import '@fontsource/plus-jakarta-sans/600.css'
-import '@fontsource/plus-jakarta-sans/700.css'
-import '@fontsource/plus-jakarta-sans/800.css'
-import '@fontsource/amiri/400.css'
-import '@fontsource/amiri/700.css'
+import './css/fonts.css'
 import './css/main.css'
 
 // Init Pinia
@@ -23,10 +16,23 @@ pinia.use(createPersistedStatePlugin())
 // Create Vue app
 createApp(App).use(router).use(pinia).mount('#app')
 
-import { registerSW } from 'virtual:pwa-register'
+if (import.meta.env.PROD) {
+  const registerServiceWorker = () => {
+    import('virtual:pwa-register').then(({ registerSW }) => {
+      registerSW({ immediate: true })
+    })
+  }
 
-// Register PWA Service Worker
-registerSW({ immediate: true })
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(registerServiceWorker, { timeout: 3000 })
+  } else {
+    window.setTimeout(registerServiceWorker, 1500)
+  }
+} else if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    registrations.forEach((registration) => registration.unregister())
+  })
+}
 
 const authStore = useAuthStore(pinia)
 
@@ -40,7 +46,7 @@ authStore.loadMe()
 // darkModeStore.init()
 
 // Default title tag
-const defaultDocumentTitle = 'mycbt'
+const defaultDocumentTitle = 'AtigaCBT'
 
 // Set document title from route meta
 router.afterEach((to) => {

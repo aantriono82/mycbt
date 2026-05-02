@@ -14,6 +14,7 @@ import (
 
 type ObjectStore interface {
 	PutObject(ctx context.Context, objectKey, contentType string, body io.Reader, size int64) (string, error)
+	GetObject(ctx context.Context, objectKey string) (io.ReadCloser, string, error)
 }
 
 type LocalObjectStore struct {
@@ -50,6 +51,21 @@ func (s *LocalObjectStore) PutObject(_ context.Context, objectKey, _ string, bod
 	}
 
 	return "/" + filepath.ToSlash(filepath.Join(s.BaseDir, objectKey)), nil
+}
+
+func (s *LocalObjectStore) GetObject(_ context.Context, objectKey string) (io.ReadCloser, string, error) {
+	objectKey = strings.TrimLeft(filepath.ToSlash(strings.TrimSpace(objectKey)), "/")
+	if objectKey == "" {
+		return nil, "", fmt.Errorf("object key is required")
+	}
+
+	targetPath := filepath.Join(s.BaseDir, filepath.FromSlash(objectKey))
+	f, err := os.Open(targetPath)
+	if err != nil {
+		return nil, "", err
+	}
+	contentType := mimeFromExt(filepath.Ext(targetPath))
+	return f, contentType, nil
 }
 
 type S3ObjectStore struct {
@@ -127,13 +143,42 @@ func (s *S3ObjectStore) PutObject(ctx context.Context, objectKey, contentType st
 		return "", fmt.Errorf("put object: %w", err)
 	}
 
-	if s.PublicBaseURL != "" {
-		return s.PublicBaseURL + "/" + fullKey, nil
+	return "/uploads/" + fullKey, nil
+}
+
+func (s *S3ObjectStore) GetObject(ctx context.Context, objectKey string) (io.ReadCloser, string, error) {
+	objectKey = strings.TrimLeft(filepath.ToSlash(strings.TrimSpace(objectKey)), "/")
+	if objectKey == "" {
+		return nil, "", fmt.Errorf("object key is required")
 	}
 
-	scheme := "http"
-	if s.UseSSL {
-		scheme = "https"
+	obj, err := s.Client.GetObject(ctx, s.Bucket, objectKey, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, "", fmt.Errorf("get object: %w", err)
 	}
-	return fmt.Sprintf("%s://%s/%s/%s", scheme, s.Endpoint, s.Bucket, fullKey), nil
+
+	info, err := obj.Stat()
+	if err != nil {
+		_ = obj.Close()
+		return nil, "", fmt.Errorf("stat object: %w", err)
+	}
+
+	return obj, strings.TrimSpace(info.ContentType), nil
+}
+
+func mimeFromExt(ext string) string {
+	switch strings.ToLower(strings.TrimSpace(ext)) {
+	case ".png":
+		return "image/png"
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".gif":
+		return "image/gif"
+	case ".webp":
+		return "image/webp"
+	case ".svg":
+		return "image/svg+xml"
+	default:
+		return "application/octet-stream"
+	}
 }

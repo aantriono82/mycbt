@@ -7,7 +7,6 @@ import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.
 import CardBox from '@/components/CardBox.vue'
 import DashboardCard from '@/components/DashboardCard.vue'
 import BaseButton from '@/components/BaseButton.vue'
-import FormField from '@/components/FormField.vue'
 import FormControl from '@/components/FormControl.vue'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
@@ -47,6 +46,9 @@ const meta = ref(null)
 const itemAnalysis = ref([])
 const itemMeta = ref(null)
 const scoreDistribution = ref(null)
+const showAllAttempts = ref(false)
+const attemptFilter = ref('all')
+const expandedStudentGroups = ref({})
 
 const isLoadingExams = ref(false)
 const isLoadingResults = ref(false)
@@ -60,7 +62,6 @@ const isSyncingLTI = ref(false)
 const blastChannels = ref(['email', 'whatsapp'])
 const showScoreDistribution = ref(true)
 const showItemAnalysis = ref(true)
-const passingScore = ref(75)
 
 const isEssayModalActive = ref(false)
 const selectedSessionForEssay = ref(null)
@@ -68,14 +69,11 @@ const essayAttempts = ref([])
 
 const canLoad = computed(() => authStore.isAuthenticated)
 
-const clampPassingScore = () => {
-  const n = Number(passingScore.value)
-  if (!Number.isFinite(n)) {
-    passingScore.value = 75
-    return
-  }
-  passingScore.value = Math.max(0, Math.min(100, Math.round(n)))
-}
+const passingScore = computed(() => {
+  const n = Number(meta.value?.exam?.passing_score)
+  if (!Number.isFinite(n)) return 75
+  return Math.max(0, Math.min(100, Math.round(n)))
+})
 
 const toDuration = (seconds) => {
   const total = Number(seconds || 0)
@@ -108,12 +106,97 @@ const blankCount = (row) => {
 }
 
 const stats = computed(() => {
-  const items = results.value || []
+  const items = filteredResults.value || []
   const total = items.length
   const submitted = items.filter((x) => x.status === 'submitted').length
   const expired = items.filter((x) => x.status === 'expired').length
   const avg = total ? Math.round(items.reduce((s, x) => s + Number(x.score || 0), 0) / total) : 0
   return { total, submitted, expired, avg }
+})
+
+const summaryModeLabel = computed(() => showAllAttempts.value ? 'Semua attempt' : 'Nilai akhir per siswa')
+
+const filteredResults = computed(() => {
+  const items = results.value || []
+  if (!showAllAttempts.value || attemptFilter.value === 'all') return items
+  if (attemptFilter.value === 'best') return items.filter((item) => item.is_best_attempt)
+  if (attemptFilter.value === 'non_best') return items.filter((item) => !item.is_best_attempt)
+  return items
+})
+
+const attemptSummary = computed(() => {
+  const items = results.value || []
+  const best = items.filter((item) => item.is_best_attempt).length
+  const nonBest = items.length - best
+  return {
+    total: items.length,
+    best,
+    nonBest,
+  }
+})
+
+const tableRows = computed(() => {
+  const items = filteredResults.value || []
+  if (!showAllAttempts.value) {
+    return items.map((item) => ({ type: 'item', item }))
+  }
+
+  const groups = new Map()
+  for (const item of items) {
+    const key = item.student_id || `${item.student_name}-${item.student_nis}-${item.student_username}`
+    if (!groups.has(key)) {
+      groups.set(key, {
+        studentId: item.student_id,
+        studentName: item.student_name,
+        studentNIS: item.student_nis,
+        studentUsername: item.student_username,
+        attempts: [],
+      })
+    }
+    groups.get(key).attempts.push(item)
+  }
+
+  const sortedGroups = Array.from(groups.values()).sort((a, b) => {
+    const byName = String(a.studentName || '').localeCompare(String(b.studentName || ''), 'id')
+    if (byName !== 0) return byName
+    return String(a.studentNIS || '').localeCompare(String(b.studentNIS || ''), 'id')
+  })
+
+  const rows = []
+  for (const group of sortedGroups) {
+    group.attempts.sort((a, b) => {
+      const attemptDiff = Number(a.attempt_number || 0) - Number(b.attempt_number || 0)
+      if (attemptDiff !== 0) return attemptDiff
+      return String(a.session_id || '').localeCompare(String(b.session_id || ''), 'id')
+    })
+    rows.push({ type: 'group', group })
+    for (const item of group.attempts) {
+      rows.push({ type: 'item', item, group })
+    }
+  }
+  return rows
+})
+
+const attemptGroups = computed(() => {
+  const items = filteredResults.value || []
+  if (!showAllAttempts.value) return []
+
+  const groups = new Map()
+  for (const item of items) {
+    const key = item.student_id || `${item.student_name}-${item.student_nis}-${item.student_username}`
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key,
+        studentId: item.student_id,
+        studentName: item.student_name,
+        studentNIS: item.student_nis,
+        studentUsername: item.student_username,
+        attempts: [],
+      })
+    }
+    groups.get(key).attempts.push(item)
+  }
+  return Array.from(groups.values())
 })
 
 const filteredExamsForSelect = computed(() => {
@@ -155,7 +238,7 @@ const loadResults = async () => {
   errorMessage.value = ''
   try {
     const { data } = await api.get(`/api/v1/exams/${selectedExamId.value}/results`, {
-      params: { q: q.value, limit: 100, offset: 0 },
+      params: { q: q.value, limit: 100, offset: 0, all_attempts: showAllAttempts.value ? 1 : 0 },
     })
     results.value = data?.data || []
     meta.value = data?.meta || null
@@ -166,6 +249,27 @@ const loadResults = async () => {
   } finally {
     isLoadingResults.value = false
   }
+}
+
+const isGroupExpanded = (key) => Boolean(expandedStudentGroups.value[key])
+
+const toggleGroupExpanded = (key) => {
+  expandedStudentGroups.value = {
+    ...expandedStudentGroups.value,
+    [key]: !expandedStudentGroups.value[key],
+  }
+}
+
+const collapseAllGroups = () => {
+  expandedStudentGroups.value = {}
+}
+
+const expandAllGroups = () => {
+  const next = {}
+  for (const group of attemptGroups.value) {
+    next[group.key] = true
+  }
+  expandedStudentGroups.value = next
 }
 
 const loadItemAnalysis = async () => {
@@ -360,6 +464,20 @@ watch(q, () => {
   debouncedLoadResults()
 })
 
+watch(showAllAttempts, async () => {
+  attemptFilter.value = 'all'
+  collapseAllGroups()
+  await loadResults()
+})
+
+watch(attemptFilter, () => {
+  collapseAllGroups()
+})
+
+watch(selectedExamId, () => {
+  collapseAllGroups()
+})
+
 watch(selectedExamId, async () => {
   await loadResults()
   await loadItemAnalysis()
@@ -479,20 +597,70 @@ onMounted(async () => {
           </div>
         </div>
         <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div class="text-xs text-slate-500 dark:text-slate-400">
-            Status lulus dihitung dari nilai akhir dan ambang batas lulus.
+          <div class="flex flex-col gap-2">
+            <div class="text-xs text-slate-500 dark:text-slate-400">
+              Status lulus dihitung dari nilai yang sedang ditampilkan dan ambang batas lulus.
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                class="rounded-lg border px-3 py-1.5 text-[11px] font-black uppercase tracking-tight transition-colors"
+                :class="!showAllAttempts ? 'border-sky-600 bg-sky-600 text-white' : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'"
+                @click="showAllAttempts = false"
+              >
+                Nilai Akhir
+              </button>
+              <button
+                type="button"
+                class="rounded-lg border px-3 py-1.5 text-[11px] font-black uppercase tracking-tight transition-colors"
+                :class="showAllAttempts ? 'border-sky-600 bg-sky-600 text-white' : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'"
+                @click="showAllAttempts = true"
+              >
+                Semua Attempt
+              </button>
+              <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                {{ summaryModeLabel }}
+              </span>
+            </div>
+            <div v-if="showAllAttempts" class="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                class="rounded-lg border px-3 py-1.5 text-[11px] font-black uppercase tracking-tight transition-colors"
+                :class="attemptFilter === 'all' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'"
+                @click="attemptFilter = 'all'"
+              >
+                Semua
+              </button>
+              <button
+                type="button"
+                class="rounded-lg border px-3 py-1.5 text-[11px] font-black uppercase tracking-tight transition-colors"
+                :class="attemptFilter === 'best' ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'"
+                @click="attemptFilter = 'best'"
+              >
+                Hanya Best
+              </button>
+              <button
+                type="button"
+                class="rounded-lg border px-3 py-1.5 text-[11px] font-black uppercase tracking-tight transition-colors"
+                :class="attemptFilter === 'non_best' ? 'border-amber-600 bg-amber-600 text-white' : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'"
+                @click="attemptFilter = 'non_best'"
+              >
+                Selain Best
+              </button>
+            </div>
           </div>
           <div class="w-full sm:w-60">
-            <FormField label="Ambang Lulus">
-              <FormControl
-                v-model.number="passingScore"
-                type="number"
-                min="0"
-                max="100"
-                placeholder="75"
-                @blur="clampPassingScore"
-              />
-            </FormField>
+            <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/60">
+              <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                Ambang Lulus
+              </div>
+              <div class="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">
+                {{ passingScore }}
+              </div>
+              <div class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                Nilai ini mengikuti pengaturan di jadwal ujian.
+              </div>
+            </div>
           </div>
         </div>
       </CardBox>
@@ -510,14 +678,42 @@ onMounted(async () => {
           </CardBox>
         </template>
         <template v-else>
-          <DashboardCard label="Total Peserta" :number="stats.total" :icon="mdiAccountGroup" color="blue" />
-          <DashboardCard label="Selesai (Submitted)" :number="stats.submitted" :icon="mdiCheckCircleOutline" color="emerald" />
-          <DashboardCard label="Terlambat (Expired)" :number="stats.expired" :icon="mdiClockAlertOutline" color="amber" />
+          <DashboardCard :label="showAllAttempts ? 'Total Attempt' : 'Total Peserta'" :number="stats.total" :icon="mdiAccountGroup" color="blue" />
+          <DashboardCard :label="showAllAttempts ? 'Attempt Submitted' : 'Selesai (Submitted)'" :number="stats.submitted" :icon="mdiCheckCircleOutline" color="emerald" />
+          <DashboardCard :label="showAllAttempts ? 'Attempt Expired' : 'Terlambat (Expired)'" :number="stats.expired" :icon="mdiClockAlertOutline" color="amber" />
           <DashboardCard label="Rata-rata Nilai" :number="stats.avg" :icon="mdiChartLine" color="indigo" />
         </template>
       </div>
 
       <CardBox>
+        <div
+          v-if="showAllAttempts"
+          class="mb-4 flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-widest"
+        >
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+            Total: {{ attemptSummary.total }}
+          </span>
+          <span class="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+            Best: {{ attemptSummary.best }}
+          </span>
+          <span class="rounded-full bg-amber-100 px-3 py-1 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+            Non-Best: {{ attemptSummary.nonBest }}
+          </span>
+          <button
+            type="button"
+            class="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-500 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+            @click="expandAllGroups"
+          >
+            Buka Semua
+          </button>
+          <button
+            type="button"
+            class="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-500 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+            @click="collapseAllGroups"
+          >
+            Tutup Semua
+          </button>
+        </div>
         <div class="overflow-x-auto">
           <table class="w-full text-left text-sm">
             <thead class="border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 uppercase text-xs tracking-wider font-bold">
@@ -547,33 +743,73 @@ onMounted(async () => {
                   </td>
                 </tr>
               </template>
-              <tr v-else v-for="(row, idx) in results" :key="row.session_id" class="border-b dark:border-slate-800 last:border-b-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                <td class="px-3 py-3 text-center text-slate-500 dark:text-slate-400">{{ idx + 1 }}</td>
-                <td class="px-3 py-3 text-center font-semibold text-slate-600 dark:text-slate-300">{{ row.attempt_number || 1 }}</td>
-                <td class="px-3 py-3 text-center text-slate-500 dark:text-slate-400">{{ row.student_nis }}</td>
-                <td class="px-3 py-3 font-medium dark:text-slate-100">{{ row.student_name }}</td>
-                <td class="px-3 py-3 text-slate-500 dark:text-slate-400">{{ row.student_username }}</td>
+              <template v-else>
+                <template v-for="(entry, idx) in tableRows" :key="entry.type === 'group' ? `group-${entry.group.studentId || idx}` : entry.item.session_id">
+                  <tr
+                    v-if="entry.type === 'group'"
+                    class="border-y border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-800/40"
+                  >
+                    <td colspan="15" class="px-3 py-2">
+                      <button
+                        type="button"
+                        class="flex w-full flex-wrap items-center gap-2 text-left text-xs"
+                        @click="toggleGroupExpanded(entry.group.key)"
+                      >
+                        <span class="font-black uppercase tracking-widest text-slate-400">Siswa</span>
+                        <span class="font-bold text-slate-700 dark:text-slate-100">{{ entry.group.studentName }}</span>
+                        <span class="rounded-full bg-white px-2 py-0.5 font-mono text-slate-500 dark:bg-slate-900 dark:text-slate-300">
+                          {{ entry.group.studentNIS || '-' }}
+                        </span>
+                        <span class="text-slate-400">@{{ entry.group.studentUsername }}</span>
+                        <span class="rounded-full bg-sky-100 px-2 py-0.5 font-bold text-sky-700 dark:bg-sky-900/30 dark:text-sky-400">
+                          {{ entry.group.attempts.length }} attempt
+                        </span>
+                        <span class="ml-auto rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+                          {{ isGroupExpanded(entry.group.key) ? 'Tutup' : 'Buka' }}
+                        </span>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr
+                    v-else-if="!showAllAttempts || isGroupExpanded(entry.group.key)"
+                    class="border-b dark:border-slate-800 last:border-b-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
+                  >
+                <td class="px-3 py-3 text-center text-slate-500 dark:text-slate-400">{{ entry.type === 'item' ? idx + 1 : '' }}</td>
+                <td class="px-3 py-3 text-center font-semibold text-slate-600 dark:text-slate-300">
+                  <div class="flex flex-col items-center gap-1">
+                    <span>{{ entry.item.attempt_number || 1 }}</span>
+                    <span
+                      v-if="showAllAttempts && entry.item.is_best_attempt"
+                      class="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                    >
+                      Best
+                    </span>
+                  </div>
+                </td>
+                <td class="px-3 py-3 text-center text-slate-500 dark:text-slate-400">{{ entry.item.student_nis }}</td>
+                <td class="px-3 py-3 font-medium dark:text-slate-100">{{ entry.item.student_name }}</td>
+                <td class="px-3 py-3 text-slate-500 dark:text-slate-400">{{ entry.item.student_username }}</td>
                 <td class="px-3 py-3 text-center">
                   <span
                     class="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight"
-                    :class="row.status === 'submitted' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : row.status === 'expired' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'"
+                    :class="entry.item.status === 'submitted' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : entry.item.status === 'expired' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'"
                   >
-                    {{ row.status }}
+                    {{ entry.item.status }}
                   </span>
                 </td>
-                <td class="px-3 py-3 text-slate-500 dark:text-slate-400 text-xs">{{ formatDateTime(row.started_at) }}</td>
-                <td class="px-3 py-3 text-slate-500 dark:text-slate-400 text-xs">{{ formatDateTime(row.finished_at) }}</td>
-                <td class="px-3 py-3 text-center font-mono text-xs text-slate-600 dark:text-slate-300">{{ toDuration(row.duration_seconds) }}</td>
-                <td class="px-3 py-3 text-center text-emerald-700 dark:text-emerald-400 font-mono">{{ row.correct_count }}</td>
-                <td class="px-3 py-3 text-center text-rose-700 dark:text-rose-400 font-mono">{{ wrongCount(row) }}</td>
-                <td class="px-3 py-3 text-center text-slate-500 dark:text-slate-300 font-mono">{{ blankCount(row) }}</td>
-                <td class="px-3 py-3 text-center font-bold text-lg text-info dark:text-sky-400">{{ row.score }}</td>
+                <td class="px-3 py-3 text-slate-500 dark:text-slate-400 text-xs">{{ formatDateTime(entry.item.started_at) }}</td>
+                <td class="px-3 py-3 text-slate-500 dark:text-slate-400 text-xs">{{ formatDateTime(entry.item.finished_at) }}</td>
+                <td class="px-3 py-3 text-center font-mono text-xs text-slate-600 dark:text-slate-300">{{ toDuration(entry.item.duration_seconds) }}</td>
+                <td class="px-3 py-3 text-center text-emerald-700 dark:text-emerald-400 font-mono">{{ entry.item.correct_count }}</td>
+                <td class="px-3 py-3 text-center text-rose-700 dark:text-rose-400 font-mono">{{ wrongCount(entry.item) }}</td>
+                <td class="px-3 py-3 text-center text-slate-500 dark:text-slate-300 font-mono">{{ blankCount(entry.item) }}</td>
+                <td class="px-3 py-3 text-center font-bold text-lg text-info dark:text-sky-400">{{ entry.item.score }}</td>
                 <td class="px-3 py-3 text-center">
                   <span
                     class="inline-flex min-w-[96px] items-center justify-center rounded-full px-3 py-1 text-[11px] font-black tracking-tight text-white shadow-sm"
-                    :class="passLabel(row) === 'Lulus' ? 'bg-emerald-500' : 'bg-rose-500'"
+                    :class="passLabel(entry.item) === 'Lulus' ? 'bg-emerald-500' : 'bg-rose-500'"
                   >
-                    {{ passLabel(row) }}
+                    {{ passLabel(entry.item) }}
                   </span>
                 </td>
                 <td class="px-3 py-3 text-center">
@@ -582,19 +818,21 @@ onMounted(async () => {
                       :icon="mdiPencil"
                       color="whiteDark"
                       smaller
-                      @click="openEssayModal(row)"
+                      @click="openEssayModal(entry.item)"
                       label="Koreksi"
                     />
-                    <div v-if="row.pending_grading_count > 0" class="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-tighter">
-                      {{ row.pending_grading_count }} pending
+                    <div v-if="entry.item.pending_grading_count > 0" class="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-tighter">
+                      {{ entry.item.pending_grading_count }} pending
                     </div>
-                    <div v-else-if="row.manual_scored_count > 0" class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">
+                    <div v-else-if="entry.item.manual_scored_count > 0" class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">
                       Selesai
                     </div>
                   </div>
                 </td>
-              </tr>
-              <tr v-if="!results.length && !isLoadingResults">
+                  </tr>
+                </template>
+              </template>
+              <tr v-if="!filteredResults.length && !isLoadingResults">
                 <td colspan="14" class="px-3 py-10 text-center text-slate-400 dark:text-slate-500 italic">
                   Belum ada data peserta untuk ujian ini.
                 </td>

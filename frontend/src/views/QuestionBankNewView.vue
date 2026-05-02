@@ -260,6 +260,7 @@ const summarizeText = (value, maxLen = 120) => {
   return `${text.slice(0, maxLen - 1)}…`
 }
 
+
 const normalizeRichHtmlForPayload = (value) => {
   const raw = String(value ?? '')
   if (!raw.trim()) return ''
@@ -669,8 +670,8 @@ const deleteQuestion = async (id) => {
   try {
     await api.delete(`/api/v1/questions/${id}`)
     await loadQuestions()
-  } catch {
-    errorMessage.value = 'Gagal menghapus'
+  } catch (error) {
+    errorMessage.value = error?.response?.data?.error?.message || 'Gagal menghapus soal'
   }
 }
 

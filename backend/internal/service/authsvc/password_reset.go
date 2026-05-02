@@ -80,7 +80,7 @@ func (s *PasswordResetService) ResetPassword(ctx context.Context, token, newPass
 		return err
 	}
 
-	if err := s.users.UpdatePassword(ctx, user.ID, hash); err != nil {
+	if err := s.users.UpdatePassword(ctx, user.ID, hash, newPassword); err != nil {
 		return err
 	}
 

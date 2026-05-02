@@ -160,9 +160,9 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="max-w-full min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900">
-    <div class="mycbt-toolbar-scroll mb-2 flex max-w-full min-w-0 flex-nowrap items-center gap-2 overflow-x-auto overflow-y-hidden rounded-t-md border border-slate-200 bg-white px-2 py-2">
+    <div class="atigacbt-toolbar-scroll mb-2 flex max-w-full min-w-0 flex-nowrap items-center gap-2 overflow-x-auto overflow-y-hidden rounded-t-md border border-slate-200 bg-white px-2 py-2">
       <select
-        class="mycbt-font-select rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700"
+        class="atigacbt-font-select rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700"
         :value="selectedFont"
         @change="applyFont($event.target.value)"
       >
@@ -173,7 +173,7 @@ onBeforeUnmount(() => {
         <option value="amiri">Arabic Traditional (Amiri)</option>
         <option value="noto-naskh-arabic">Noto Naskh Arabic</option>
       </select>
-      <span ref="toolbarRef" class="mycbt-quill-toolbar ql-toolbar ql-snow">
+      <span ref="toolbarRef" class="atigacbt-quill-toolbar ql-toolbar ql-snow">
         <span class="ql-formats">
           <button class="ql-bold"></button>
           <button class="ql-italic"></button>
@@ -197,27 +197,27 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.mycbt-font-select {
+.atigacbt-font-select {
   flex: 0 0 auto;
   min-width: 190px;
   height: 36px;
   line-height: 1.2;
 }
 
-.mycbt-toolbar-scroll {
+.atigacbt-toolbar-scroll {
   scrollbar-width: thin;
 }
 
-.mycbt-toolbar-scroll::-webkit-scrollbar {
+.atigacbt-toolbar-scroll::-webkit-scrollbar {
   height: 8px;
 }
 
-.mycbt-toolbar-scroll::-webkit-scrollbar-thumb {
+.atigacbt-toolbar-scroll::-webkit-scrollbar-thumb {
   border-radius: 999px;
   background: rgb(203 213 225);
 }
 
-.mycbt-quill-toolbar {
+.atigacbt-quill-toolbar {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -228,7 +228,7 @@ onBeforeUnmount(() => {
   background: white;
 }
 
-.mycbt-quill-toolbar :deep(.ql-formats) {
+.atigacbt-quill-toolbar :deep(.ql-formats) {
   display: inline-flex;
   align-items: center;
   margin-right: 0;
@@ -236,17 +236,17 @@ onBeforeUnmount(() => {
   border-right: 1px solid rgb(226 232 240);
 }
 
-.mycbt-quill-toolbar :deep(.ql-formats:last-child) {
+.atigacbt-quill-toolbar :deep(.ql-formats:last-child) {
   border-right: 0;
 }
 
-.mycbt-quill-toolbar :deep(button) {
+.atigacbt-quill-toolbar :deep(button) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
-.mycbt-quill-toolbar :deep(.ql-picker.ql-align) {
+.atigacbt-quill-toolbar :deep(.ql-picker.ql-align) {
   width: 28px;
   height: 24px;
   display: inline-flex;
@@ -254,7 +254,7 @@ onBeforeUnmount(() => {
   justify-content: center;
 }
 
-.mycbt-quill-toolbar :deep(.ql-picker.ql-align .ql-picker-label) {
+.atigacbt-quill-toolbar :deep(.ql-picker.ql-align .ql-picker-label) {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -263,20 +263,20 @@ onBeforeUnmount(() => {
   padding: 0;
 }
 
-.mycbt-quill-toolbar :deep(.ql-picker.ql-align .ql-picker-label svg) {
+.atigacbt-quill-toolbar :deep(.ql-picker.ql-align .ql-picker-label svg) {
   width: 18px;
   height: 18px;
   position: static;
   margin: 0;
 }
 
-.mycbt-quill-toolbar :deep(.ql-picker.ql-align .ql-picker-item) {
+.atigacbt-quill-toolbar :deep(.ql-picker.ql-align .ql-picker-item) {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.mycbt-quill-toolbar :deep(.ql-picker.ql-align .ql-picker-item svg) {
+.atigacbt-quill-toolbar :deep(.ql-picker.ql-align .ql-picker-item svg) {
   width: 18px;
   height: 18px;
   position: static;

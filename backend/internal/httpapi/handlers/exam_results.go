@@ -102,12 +102,15 @@ func (h *ExamResultsHandler) List(c *gin.Context) {
 	q := params.StringQueryTrim(c, "q")
 	limit := params.IntQuery(c, "limit", 50, 1, 200)
 	offset := params.IntQuery(c, "offset", 0, 0, 1_000_000)
+	allAttempts := strings.EqualFold(params.StringQueryTrim(c, "all_attempts"), "1") ||
+		strings.EqualFold(params.StringQueryTrim(c, "all_attempts"), "true")
 
 	items, total, err := h.st.ListExamSessionsWithScore(c.Request.Context(), c.Param("id"), studentexamrepo.ListExamSessionsFilter{
-		Q:      q,
-		Limit:  limit,
-		Offset: offset,
-		NowUTC: nowUTC,
+		Q:           q,
+		Limit:       limit,
+		Offset:      offset,
+		NowUTC:      nowUTC,
+		AllAttempts: allAttempts,
 	})
 	if err != nil {
 		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
@@ -117,11 +120,12 @@ func (h *ExamResultsHandler) List(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"data": items,
 		"meta": gin.H{
-			"exam":   exam,
-			"q":      q,
-			"limit":  limit,
-			"offset": offset,
-			"total":  total,
+			"exam":         exam,
+			"q":            q,
+			"limit":        limit,
+			"offset":       offset,
+			"total":        total,
+			"all_attempts": allAttempts,
 		},
 	})
 }

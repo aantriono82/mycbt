@@ -47,23 +47,51 @@
              <!-- Card Header -->
              <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-white">
                 <span class="text-[#0B7EA1] font-bold uppercase text-sm tracking-wide">SOAL NOMOR: {{ currentIndex + 1 }}</span>
-                <div class="flex items-center gap-4 text-[11px] font-bold text-slate-500">
+                <div class="relative z-20 isolate flex items-center gap-3 text-[11px] font-bold text-slate-500">
                    <span class="uppercase opacity-60">Ukuran Font:</span>
-                   <button class="h-6 w-8 flex items-center justify-center border border-slate-300 rounded bg-slate-50 text-slate-700 font-bold leading-none">A</button>
-                   <button class="h-7 w-9 flex items-center justify-center border-2 border-[#0B7EA1] rounded bg-white text-[#0B7EA1] font-black leading-none">A</button>
-                   <button class="h-7 w-10 flex items-center justify-center border border-slate-300 rounded bg-slate-50 text-slate-700 font-bold leading-none text-base">A</button>
+                   <div class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1 shadow-sm">
+                     <button
+                       type="button"
+                       class="relative z-30 flex h-7 w-8 shrink-0 cursor-pointer select-none items-center justify-center rounded border bg-slate-50 font-bold leading-none text-slate-700 transition-colors pointer-events-auto"
+                       :class="fontSize === 'sm' ? 'border-2 border-[#0B7EA1] bg-white text-[#0B7EA1]' : 'border-slate-300 bg-slate-50 text-slate-700 hover:border-slate-400'"
+                       @click.stop="setFontSize('sm')"
+                     >
+                       A
+                     </button>
+                     <button
+                       type="button"
+                       class="relative z-30 flex h-8 w-9 shrink-0 cursor-pointer select-none items-center justify-center rounded border bg-slate-50 font-black leading-none text-slate-700 transition-colors pointer-events-auto"
+                       :class="fontSize === 'md' ? 'border-2 border-[#0B7EA1] bg-white text-[#0B7EA1]' : 'border-slate-300 bg-slate-50 text-slate-700 hover:border-slate-400'"
+                       @click.stop="setFontSize('md')"
+                     >
+                       A
+                     </button>
+                     <button
+                       type="button"
+                       class="relative z-30 flex h-8 w-10 shrink-0 cursor-pointer select-none items-center justify-center rounded border bg-slate-50 text-base font-bold leading-none text-slate-700 transition-colors pointer-events-auto"
+                       :class="fontSize === 'lg' ? 'border-2 border-[#0B7EA1] bg-white text-[#0B7EA1]' : 'border-slate-300 bg-slate-50 text-slate-700 hover:border-slate-400'"
+                       @click.stop="setFontSize('lg')"
+                     >
+                       A
+                     </button>
+                   </div>
                 </div>
              </div>
 
-             <div ref="cardScrollEl" class="flex-1 overflow-auto">
+             <div ref="cardScrollEl" class="flex-1 overflow-auto" :class="['tka-font-zone', fontClass]">
                 <!-- CONTENT: Stimulus (Stem) -->
-                <div class="p-6 prose prose-slate max-w-none text-base leading-relaxed text-slate-900">
-                   <div class="flex justify-between items-start mb-4">
-                      <div class="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">STIMULUS / SOAL UTAMA</div>
+                <QuestionStimulusViewer
+                  v-model:zoom="stimulusZoom"
+                  :content-key="currentQuestion.id"
+                  title="STIMULUS / SOAL UTAMA"
+                  title-class="text-slate-400"
+                  content-class="p-6 prose prose-slate max-w-none text-slate-900"
+                >
+                   <div class="mb-4 flex justify-end">
                       <button class="text-xs font-semibold underline text-slate-500 hover:text-slate-700" @click="goToEditor">Edit</button>
                    </div>
-                   <div v-html="renderHtml(currentQuestion.stem)"></div>
-                </div>
+                   <div class="tka-question-content" v-html="renderHtml(currentQuestion.stem)"></div>
+                </QuestionStimulusViewer>
                 
                 <!-- INTERACTION Area -->
                 <div class="px-6 pb-10 pt-6 border-t border-slate-200 bg-white">
@@ -100,7 +128,7 @@
                         :checked="answers[currentQuestion.id] === String(opt.id)"
                         @change="answers[currentQuestion.id] = String(opt.id)"
                       />
-                      <div class="text-slate-800 font-medium text-sm leading-relaxed" v-html="renderHtml(opt.content)"></div>
+                      <div class="tka-option-text text-slate-800 font-medium leading-relaxed" v-html="renderHtml(opt.content)"></div>
                    </label>
                    <div v-if="!currentQuestion.options?.length" class="p-10 text-center text-slate-400 italic bg-white rounded-2xl border-2 border-dashed border-slate-100">
                       Tidak ada opsi pilihan ganda yang tersedia.
@@ -131,7 +159,7 @@
                           <span class="text-xs font-black leading-none">✓</span>
                         </div>
                       </div>
-                      <div class="text-slate-800 font-medium text-sm leading-relaxed" v-html="renderHtml(opt.content)"></div>
+                      <div class="tka-option-text text-slate-800 font-medium leading-relaxed" v-html="renderHtml(opt.content)"></div>
                    </button>
                    <div v-if="!currentQuestion.options?.length" class="p-10 text-center text-slate-400 italic bg-white rounded-2xl border-2 border-dashed border-slate-100">
                       Tidak ada opsi PG Kompleks yang tersedia.
@@ -380,8 +408,10 @@ import {
 } from '@mdi/js'
 import BaseIcon from '@/components/BaseIcon.vue'
 import QuillEditor from '@/components/QuillEditor.vue'
+import QuestionStimulusViewer from '@/components/QuestionStimulusViewer.vue'
 import PreviewMatchingBoard from '@/components/student/PreviewMatchingBoard.vue'
 import { api } from '@/services/api.js'
+import { resolveBackendAssetUrl } from '@/utils/assetUrl.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -422,8 +452,37 @@ const startTimer = () => {
 
 const currentQuestion = computed(() => questions.value[currentIndex.value] || null)
 const cardScrollEl = ref(null)
+const stimulusZoom = ref(1)
+const FONT_KEY = 'atigacbt_preview_font_size'
+const fontSize = ref('md')
 const shortAnswerEditorHtml = ref('')
 const essayEditorHtml = ref('')
+
+try {
+  const saved = localStorage.getItem(FONT_KEY)
+  if (saved === 'sm' || saved === 'md' || saved === 'lg') fontSize.value = saved
+} catch {
+  // ignore
+}
+
+watch(fontSize, (v) => {
+  try {
+    localStorage.setItem(FONT_KEY, String(v || 'md'))
+  } catch {
+    // ignore
+  }
+}, { flush: 'sync' })
+
+const setFontSize = (v) => {
+  if (v !== 'sm' && v !== 'md' && v !== 'lg') return
+  fontSize.value = v
+}
+
+const fontClass = computed(() => {
+  if (fontSize.value === 'sm') return 'tka-font-sm'
+  if (fontSize.value === 'lg') return 'tka-font-lg'
+  return 'tka-font-md'
+})
 
 const stripHtml = (html) => {
   const raw = String(html || '')
@@ -467,6 +526,10 @@ const renderHtml = (html) => {
     doc.querySelectorAll('*').forEach(el => {
       for (const attr of Array.from(el.attributes || [])) {
         if (/^on/i.test(attr.name)) el.removeAttribute(attr.name)
+      }
+      if (el.tagName === 'IMG') {
+        const src = el.getAttribute('src')
+        if (src) el.setAttribute('src', resolveBackendAssetUrl(src))
       }
       const style = el.getAttribute && el.getAttribute('style')
       if (style) {
@@ -689,6 +752,7 @@ watch(currentIndex, () => {
 watch(
   () => currentQuestion.value?.id,
   () => {
+    stimulusZoom.value = 1
     syncPreviewEditorModel()
   },
   { immediate: true },
@@ -732,4 +796,32 @@ const goToEditor = () => {
 @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 :deep(.prose) { max-width: none; }
 :deep(.prose img) { border-radius: 16px; display: block; margin: 32px auto; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); border: 8px solid #f8fafc; }
+
+.tka-font-zone {
+  --tka-content-font-size: 1rem;
+  --tka-content-line-height: 1.65;
+}
+
+.tka-font-zone.tka-font-sm {
+  --tka-content-font-size: 0.95rem;
+}
+
+.tka-font-zone.tka-font-md {
+  --tka-content-font-size: 1rem;
+}
+
+.tka-font-zone.tka-font-lg {
+  --tka-content-font-size: 1.125rem;
+}
+
+.tka-font-zone :deep(.prose),
+.tka-font-zone .tka-question-content,
+.tka-font-zone .tka-option-text {
+  font-size: var(--tka-content-font-size);
+  line-height: var(--tka-content-line-height);
+}
+
+.tka-font-zone .tka-question-content :deep(*) {
+  line-height: var(--tka-content-line-height);
+}
 </style>

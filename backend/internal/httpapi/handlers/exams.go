@@ -83,6 +83,7 @@ type createExamReq struct {
 	ShuffleOptions   bool   `json:"shuffle_options"`
 	ScoringMode      string `json:"scoring_mode"` // partial|absolute
 	MaxAttempts      *int   `json:"max_attempts"`
+	PassingScore     *int   `json:"passing_score"`
 }
 
 func (h *ExamsHandler) Create(c *gin.Context) {
@@ -112,6 +113,14 @@ func (h *ExamsHandler) Create(c *gin.Context) {
 	}
 	if maxAttempts <= 0 {
 		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "max_attempts must be > 0"}})
+		return
+	}
+	passingScore := 75
+	if req.PassingScore != nil {
+		passingScore = *req.PassingScore
+	}
+	if passingScore < 0 || passingScore > 100 {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "passing_score must be between 0 and 100"}})
 		return
 	}
 	scoringMode := strings.TrimSpace(strings.ToLower(req.ScoringMode))
@@ -186,6 +195,7 @@ func (h *ExamsHandler) Create(c *gin.Context) {
 		ShuffleOptions:   req.ShuffleOptions,
 		ScoringMode:      scoringMode,
 		MaxAttempts:      maxAttempts,
+		PassingScore:     passingScore,
 	})
 	if err != nil {
 		if pgerr.Code(err) == pgerr.CodeForeignKeyViolation {
@@ -237,6 +247,7 @@ type patchExamReq struct {
 	ShuffleOptions   *bool   `json:"shuffle_options"`
 	ScoringMode      *string `json:"scoring_mode"` // partial|absolute
 	MaxAttempts      *int    `json:"max_attempts"`
+	PassingScore     *int    `json:"passing_score"`
 	Status           *string `json:"status"`       // draft|published|archived
 }
 
@@ -351,6 +362,17 @@ func (h *ExamsHandler) Patch(c *gin.Context) {
 		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "max_attempts must be > 0"}})
 		return
 	}
+	passingScore := cur.PassingScore
+	if passingScore < 0 || passingScore > 100 {
+		passingScore = 75
+	}
+	if req.PassingScore != nil {
+		passingScore = *req.PassingScore
+	}
+	if passingScore < 0 || passingScore > 100 {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "passing_score must be between 0 and 100"}})
+		return
+	}
 	status := cur.Status
 	if req.Status != nil {
 		status = strings.TrimSpace(*req.Status)
@@ -383,6 +405,7 @@ func (h *ExamsHandler) Patch(c *gin.Context) {
 		ShuffleOptions:   shO,
 		ScoringMode:      scoringMode,
 		MaxAttempts:      maxAttempts,
+		PassingScore:     passingScore,
 		Status:           status,
 	})
 	if err != nil {

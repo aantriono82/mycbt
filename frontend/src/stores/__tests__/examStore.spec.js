@@ -44,7 +44,7 @@ describe('examStore', () => {
     await store.saveAnswer('q1', { selected_option_id: 'A' })
 
     expect(store.answers.q1).toEqual({ selected_option_id: 'A' })
-    const persisted = JSON.parse(localStorage.getItem('mycbt:exam-store'))
+    const persisted = JSON.parse(localStorage.getItem('atigacbt:exam-store'))
     expect(persisted.answers.q1).toEqual({ selected_option_id: 'A' })
     expect(postMock).toHaveBeenCalledWith('/api/v1/student/sessions/sess-1/answers', {
       question_id: 'q1',
@@ -67,7 +67,7 @@ describe('examStore', () => {
 
   it('rehydrates state from localStorage via persisted-state plugin', () => {
     localStorage.setItem(
-      'mycbt:exam-store',
+      'atigacbt:exam-store',
       JSON.stringify({
         sessionId: 'sess-rehydrate',
         startTime: '2026-04-24T01:00:00Z',

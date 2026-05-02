@@ -33,6 +33,17 @@ type ListStudentResultsFilter struct {
 	Offset int
 }
 
+func paginateStudentResults(rows []StudentResultSummary, limit, offset int) []StudentResultSummary {
+	if offset >= len(rows) {
+		return []StudentResultSummary{}
+	}
+	end := len(rows)
+	if limit > 0 && offset+limit < end {
+		end = offset + limit
+	}
+	return rows[offset:end]
+}
+
 func (r *Repo) ListStudentResults(ctx context.Context, studentID string, f ListStudentResultsFilter) ([]StudentResultSummary, int, error) {
 	rows, err := r.pool.Query(ctx, `
 SELECT s.id::text,
@@ -46,14 +57,13 @@ JOIN exams e ON e.id = s.exam_id
 JOIN subjects sub ON sub.id = e.subject_id
 WHERE s.student_id = $1
   AND s.status <> 'in_progress'
-ORDER BY s.finished_at DESC NULLS LAST, s.started_at DESC
-LIMIT $2 OFFSET $3`, studentID, f.Limit, f.Offset)
+ORDER BY s.finished_at DESC NULLS LAST, s.started_at DESC`, studentID)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list results: %w", err)
 	}
 	defer rows.Close()
 
-	out := []StudentResultSummary{}
+	allRows := []StudentResultSummary{}
 	for rows.Next() {
 		var it StudentResultSummary
 		var finished string
@@ -63,35 +73,29 @@ LIMIT $2 OFFSET $3`, studentID, f.Limit, f.Offset)
 		if finished != "" {
 			it.SubmittedAt = finished
 		}
-		out = append(out, it)
+		allRows = append(allRows, it)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, 0, err
 	}
 
-	var total int
-	if err := r.pool.QueryRow(ctx, `
-SELECT COUNT(*)
-FROM exam_sessions
-WHERE student_id = $1 AND status <> 'in_progress'`, studentID).Scan(&total); err != nil {
-		return nil, 0, fmt.Errorf("count results: %w", err)
-	}
-
-	for i := range out {
-		sum, err := r.ComputeAutoScore(ctx, out[i].SessionID, studentID, time.Now().UTC())
+	for i := range allRows {
+		sum, err := r.ComputeAutoScore(ctx, allRows[i].SessionID, studentID, time.Now().UTC())
 		if err != nil {
 			return nil, 0, err
 		}
-		out[i].TotalQuestions = sum.TotalQuestions
-		out[i].AnsweredQuestions = sum.AnsweredQuestions
-		out[i].AutoScorable = sum.AutoScorable
-		out[i].CorrectCount = sum.CorrectCount
-		out[i].Score = sum.Score
-		out[i].ManualScoredCount = sum.ManualScored
-		out[i].PendingGradingCount = sum.PendingGrading
+		allRows[i].TotalQuestions = sum.TotalQuestions
+		allRows[i].AnsweredQuestions = sum.AnsweredQuestions
+		allRows[i].AutoScorable = sum.AutoScorable
+		allRows[i].CorrectCount = sum.CorrectCount
+		allRows[i].Score = sum.Score
+		allRows[i].ManualScoredCount = sum.ManualScored
+		allRows[i].PendingGradingCount = sum.PendingGrading
 	}
 
-	return out, total, nil
+	out := selectBestResultsByExam(allRows)
+	total := len(out)
+	return paginateStudentResults(out, f.Limit, f.Offset), total, nil
 }
 
 type AutoScoreSummary struct {

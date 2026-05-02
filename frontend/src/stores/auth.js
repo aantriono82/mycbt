@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { api, getStoredToken, setStoredToken } from '@/services/api.js'
 
-const USER_KEY = 'mycbt_user'
+const USER_KEY = 'atigacbt_user'
 
 export const ROLES = /** @type {const} */ ({
   ADMIN: 'admin',

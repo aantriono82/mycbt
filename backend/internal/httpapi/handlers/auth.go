@@ -33,7 +33,7 @@ type authService interface {
 type userStore interface {
 	GetByID(ctx context.Context, id string) (model.User, bool, error)
 	UpdateProfile(ctx context.Context, id, name, email string) error
-	UpdatePassword(ctx context.Context, id string, hash string) error
+	UpdatePassword(ctx context.Context, id string, hash string, plain string) error
 	UpdatePhoto(ctx context.Context, id string, photoURL string) error
 }
 
@@ -261,7 +261,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "internal", "message": "failed to process password"}})
 		return
 	}
-	if err := h.users.UpdatePassword(c.Request.Context(), userID, hash); err != nil {
+	if err := h.users.UpdatePassword(c.Request.Context(), userID, hash, next); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"code": "internal", "message": "failed to update password"}})
 		return
 	}

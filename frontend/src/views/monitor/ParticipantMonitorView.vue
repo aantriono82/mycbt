@@ -343,7 +343,7 @@ onBeforeUnmount(() => {
 
       <CardBox class="mb-6">
         <div class="flex flex-wrap items-center gap-3">
-          <BaseButton color="whiteDark" outline label="Terapkan" :disabled="isLoadingParticipants" @click="applyFilter" />
+          <BaseButton color="success" label="Terapkan" :disabled="isLoadingParticipants" @click="applyFilter" />
           <BaseButton
             color="warning"
             outline

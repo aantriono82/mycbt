@@ -86,27 +86,27 @@ const colorClasses = computed(() => {
 
 <template>
   <div :class="[
-    'rounded-[2rem] shadow-sm border flex flex-col justify-between transition-all hover:shadow-xl hover:-translate-y-1 active:scale-95 relative overflow-hidden group cursor-pointer',
-    small ? 'h-32 p-5' : 'h-40 p-6',
+    'rounded-[1.75rem] shadow-sm border flex flex-col justify-between transition-all hover:shadow-xl hover:-translate-y-1 active:scale-95 relative overflow-hidden group cursor-pointer',
+    small ? 'min-h-[7rem] p-4 sm:min-h-32 sm:p-5' : 'min-h-[8.5rem] p-4 sm:min-h-[10rem] sm:p-6',
     colorClasses.cardBg,
     colorClasses.cardBorder
   ]">
     <!-- Decorative Circle -->
-    <div :class="['absolute -top-6 -right-6 h-24 w-24 rounded-full opacity-20', colorClasses.bg]"></div>
+    <div :class="['absolute -top-5 -right-5 h-20 w-20 rounded-full opacity-20 sm:-top-6 sm:-right-6 sm:h-24 sm:w-24', colorClasses.bg]"></div>
     
-    <div :class="[small ? 'text-[10px]' : 'text-xs', 'font-black uppercase tracking-[0.2em]', colorClasses.label]">
+    <div :class="[small ? 'text-[9px] sm:text-[10px]' : 'text-[10px] sm:text-xs', 'font-black uppercase tracking-[0.18em] sm:tracking-[0.2em]', colorClasses.label]">
       {{ label }}
     </div>
     <div class="flex items-end justify-between relative z-10">
       <div v-if="loading">
         <BaseSkeleton :width="small ? 'w-16' : 'w-24'" :height="small ? 'h-8' : 'h-12'" />
       </div>
-      <div v-else :class="[small ? 'text-3xl' : 'text-5xl', 'font-black tracking-tighter', colorClasses.text]">
+      <div v-else :class="[small ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-5xl', 'font-black leading-none tracking-tight', colorClasses.text]">
         {{ number }}
       </div>
-      <div :class="['rounded-2xl shadow-sm transition-transform group-hover:scale-110', small ? 'p-2' : 'p-3', colorClasses.bg]">
+      <div :class="['rounded-xl sm:rounded-2xl shadow-sm transition-transform group-hover:scale-110 shrink-0', small ? 'p-2' : 'p-2.5 sm:p-3', colorClasses.bg]">
         <BaseSkeleton v-if="loading" :width="small ? 'w-6' : 'w-8'" :height="small ? 'w-6' : 'w-8'" rounded="rounded-lg" />
-        <BaseIcon v-else :path="icon" :size="small ? 24 : 32" :class="colorClasses.icon" />
+        <BaseIcon v-else :path="icon" :size="small ? 22 : 26" :class="colorClasses.icon" />
       </div>
     </div>
   </div>

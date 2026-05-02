@@ -64,7 +64,7 @@ AtigaCBT is a premium computer-based testing platform designed for stability, ri
 - Keputusan deployment:
 - **Jangan gunakan Nginx host** sebagai reverse proxy utama selama Dokploy aktif.
 - Routing domain `cbt.aantriono.sch.id` dilakukan melalui **Traefik (Dokploy)**.
-- Backend MyCBT tetap jalan pada port internal (mis. `127.0.0.1:8080` / service internal container), lalu diproxy oleh Traefik.
+- Backend AtigaCBT tetap jalan pada port internal (mis. `127.0.0.1:8080` / service internal container), lalu diproxy oleh Traefik.
 - Frontend dilayani sebagai service/app di Dokploy dan domain diarahkan lewat Traefik.
 - Jika ingin memaksa Nginx host, `dokploy-traefik` harus dimatikan (tidak direkomendasikan karena memutus routing Dokploy).
 
@@ -98,7 +98,7 @@ Catatan (DB baru): jalankan migrate + seed sekali dari folder `backend`:
 
 ```bash
 cd backend
-export DATABASE_URL="postgres://mycbt:mycbt@localhost:5433/mycbt?sslmode=disable"
+export DATABASE_URL="postgres://atigacbt:atigacbt@localhost:5433/atigacbt?sslmode=disable"
 export JWT_SECRET="7f59f6b9c9f2b8e8a8b8c8d8e8f808182838485868788898a8b8c8d8e8f8081"
 ../.tooling/go/bin/go run ./cmd/migrate
 export ADMIN_USERNAME=admin

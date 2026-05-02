@@ -455,7 +455,7 @@ onMounted(async () => {
                   </td>
                   <td class="px-3 py-3">
                     <BaseButtons>
-                      <BaseButton :icon="mdiSend" color="emerald" small label="Blast" :disabled="isBlasting[item.id]" @click="blastAnnouncement(item.id)" />
+                      <BaseButton :icon="mdiSend" color="success" small label="Blast" :disabled="isBlasting[item.id]" @click="blastAnnouncement(item.id)" />
                       <BaseButton :icon="mdiPencil" color="info" small label="Edit" @click="startEdit(item)" />
                       <BaseButton :icon="mdiDelete" color="danger" small label="Hapus" @click="deleteAnnouncement(item.id)" />
                     </BaseButtons>

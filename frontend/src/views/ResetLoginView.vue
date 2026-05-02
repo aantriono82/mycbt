@@ -175,7 +175,7 @@ onBeforeUnmount(() => {
 
       <CardBox class="mb-6">
         <div class="flex flex-wrap items-center gap-3">
-          <BaseButton color="whiteDark" outline label="Terapkan" :disabled="isLoadingParticipants" @click="loadParticipants" />
+          <BaseButton color="success" label="Terapkan" :disabled="isLoadingParticipants" @click="loadParticipants" />
           <div v-if="isLoading || isLoadingParticipants" class="text-sm text-slate-500 dark:text-slate-400 italic font-mono animate-pulse">Memuat data...</div>
           <div class="ml-auto text-xs uppercase font-bold tracking-widest text-slate-400 dark:text-slate-500">
             TOTAL {{ stats.total }} · ONLINE {{ stats.online }} · PROGRESS {{ stats.inProgress }} · BELUM JOIN {{ stats.blocked }}

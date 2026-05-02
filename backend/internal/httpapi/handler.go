@@ -53,6 +53,7 @@ func NewHandler(deps Deps) http.Handler {
 	r.Use(middleware.RequestID())
 	r.Use(middleware.StructuredLogger())
 	r.Use(middleware.SecurityHeaders())
+	up := handlers.NewUploadsHandler(deps.ObjectStore)
 	if cfg.Env == "debug" || cfg.Env == "" {
 		pp := r.Group("/debug/pprof")
 		pp.GET("/", gin.WrapF(httppprof.Index))
@@ -162,7 +163,6 @@ func NewHandler(deps Deps) http.Handler {
 		qb := questionbankrepo.New(deps.Pool)
 		teacherSubs := masterrepo.NewTeacherSubjects(deps.Pool)
 		h := handlers.NewQuestionBankHandler(qb, teacherSubs)
-		up := handlers.NewUploadsHandler(deps.ObjectStore)
 
 		qg := v1.Group("")
 		qg.Use(middleware.RequireAuth(deps.Auth), middleware.RequireRole("admin", "teacher"))
@@ -253,12 +253,13 @@ func NewHandler(deps Deps) http.Handler {
 	if deps.Auth != nil && deps.Pool != nil {
 		st := studentexamrepo.New(deps.Pool)
 		h := handlers.NewStudentExamHandler(st, masterrepo.NewSettings(deps.Pool))
-		nh := handlers.NewNotificationHandler(masterrepo.NewAnnouncements(deps.Pool), st)
+		nh := handlers.NewNotificationHandler(st)
+
+		v1.GET("/student/notifications/stream", middleware.RequireAuthHeaderOrQueryToken(deps.Auth), middleware.RequireRole("student"), nh.Stream)
 
 		sg := v1.Group("/student")
 		sg.Use(middleware.RequireAuth(deps.Auth), middleware.RequireRole("student"))
 
-		sg.GET("/notifications/stream", middleware.RequireAuthHeaderOrQueryToken(deps.Auth), nh.Stream)
 		sg.GET("/exams", h.ListExams)
 		sg.DELETE("/exams/:id/dismiss", h.DismissExamCard)
 		sg.GET("/exams/:id/session", h.GetActiveSessionByExam)
@@ -272,6 +273,7 @@ func NewHandler(deps Deps) http.Handler {
 		sg.POST("/sessions/:id/heartbeat", h.Heartbeat)
 		sg.GET("/results", h.ListResults)
 		sg.GET("/announcements", h.ListAnnouncements)
+		sg.POST("/announcements/read", h.MarkAnnouncementsRead)
 		sg.POST("/attendance", h.SubmitAttendance)
 		sg.GET("/attendance/history", h.ListAttendanceHistory)
 
@@ -524,12 +526,17 @@ func NewHandler(deps Deps) http.Handler {
 		admin.DELETE("/audit-logs/:id", al.Delete)
 	}
 
-	// Serve uploaded assets from local storage when URL path starts with /uploads.
-	localUploadDir := strings.TrimSpace(deps.Config.UploadLocalDir)
-	if localUploadDir == "" {
-		localUploadDir = "uploads"
+	// Serve uploaded assets.
+	provider := strings.ToLower(strings.TrimSpace(deps.Config.UploadProvider))
+	if provider == "" || provider == "local" {
+		localUploadDir := strings.TrimSpace(deps.Config.UploadLocalDir)
+		if localUploadDir == "" {
+			localUploadDir = "uploads"
+		}
+		r.Static("/uploads", "./"+filepath.ToSlash(localUploadDir))
+	} else {
+		r.GET("/uploads/*filepath", up.ServeObject)
 	}
-	r.Static("/uploads", "./"+filepath.ToSlash(localUploadDir))
 	return r
 }
 

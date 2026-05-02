@@ -41,7 +41,7 @@ const masterLevels = ref([])
 const masterGroups = ref([])
 const masterSessions = ref([])
 const selectedTemplate = ref('official')
-const printTemplateStorageKey = 'mycbt.print.templatePreset'
+const printTemplateStorageKey = 'atigacbt.print.templatePreset'
 const templatePresets = [
   {
     value: 'official',

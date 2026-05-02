@@ -140,7 +140,7 @@ const exportPdf = () => {
           </thead>
           <tbody>${rowsHtml}</tbody>
         </table>
-        <div class="footer">MYCBT - Rekap Absensi Peserta</div>
+        <div class="footer">AtigaCBT - Rekap Absensi Peserta</div>
       </body>
     </html>
   `

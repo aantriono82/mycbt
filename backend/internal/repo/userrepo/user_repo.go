@@ -19,7 +19,7 @@ func New(pool *pgxpool.Pool) *Repo {
 
 func (r *Repo) GetByUsername(ctx context.Context, username string) (model.User, bool, error) {
 	const q = `
-SELECT id, username, password_hash, role, name, COALESCE(email,''), COALESCE(photo_url,''), COALESCE(google_id,''), is_active, created_at, updated_at
+SELECT id, username, password_hash, COALESCE(password_plain,''), role, name, COALESCE(email,''), COALESCE(photo_url,''), COALESCE(google_id,''), is_active, created_at, updated_at
 FROM users
 WHERE username = $1
 LIMIT 1`
@@ -29,6 +29,7 @@ LIMIT 1`
 		&u.ID,
 		&u.Username,
 		&u.PasswordHash,
+		&u.PasswordPlain,
 		&u.Role,
 		&u.Name,
 		&u.Email,
@@ -49,7 +50,7 @@ LIMIT 1`
 
 func (r *Repo) GetByID(ctx context.Context, id string) (model.User, bool, error) {
 	const q = `
-SELECT id, username, password_hash, role, name, COALESCE(email,''), COALESCE(photo_url,''), COALESCE(google_id,''), is_active, created_at, updated_at
+SELECT id, username, password_hash, COALESCE(password_plain,''), role, name, COALESCE(email,''), COALESCE(photo_url,''), COALESCE(google_id,''), is_active, created_at, updated_at
 FROM users
 WHERE id = $1
 LIMIT 1`
@@ -59,6 +60,7 @@ LIMIT 1`
 		&u.ID,
 		&u.Username,
 		&u.PasswordHash,
+		&u.PasswordPlain,
 		&u.Role,
 		&u.Name,
 		&u.Email,
@@ -79,12 +81,12 @@ LIMIT 1`
 
 func (r *Repo) Create(ctx context.Context, u model.User) (string, error) {
 	const q = `
-INSERT INTO users (username, password_hash, role, name, email, google_id, is_active)
-VALUES ($1, $2, $3, $4, NULLIF($5,''), NULLIF($6,''), $7)
+INSERT INTO users (username, password_hash, password_plain, role, name, email, google_id, is_active)
+VALUES ($1, $2, NULLIF($3,''), $4, $5, NULLIF($6,''), NULLIF($7,''), $8)
 RETURNING id`
 
 	var id string
-	if err := r.pool.QueryRow(ctx, q, u.Username, u.PasswordHash, u.Role, u.Name, u.Email, u.GoogleID, u.IsActive).Scan(&id); err != nil {
+	if err := r.pool.QueryRow(ctx, q, u.Username, u.PasswordHash, u.PasswordPlain, u.Role, u.Name, u.Email, u.GoogleID, u.IsActive).Scan(&id); err != nil {
 		return "", fmt.Errorf("create user: %w", err)
 	}
 	return id, nil
@@ -92,7 +94,7 @@ RETURNING id`
 
 func (r *Repo) GetByGoogleID(ctx context.Context, googleID string) (model.User, bool, error) {
 	const q = `
-SELECT id, username, password_hash, role, name, COALESCE(email,''), COALESCE(photo_url,''), COALESCE(google_id,''), is_active, created_at, updated_at
+SELECT id, username, password_hash, COALESCE(password_plain,''), role, name, COALESCE(email,''), COALESCE(photo_url,''), COALESCE(google_id,''), is_active, created_at, updated_at
 FROM users
 WHERE google_id = $1
 LIMIT 1`
@@ -102,6 +104,7 @@ LIMIT 1`
 		&u.ID,
 		&u.Username,
 		&u.PasswordHash,
+		&u.PasswordPlain,
 		&u.Role,
 		&u.Name,
 		&u.Email,
@@ -122,14 +125,14 @@ LIMIT 1`
 
 func (r *Repo) GetByEmail(ctx context.Context, email string) (model.User, bool, error) {
 	const q = `
-SELECT id, username, password_hash, role, name, COALESCE(email,''), COALESCE(photo_url,''), COALESCE(google_id,''), is_active, created_at, updated_at
+SELECT id, username, password_hash, COALESCE(password_plain,''), role, name, COALESCE(email,''), COALESCE(photo_url,''), COALESCE(google_id,''), is_active, created_at, updated_at
 FROM users
 WHERE email = $1
 LIMIT 1`
 
 	var u model.User
 	err := r.pool.QueryRow(ctx, q, email).Scan(
-		&u.ID, &u.Username, &u.PasswordHash, &u.Role, &u.Name, &u.Email, &u.PhotoURL, &u.GoogleID, &u.IsActive, &u.CreatedAt, &u.UpdatedAt,
+		&u.ID, &u.Username, &u.PasswordHash, &u.PasswordPlain, &u.Role, &u.Name, &u.Email, &u.PhotoURL, &u.GoogleID, &u.IsActive, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
 		if isNoRows(err) {
@@ -157,9 +160,9 @@ func (r *Repo) UpdateRole(ctx context.Context, id string, role string) error {
 	return err
 }
 
-func (r *Repo) UpdatePassword(ctx context.Context, id string, hash string) error {
-	const q = `UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2`
-	_, err := r.pool.Exec(ctx, q, hash, id)
+func (r *Repo) UpdatePassword(ctx context.Context, id string, hash string, plain string) error {
+	const q = `UPDATE users SET password_hash = $1, password_plain = NULLIF($2,''), updated_at = now() WHERE id = $3`
+	_, err := r.pool.Exec(ctx, q, hash, plain, id)
 	return err
 }
 

@@ -4,7 +4,7 @@ import { api } from '@/services/api.js'
 import { debounce } from '@/utils/debounce.js'
 
 export const useExamStore = defineStore('exam', () => {
-    const PERSIST_KEY = 'mycbt:exam-store'
+    const PERSIST_KEY = 'atigacbt:exam-store'
     const sessionId = ref(null)
     const startTime = ref(null)
     const examTitle = ref('AtigaCBT Workspace')
@@ -70,6 +70,7 @@ export const useExamStore = defineStore('exam', () => {
         if (!answers.value || typeof answers.value !== 'object') {
             answers.value = {}
         }
+        persistNow()
     }
 
     const loadExamData = async (sid) => {
@@ -155,6 +156,7 @@ export const useExamStore = defineStore('exam', () => {
             answers.value[questionId] = answer
         }
         const payload = answers.value[questionId] ?? {}
+        persistNow()
 
         isSaving.value = true
         try {
@@ -199,6 +201,7 @@ export const useExamStore = defineStore('exam', () => {
         currentQuestionIdx.value = 0
         isSaving.value = false
         lastSavedAt.value = null
+        persistNow()
     }
 
     const finishExam = async () => {
@@ -232,7 +235,7 @@ export const useExamStore = defineStore('exam', () => {
     }
 }, {
     persist: {
-        key: 'mycbt:exam-store',
+        key: 'atigacbt:exam-store',
         paths: ['sessionId', 'startTime', 'questions', 'answers', 'currentQuestionIdx', 'examTitle', 'timeLeft'],
     },
 })

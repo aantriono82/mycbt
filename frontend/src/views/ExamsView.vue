@@ -21,7 +21,7 @@ const formatDateIndonesian = (dateStr) => {
 
   return `${formatted} ${tz}`
 }
-  import { mdiClipboardTextOutline, mdiContentCopy, mdiContentSave, mdiDelete, mdiPlus, mdiRefresh } from '@mdi/js'
+  import { mdiArchive, mdiCheckCircle, mdiClipboardTextOutline, mdiContentCopy, mdiContentSave, mdiDelete, mdiFileDocumentEditOutline, mdiPlus, mdiRefresh } from '@mdi/js'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
@@ -59,6 +59,8 @@ const formErrors = reactive({
   starts_at: '',
   ends_at: '',
   duration_minutes: '',
+  max_attempts: '',
+  passing_score: '',
   question_set_id: '',
   num_questions: '',
   target_ids: '',
@@ -67,6 +69,8 @@ const formErrors = reactive({
 const selectedExamId = ref('')
 const selectedExamSessionId = ref('')
 const selectedExamScoringMode = ref('partial')
+const selectedExamMaxAttempts = ref(1)
+const selectedExamPassingScore = ref(75)
 const selectedExam = computed(() => exams.value.find((x) => x.id === selectedExamId.value) || null)
 const selectedExamShortId = computed(() => shortCode2(selectedExamId.value))
 
@@ -78,6 +82,8 @@ const form = reactive({
   starts_at: '',
   ends_at: '',
   duration_minutes: 60,
+  max_attempts: 1,
+  passing_score: 75,
   shuffle_questions: true,
   shuffle_options: true,
   scoring_mode: 'partial',
@@ -164,27 +170,36 @@ watch(helperStudent, (val) => {
   }
 })
 
-const selectedLevelNames = computed(() => {
+const selectedLevelItems = computed(() => {
   const ids = parseCsvLines(targetForm.level_ids_text)
   return ids.map((id) => {
     const level = levels.value.find((l) => l.id === id)
-    return level ? `${shortCode2(level.id)} · ${level.name}` : id
+    return {
+      id,
+      label: level ? `${shortCode2(level.id)} · ${level.name}` : id,
+    }
   })
 })
 
-const selectedGroupNames = computed(() => {
+const selectedGroupItems = computed(() => {
   const ids = parseCsvLines(targetForm.group_ids_text)
   return ids.map((id) => {
     const group = groups.value.find((g) => g.id === id)
-    return group ? `${shortCode2(group.id)} · ${group.name}` : id
+    return {
+      id,
+      label: group ? `${shortCode2(group.id)} · ${group.name}` : id,
+    }
   })
 })
 
-const selectedStudentNames = computed(() => {
+const selectedStudentItems = computed(() => {
   const ids = parseCsvLines(targetForm.student_ids_text)
   return ids.map((id) => {
     const s = students.value.find((x) => x.id === id)
-    return s ? `${shortCode2(s.id)} · ${s.name} (${s.nis})` : id
+    return {
+      id,
+      label: s ? `${shortCode2(s.id)} · ${s.name} (${s.nis})` : id,
+    }
   })
 })
 
@@ -197,6 +212,15 @@ const parseCsvLines = (value) =>
     .map((item) => item.trim())
     .filter(Boolean)
 
+const removeTargetValue = (key, value) => {
+  const items = parseCsvLines(targetForm[key]).filter((item) => item !== value)
+  targetForm[key] = items.join('\n')
+}
+
+const clearTargetValue = (key) => {
+  targetForm[key] = ''
+}
+
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -207,6 +231,14 @@ const clearExamFormErrors = () => {
   formErrors.starts_at = ''
   formErrors.ends_at = ''
   formErrors.duration_minutes = ''
+  formErrors.max_attempts = ''
+  formErrors.passing_score = ''
+}
+
+const clampScore = (value, fallback = 75) => {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return fallback
+  return Math.max(0, Math.min(100, Math.round(n)))
 }
 
 const clearAttachErrors = () => {
@@ -239,6 +271,14 @@ const validateCreateExamForm = () => {
   if (!Number.isInteger(duration) || duration < 1 || duration > 600) {
     formErrors.duration_minutes = 'Durasi harus bilangan bulat 1-600'
   }
+  const maxAttempts = Number(form.max_attempts)
+  if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 100) {
+    formErrors.max_attempts = 'Attempt harus bilangan bulat 1-100'
+  }
+  const passingScore = Number(form.passing_score)
+  if (!Number.isInteger(passingScore) || passingScore < 0 || passingScore > 100) {
+    formErrors.passing_score = 'Ambang lulus harus bilangan bulat 0-100'
+  }
   return !Object.values({
     teacher_id: formErrors.teacher_id,
     subject_id: formErrors.subject_id,
@@ -246,6 +286,8 @@ const validateCreateExamForm = () => {
     starts_at: formErrors.starts_at,
     ends_at: formErrors.ends_at,
     duration_minutes: formErrors.duration_minutes,
+    max_attempts: formErrors.max_attempts,
+    passing_score: formErrors.passing_score,
   }).some(Boolean)
 }
 
@@ -449,6 +491,44 @@ const updateExamScoringMode = async () => {
   }
 }
 
+const updateExamMaxAttempts = async () => {
+  if (!selectedExamId.value) return
+  const maxAttempts = Number(selectedExamMaxAttempts.value)
+  if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 100) {
+    errorMessage.value = 'Attempt harus bilangan bulat 1-100'
+    successMessage.value = ''
+    return
+  }
+  errorMessage.value = ''
+  successMessage.value = ''
+  try {
+    await api.patch(`/api/v1/exams/${selectedExamId.value}`, {
+      max_attempts: maxAttempts,
+    })
+    successMessage.value = 'Batas attempt berhasil diperbarui'
+    await loadExams()
+  } catch (error) {
+    errorMessage.value = error?.response?.data?.error?.message || 'Gagal memperbarui batas attempt'
+  }
+}
+
+const updateExamPassingScore = async () => {
+  if (!selectedExamId.value) return
+  const passingScore = clampScore(selectedExamPassingScore.value)
+  selectedExamPassingScore.value = passingScore
+  errorMessage.value = ''
+  successMessage.value = ''
+  try {
+    await api.patch(`/api/v1/exams/${selectedExamId.value}`, {
+      passing_score: passingScore,
+    })
+    successMessage.value = 'Ambang lulus berhasil diperbarui'
+    await loadExams()
+  } catch (error) {
+    errorMessage.value = error?.response?.data?.error?.message || 'Gagal memperbarui ambang lulus'
+  }
+}
+
 const createExam = async () => {
   successMessage.value = ''
   errorMessage.value = ''
@@ -465,6 +545,8 @@ const createExam = async () => {
     starts_at: form.starts_at ? new Date(form.starts_at).toISOString() : '',
     ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : '',
     duration_minutes: Number(form.duration_minutes),
+    max_attempts: Number(form.max_attempts),
+    passing_score: clampScore(form.passing_score),
     shuffle_questions: form.shuffle_questions,
     shuffle_options: form.shuffle_options,
     scoring_mode: String(form.scoring_mode || 'partial').trim() || 'partial',
@@ -488,6 +570,8 @@ const createExam = async () => {
     scheduleForm.ends_hour = ''
     scheduleForm.ends_minute = ''
     form.duration_minutes = 60
+    form.max_attempts = 1
+    form.passing_score = 75
     form.scoring_mode = 'partial'
     await loadExams()
     selectedExamId.value = data?.data?.id || selectedExamId.value
@@ -591,9 +675,13 @@ watch(selectedExamId, (newId) => {
   if (selectedExam.value) {
     selectedExamSessionId.value = selectedExam.value.session_id || ''
     selectedExamScoringMode.value = selectedExam.value.scoring_mode || 'partial'
+    selectedExamMaxAttempts.value = Number(selectedExam.value.max_attempts) > 0 ? Number(selectedExam.value.max_attempts) : 1
+    selectedExamPassingScore.value = clampScore(selectedExam.value.passing_score, 75)
   } else {
     selectedExamSessionId.value = ''
     selectedExamScoringMode.value = 'partial'
+    selectedExamMaxAttempts.value = 1
+    selectedExamPassingScore.value = 75
   }
 })
 
@@ -610,149 +698,193 @@ onMounted(async () => {
         <BaseButton :icon="mdiRefresh" color="info" label="Muat Ulang" @click="loadExams(); loadQuestionSets(); loadSelectedExamDetails()" />
       </SectionTitleLineWithButton>
 
-      <div class="mb-6 grid gap-6 xl:grid-cols-5">
-        <CardBox class="xl:col-span-2">
-          <h3 class="mb-4 text-lg font-semibold dark:text-slate-100">Tambah Jadwal Ujian</h3>
-          <div class="grid gap-4">
+      <div class="mb-6 grid gap-6 2xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.35fr)]">
+        <CardBox>
+          <div class="mb-6 flex flex-col gap-2 border-b border-slate-100 pb-4 dark:border-slate-800">
+            <h3 class="text-lg font-semibold dark:text-slate-100">Tambah Jadwal Ujian</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400">
+              Susun identitas ujian, waktu pelaksanaan, dan aturan penilaian dalam satu form.
+            </p>
+          </div>
+
+          <div class="grid gap-5">
             <FormField v-if="!isTeacherArea" label="Guru" :error="formErrors.teacher_id">
               <FormControl
                 v-model="form.teacher_id"
                 :options="[{ id: '', label: 'Pilih guru' }, ...teachers.map((item) => ({ id: item.id, label: item.name }))]"
               />
             </FormField>
-            <FormField label="Mata Pelajaran" :error="formErrors.subject_id">
-              <FormControl
-                v-model="form.subject_id"
-                :options="[{ id: '', label: 'Pilih mapel' }, ...subjects.map((item) => ({ id: item.id, label: item.code ? `${item.code} - ${item.name}` : item.name }))]"
-              />
-            </FormField>
-            <FormField label="Sesi (Opsional)">
-              <FormControl
-                v-model="form.session_id"
-                :options="[{ id: '', label: 'Pilih sesi (pilihan)' }, ...sessions.map((item) => ({ id: item.id, label: item.start_time ? `${item.name} (${item.start_time} - ${item.end_time})` : item.name }))]"
-              />
-            </FormField>
+
+            <div class="grid gap-5 xl:grid-cols-2">
+              <FormField label="Mata Pelajaran" :error="formErrors.subject_id">
+                <FormControl
+                  v-model="form.subject_id"
+                  :options="[{ id: '', label: 'Pilih mapel' }, ...subjects.map((item) => ({ id: item.id, label: item.code ? `${item.code} - ${item.name}` : item.name }))]"
+                />
+              </FormField>
+              <FormField label="Sesi (Opsional)">
+                <FormControl
+                  v-model="form.session_id"
+                  :options="[{ id: '', label: 'Pilih sesi (pilihan)' }, ...sessions.map((item) => ({ id: item.id, label: item.start_time ? `${item.name} (${item.start_time} - ${item.end_time})` : item.name }))]"
+                />
+              </FormField>
+              </div>
+
             <FormField label="Judul Ujian" :error="formErrors.title">
               <FormControl v-model="form.title" placeholder="Ujian Harian 1" />
             </FormField>
-            <FormField label="Mulai" :error="formErrors.starts_at" help="Gunakan format 24 jam. Waktu akan ditampilkan dalam WIB/WITA/WIT sesuai zona waktu Anda">
-              <div class="grid grid-cols-3 gap-2">
-                <FormControl v-model="scheduleForm.starts_date" type="date" />
-                <FormControl
-                  v-model="scheduleForm.starts_hour"
-                  :options="[{ value: '', label: 'Jam' }, ...hourOptions]"
-                />
-                <FormControl
-                  v-model="scheduleForm.starts_minute"
-                  :options="[{ value: '', label: 'Menit' }, ...minuteOptions]"
-                />
+
+            <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-800/20">
+              <div class="mb-4">
+                <div class="text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Waktu Pelaksanaan</div>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Gunakan format 24 jam. Waktu akan ditampilkan sebagai WIB, WITA, atau WIT.
+                </p>
               </div>
-            </FormField>
-            <FormField label="Selesai" :error="formErrors.ends_at" help="Gunakan format 24 jam. Waktu akan ditampilkan dalam WIB/WITA/WIT sesuai zona waktu Anda">
-              <div class="grid grid-cols-3 gap-2">
-                <FormControl v-model="scheduleForm.ends_date" type="date" />
-                <FormControl
-                  v-model="scheduleForm.ends_hour"
-                  :options="[{ value: '', label: 'Jam' }, ...hourOptions]"
-                />
-                <FormControl
-                  v-model="scheduleForm.ends_minute"
-                  :options="[{ value: '', label: 'Menit' }, ...minuteOptions]"
-                />
+
+              <div class="grid gap-4 xl:grid-cols-2">
+                <FormField label="Mulai" :error="formErrors.starts_at">
+                  <div class="grid grid-cols-1 gap-2">
+                    <FormControl v-model="scheduleForm.starts_date" type="date" />
+                    <div class="grid grid-cols-2 gap-2">
+                      <FormControl
+                        v-model="scheduleForm.starts_hour"
+                        :options="[{ value: '', label: 'Jam' }, ...hourOptions]"
+                      />
+                      <FormControl
+                        v-model="scheduleForm.starts_minute"
+                        :options="[{ value: '', label: 'Menit' }, ...minuteOptions]"
+                      />
+                    </div>
+                  </div>
+                </FormField>
+
+                <FormField label="Selesai" :error="formErrors.ends_at">
+                  <div class="grid grid-cols-1 gap-2">
+                    <FormControl v-model="scheduleForm.ends_date" type="date" />
+                    <div class="grid grid-cols-2 gap-2">
+                      <FormControl
+                        v-model="scheduleForm.ends_hour"
+                        :options="[{ value: '', label: 'Jam' }, ...hourOptions]"
+                      />
+                      <FormControl
+                        v-model="scheduleForm.ends_minute"
+                        :options="[{ value: '', label: 'Menit' }, ...minuteOptions]"
+                      />
+                    </div>
+                  </div>
+                </FormField>
               </div>
-            </FormField>
-            <FormField label="Durasi (menit)" :error="formErrors.duration_minutes">
-              <FormControl v-model="form.duration_minutes" inputmode="numeric" />
-            </FormField>
-            <FormField label="Acak Soal">
-              <FormControl
-                v-model="form.shuffle_questions"
-                :options="[
-                  { id: true, label: 'Ya' },
-                  { id: false, label: 'Tidak' },
-                ]"
-              />
-            </FormField>
-            <FormField label="Acak Opsi">
-              <FormControl
-                v-model="form.shuffle_options"
-                :options="[
-                  { id: true, label: 'Ya' },
-                  { id: false, label: 'Tidak' },
-                ]"
-              />
-            </FormField>
-            <FormField label="Mode Penilaian">
-              <FormControl
-                v-model="form.scoring_mode"
-                :options="[
-                  { id: 'partial', label: 'Parsial (nilai proporsional)' },
-                  { id: 'absolute', label: 'Absolut (harus tepat penuh)' },
-                ]"
-              />
-            </FormField>
-            <BaseButton :icon="mdiPlus" color="info" label="Tambah Jadwal" @click="createExam" />
+            </div>
+
+            <div class="grid gap-5 xl:grid-cols-2">
+              <FormField label="Durasi (menit)" :error="formErrors.duration_minutes">
+                <FormControl v-model="form.duration_minutes" inputmode="numeric" />
+              </FormField>
+              <FormField label="Maksimal Attempt" :error="formErrors.max_attempts" help="Berapa kali siswa boleh mulai ulang ujian ini">
+                <FormControl v-model="form.max_attempts" inputmode="numeric" />
+              </FormField>
+              <FormField label="Ambang Lulus" :error="formErrors.passing_score" help="Nilai minimum agar peserta dinyatakan lulus">
+                <FormControl v-model="form.passing_score" inputmode="numeric" />
+              </FormField>
+              <FormField label="Mode Penilaian">
+                <FormControl
+                  v-model="form.scoring_mode"
+                  :options="[
+                    { id: 'partial', label: 'Parsial (nilai proporsional)' },
+                    { id: 'absolute', label: 'Absolut (harus tepat penuh)' },
+                  ]"
+                />
+              </FormField>
+              <FormField label="Acak Soal">
+                <FormControl
+                  v-model="form.shuffle_questions"
+                  :options="[
+                    { id: true, label: 'Ya' },
+                    { id: false, label: 'Tidak' },
+                  ]"
+                />
+              </FormField>
+              <FormField label="Acak Opsi">
+                <FormControl
+                  v-model="form.shuffle_options"
+                  :options="[
+                    { id: true, label: 'Ya' },
+                    { id: false, label: 'Tidak' },
+                  ]"
+                />
+              </FormField>
+            </div>
+
+            <div class="flex justify-end border-t border-slate-100 pt-5 dark:border-slate-800">
+              <BaseButton :icon="mdiPlus" color="info" label="Tambah Jadwal" @click="createExam" />
+            </div>
           </div>
         </CardBox>
 
-        <CardBox class="xl:col-span-3">
-	          <div class="mb-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-	            <div>
-	              <h3 class="text-lg font-semibold dark:text-slate-100">Daftar Jadwal Ujian</h3>
-	              <p class="text-sm text-slate-500 dark:text-slate-400">Pilih satu ujian untuk mengatur bank soal dan target peserta.</p>
-	            </div>
-	            <div class="w-full lg:max-w-sm">
-	              <FormField label="Ujian Aktif">
-	                <FormControl
-	                  v-model="selectedExamId"
-	                  :options="exams.map((item) => ({ id: item.id, label: examOptionLabel(item) }))"
-	                />
-	              </FormField>
-	            </div>
-	          </div>
+        <CardBox>
+          <div class="mb-6 flex flex-col gap-4 border-b border-slate-100 pb-4 dark:border-slate-800 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h3 class="text-lg font-semibold dark:text-slate-100">Daftar Jadwal Ujian</h3>
+              <p class="text-sm text-slate-500 dark:text-slate-400">Pilih satu ujian untuk mengatur bank soal, status publikasi, dan target peserta.</p>
+            </div>
+            <div class="w-full lg:max-w-sm">
+              <FormField label="Ujian Aktif">
+                <FormControl
+                  v-model="selectedExamId"
+                  :options="exams.map((item) => ({ id: item.id, label: examOptionLabel(item) }))"
+                />
+              </FormField>
+            </div>
+          </div>
 
-	          <div v-if="selectedExamId" class="mb-4 rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-3 text-sm bg-slate-50/50 dark:bg-slate-800/30">
-	            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-	              <div>
-                  <div class="mb-4 rounded-lg border border-sky-200 bg-white px-3 py-2 dark:border-sky-900/40 dark:bg-slate-900/50">
-                    <div class="text-[10px] font-black uppercase tracking-widest text-sky-600 dark:text-sky-400">EXAM_ID / ID Ujian</div>
-                    <div class="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
-                      <code class="block break-all rounded bg-slate-100 px-2 py-1 text-xs font-bold text-slate-800 dark:bg-slate-800 dark:text-slate-100">
-                        {{ selectedExamShortId }}
-                      </code>
-                      <BaseButton
-                        :icon="mdiContentCopy"
-                        color="info"
-                        small
-                        label="Salin"
-                        @click="copyExamId(selectedExamId)"
-                      />
-                    </div>
-                    <div class="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                      Format kode: 4 karakter
-                    </div>
+          <div v-if="selectedExamId" class="mb-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-800/20">
+            <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_150px]">
+              <div class="grid gap-4">
+                <div class="rounded-2xl border border-sky-200 bg-white px-4 py-3 dark:border-sky-900/40 dark:bg-slate-900/60">
+                  <div class="text-[10px] font-black uppercase tracking-widest text-sky-600 dark:text-sky-400">EXAM_ID / ID Ujian</div>
+                  <div class="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <code class="block break-all rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:bg-slate-800 dark:text-slate-100">
+                      {{ selectedExamShortId }}
+                    </code>
+                    <BaseButton
+                      :icon="mdiContentCopy"
+                      color="info"
+                      small
+                      label="Salin"
+                      @click="copyExamId(selectedExamId)"
+                    />
                   </div>
-	                <div class="text-slate-500 dark:text-slate-400 font-medium">Status Ujian</div>
-	                <div class="mt-1">
-	                  <span
-	                    class="rounded-full px-2 py-1 text-xs font-semibold"
-	                    :class="
-	                      selectedExam?.status === 'published'
-	                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-	                        : selectedExam?.status === 'archived'
-	                          ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
-	                          : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-	                    "
-	                  >
-	                    {{ selectedExam?.status || '-' }}
-	                  </span>
-	                </div>
-	                <div class="mt-2 text-[10px] text-slate-500 dark:text-slate-500 uppercase font-bold tracking-tight">
-	                  Catatan: ujian hanya muncul di area siswa ketika status = <span class="text-emerald-600 dark:text-emerald-400">published</span>.
-	                </div>
-                  <div class="mt-4 border-t dark:border-slate-800 pt-3">
-                    <div class="text-slate-500 dark:text-slate-400 font-medium text-xs mb-2">PENGATURAN SESI</div>
-                    <div class="flex items-center gap-3">
+                  <div class="mt-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    Format kode: 4 karakter
+                  </div>
+                </div>
+
+                <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900/50">
+                  <div class="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Status Ujian</div>
+                  <div class="mt-2 flex flex-wrap items-center gap-3">
+                    <span
+                      class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                      :class="
+                        selectedExam?.status === 'published'
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                          : selectedExam?.status === 'archived'
+                            ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                      "
+                    >
+                      {{ selectedExam?.status || '-' }}
+                    </span>
+                    <span class="text-xs text-slate-500 dark:text-slate-400">
+                      Ujian tampil ke siswa saat status <span class="font-bold text-emerald-600 dark:text-emerald-400">published</span>.
+                    </span>
+                  </div>
+                </div>
+
+                <div class="grid gap-4 xl:grid-cols-2">
+                  <div class="min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900/50">
+                    <div class="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Pengaturan Sesi</div>
+                    <div class="flex flex-col gap-3">
                       <div class="flex-1">
                         <FormControl
                           v-model="selectedExamSessionId"
@@ -760,12 +892,13 @@ onMounted(async () => {
                           small
                         />
                       </div>
-                      <BaseButton color="info" label="Update Sesi" small @click="updateExamSession" />
+                      <BaseButton class="w-full" color="info" label="Update Sesi" small @click="updateExamSession" />
                     </div>
                   </div>
-                  <div class="mt-4 border-t dark:border-slate-800 pt-3">
-                    <div class="text-slate-500 dark:text-slate-400 font-medium text-xs mb-2">PENGATURAN PENILAIAN</div>
-                    <div class="flex items-center gap-3">
+
+                  <div class="min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900/50">
+                    <div class="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Pengaturan Penilaian</div>
+                    <div class="flex flex-col gap-3">
                       <div class="flex-1">
                         <FormControl
                           v-model="selectedExamScoringMode"
@@ -776,43 +909,78 @@ onMounted(async () => {
                           small
                         />
                       </div>
-                      <BaseButton color="info" label="Update Mode" small @click="updateExamScoringMode" />
+                      <BaseButton class="w-full" color="info" label="Update Mode" small @click="updateExamScoringMode" />
                     </div>
                   </div>
-	              </div>
-	              <div class="flex flex-wrap gap-2">
-	                <BaseButton
-	                  :icon="mdiContentSave"
-	                  color="info"
-	                  small
-	                  label="Publish"
-	                  :disabled="selectedExam?.status === 'published'"
-	                  @click="setExamStatus('published')"
-	                />
-	                <BaseButton
-	                  color="purple"
-	                  small
-	                  label="Draft"
-	                  :disabled="selectedExam?.status === 'draft'"
-	                  @click="setExamStatus('draft')"
-	                />
-	                <BaseButton
-	                  color="success"
-	                  small
-	                  label="Archive"
-	                  :disabled="selectedExam?.status === 'archived'"
-	                  @click="setExamStatus('archived')"
-	                />
-	                <BaseButton
-	                  :icon="mdiDelete"
-	                  color="danger"
-	                  small
-	                  label="Hapus"
-	                  @click="deleteExam"
-	                />
-	              </div>
-	            </div>
-	          </div>
+
+                  <div class="min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900/50">
+                    <div class="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Batas Attempt</div>
+                    <div class="flex flex-col gap-3">
+                      <div class="flex-1">
+                        <FormControl
+                          v-model="selectedExamMaxAttempts"
+                          inputmode="numeric"
+                          small
+                        />
+                      </div>
+                      <BaseButton class="w-full" color="info" label="Update Attempt" small @click="updateExamMaxAttempts" />
+                    </div>
+                  </div>
+
+                  <div class="min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900/50">
+                    <div class="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Ambang Lulus</div>
+                    <div class="flex flex-col gap-3">
+                      <div class="flex-1">
+                        <FormControl
+                          v-model="selectedExamPassingScore"
+                          inputmode="numeric"
+                          small
+                        />
+                      </div>
+                      <BaseButton class="w-full" color="info" label="Update Lulus" small @click="updateExamPassingScore" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/50 xl:w-[150px] xl:justify-self-end">
+                <div class="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Aksi Cepat</div>
+                <div class="grid gap-3">
+                  <BaseButton
+                    :icon="mdiCheckCircle"
+                    class="w-full"
+                    color="info"
+                    label="Publish"
+                    :disabled="selectedExam?.status === 'published'"
+                    @click="setExamStatus('published')"
+                  />
+                  <BaseButton
+                    :icon="mdiFileDocumentEditOutline"
+                    class="w-full"
+                    color="purple"
+                    label="Draft"
+                    :disabled="selectedExam?.status === 'draft'"
+                    @click="setExamStatus('draft')"
+                  />
+                  <BaseButton
+                    :icon="mdiArchive"
+                    class="w-full"
+                    color="success"
+                    label="Archive"
+                    :disabled="selectedExam?.status === 'archived'"
+                    @click="setExamStatus('archived')"
+                  />
+                  <BaseButton
+                    :icon="mdiDelete"
+                    color="danger"
+                    class="w-full"
+                    label="Hapus"
+                    @click="deleteExam"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div v-if="!authStore.isAuthenticated" class="rounded-lg bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-900/40">
             Login terlebih dulu agar jadwal ujian dapat dimuat dari backend.
@@ -825,7 +993,101 @@ onMounted(async () => {
           </div>
 
           <div v-if="isLoading" class="text-sm text-slate-500 dark:text-slate-400 italic">Memuat jadwal ujian...</div>
-          <div v-else class="mb-6 overflow-x-auto">
+          <div v-else class="mb-6">
+            <div class="grid gap-4 lg:hidden">
+              <div
+                v-for="exam in exams"
+                :key="`mobile-${exam.id}`"
+                class="rounded-2xl border p-4 transition-colors"
+                :class="selectedExamId === exam.id ? 'border-sky-200 bg-sky-50/70 dark:border-sky-900/40 dark:bg-sky-900/20' : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/50'"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <div class="font-semibold text-slate-800 dark:text-slate-100">{{ exam.title }}</div>
+                    <div class="mt-1 flex flex-wrap items-center gap-2">
+                      <code class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                        EXAM_ID: {{ shortId(exam.id) }}
+                      </code>
+                      <button
+                        type="button"
+                        class="text-[10px] font-black uppercase tracking-widest text-sky-600 hover:text-sky-800 dark:text-sky-400"
+                        @click="copyExamId(exam.id)"
+                      >
+                        Salin
+                      </button>
+                    </div>
+                  </div>
+                  <span
+                    class="shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-tight"
+                    :class="exam.status === 'published' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'"
+                  >
+                    {{ exam.status }}
+                  </span>
+                </div>
+
+                <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800/60">
+                    <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Mata Pelajaran</div>
+                    <div class="mt-1 text-sm text-slate-700 dark:text-slate-300">{{ subjects.find(s => s.id === exam.subject_id)?.name || exam.subject_id }}</div>
+                  </div>
+                  <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800/60">
+                    <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Sesi</div>
+                    <div v-if="exam.session_id" class="mt-1">
+                      <div class="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{{ exam.session_name || 'Sesi' }}</div>
+                      <div v-if="exam.session_start_time" class="text-[11px] text-slate-500 dark:text-slate-400">
+                        {{ exam.session_start_time }} - {{ exam.session_end_time }}
+                      </div>
+                    </div>
+                    <div v-else class="mt-1 text-sm italic text-slate-400">N/A</div>
+                  </div>
+                  <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800/60">
+                    <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Mode</div>
+                    <div class="mt-1">
+                      <span
+                        class="rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-tight"
+                        :class="exam.scoring_mode === 'absolute' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'"
+                      >
+                        {{ exam.scoring_mode || 'partial' }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800/60">
+                    <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Attempt / Lulus</div>
+                    <div class="mt-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+                      {{ exam.max_attempts || 1 }} attempt · {{ exam.passing_score ?? 75 }}%
+                    </div>
+                  </div>
+                  <div class="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800/60 sm:col-span-2">
+                    <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Jadwal</div>
+                    <div class="mt-1 text-sm text-slate-700 dark:text-slate-300">Mulai: {{ formatDateIndonesian(exam.starts_at) }}</div>
+                    <div class="text-sm text-slate-500 dark:text-slate-400">Selesai: {{ formatDateIndonesian(exam.ends_at) }}</div>
+                  </div>
+                </div>
+
+                <div class="mt-4 flex flex-wrap gap-2">
+                  <BaseButton
+                    color="info"
+                    small
+                    label="Pilih"
+                    @click="selectedExamId = exam.id"
+                  />
+                  <BaseButton
+                    :icon="mdiDelete"
+                    color="danger"
+                    small
+                    label="Hapus"
+                    @click="selectedExamId = exam.id; deleteExam()"
+                  />
+                </div>
+              </div>
+
+              <div v-if="!exams.length" class="rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-sm italic text-slate-400 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-500">
+                Belum ada jadwal ujian.
+              </div>
+            </div>
+
+            <div class="hidden overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 lg:block">
+              <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
               <thead class="border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 uppercase text-xs tracking-wider font-bold">
                 <tr>
@@ -833,6 +1095,8 @@ onMounted(async () => {
                   <th class="px-3 py-3">Mata Pelajaran</th>
                   <th class="px-3 py-3">Sesi</th>
                   <th class="px-3 py-3 text-center">Mode</th>
+                  <th class="px-3 py-3 text-center">Attempt</th>
+                  <th class="px-3 py-3 text-center">Lulus</th>
                   <th class="px-3 py-3">Mulai (WIB/WITA/WIT)</th>
                   <th class="px-3 py-3">Selesai (WIB/WITA/WIT)</th>
                   <th class="px-3 py-3 text-center">Status</th>
@@ -881,6 +1145,12 @@ onMounted(async () => {
                       {{ exam.scoring_mode || 'partial' }}
                     </span>
                   </td>
+                  <td class="px-3 py-3 text-center text-slate-500 dark:text-slate-400 font-semibold">
+                    {{ exam.max_attempts || 1 }}
+                  </td>
+                  <td class="px-3 py-3 text-center text-slate-500 dark:text-slate-400 font-semibold">
+                    {{ exam.passing_score ?? 75 }}
+                  </td>
                   <td class="px-3 py-3 text-xs text-slate-500 dark:text-slate-400">{{ formatDateIndonesian(exam.starts_at) }}</td>
                   <td class="px-3 py-3 text-xs text-slate-500 dark:text-slate-400">{{ formatDateIndonesian(exam.ends_at) }}</td>
                   <td class="px-3 py-3 text-center">
@@ -901,15 +1171,20 @@ onMounted(async () => {
                   </td>
                 </tr>
                 <tr v-if="!exams.length && !isLoading">
-                  <td colspan="8" class="px-3 py-10 text-center text-slate-400 dark:text-slate-500 italic">Belum ada jadwal ujian.</td>
+                  <td colspan="10" class="px-3 py-10 text-center text-slate-400 dark:text-slate-500 italic">Belum ada jadwal ujian.</td>
                 </tr>
               </tbody>
             </table>
+              </div>
+            </div>
           </div>
 
           <div v-if="selectedExamId" class="grid gap-6 xl:grid-cols-2">
-            <div class="rounded-2xl border border-emerald-100 dark:border-emerald-900/30 p-4 bg-emerald-50/30 dark:bg-emerald-900/10">
-              <h4 class="mb-4 text-base font-semibold dark:text-slate-200">Attach Bank Soal</h4>
+            <div class="rounded-2xl border border-emerald-100 bg-emerald-50/30 p-5 dark:border-emerald-900/30 dark:bg-emerald-900/10">
+              <div class="mb-5 flex flex-col gap-1 border-b border-emerald-100/80 pb-4 dark:border-emerald-900/30">
+                <h4 class="text-base font-semibold dark:text-slate-200">Attach Bank Soal</h4>
+                <p class="text-sm text-slate-500 dark:text-slate-400">Tentukan bank soal yang dipakai dan batasi jumlah soal bila diperlukan.</p>
+              </div>
               <div class="grid gap-4">
                 <FormField label="Question Set" :error="formErrors.question_set_id">
                   <FormControl
@@ -935,7 +1210,7 @@ onMounted(async () => {
                 <div
                   v-for="item in attachedQuestionSets"
                   :key="item.question_set_id"
-                  class="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm bg-white dark:bg-slate-800/40"
+                  class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/40"
                 >
                   <div>
                     <div class="font-medium dark:text-slate-200">{{ questionSetTitle(item.question_set_id) }}</div>
@@ -949,10 +1224,13 @@ onMounted(async () => {
               </div>
             </div>
 
-            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50/20 dark:bg-slate-800/10">
-              <h4 class="mb-4 text-base font-semibold dark:text-slate-200">Target Ujian</h4>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50/20 p-5 dark:border-slate-800 dark:bg-slate-800/10">
+              <div class="mb-5 flex flex-col gap-1 border-b border-slate-200 pb-4 dark:border-slate-800">
+                <h4 class="text-base font-semibold dark:text-slate-200">Target Ujian</h4>
+                <p class="text-sm text-slate-500 dark:text-slate-400">Atur cakupan peserta berdasarkan level, group, atau siswa tertentu.</p>
+              </div>
               <div class="grid gap-4">
-                <div class="grid gap-6 md:grid-cols-3">
+                <div class="grid gap-6">
                   <div>
                     <FormField label="Target Level" :error="formErrors.target_ids">
                       <div class="flex flex-col gap-2">
@@ -960,18 +1238,39 @@ onMounted(async () => {
                           v-model="helperLevel"
                           :options="[{ id: '', label: 'Pilih level...' }, ...levels.map((l) => ({ id: l.id, label: `${shortId(l.id)} · ${l.name}` }))]"
                         />
-                        <FormControl
-                          v-model="targetForm.level_ids_text"
-                          type="textarea"
-                          placeholder="List LEVEL_ID (kode 4 karakter)"
-                        />
+                        <input v-model="targetForm.level_ids_text" type="hidden" />
+                        <div class="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm dark:border-slate-700 dark:bg-slate-900/50">
+                          <div v-if="selectedLevelItems.length" class="flex flex-wrap gap-2">
+                            <span
+                              v-for="item in selectedLevelItems"
+                              :key="item.id"
+                              class="inline-flex items-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] font-semibold text-sky-700 dark:border-sky-800 dark:bg-sky-900/30 dark:text-sky-300"
+                            >
+                              <span>{{ item.label }}</span>
+                              <button
+                                type="button"
+                                class="text-sky-500 transition-colors hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-200"
+                                @click="removeTargetValue('level_ids_text', item.id)"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          </div>
+                          <div v-else class="text-slate-400 dark:text-slate-500">
+                            Belum ada level dipilih.
+                          </div>
+                          <div class="mt-3 flex justify-end" v-if="selectedLevelItems.length">
+                            <button
+                              type="button"
+                              class="text-xs font-semibold text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                              @click="clearTargetValue('level_ids_text')"
+                            >
+                              Bersihkan
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </FormField>
-                    <div class="mt-2 flex flex-wrap gap-1">
-                      <span v-for="name in selectedLevelNames" :key="name" class="rounded bg-sky-100 dark:bg-sky-900/30 px-2 py-0.5 text-[10px] text-sky-700 dark:text-sky-400 border border-sky-200 dark:border-sky-800">
-                        {{ name }}
-                      </span>
-                    </div>
                   </div>
 
                   <div>
@@ -981,18 +1280,39 @@ onMounted(async () => {
                           v-model="helperGroup"
                           :options="[{ id: '', label: 'Pilih group...' }, ...groups.map((g) => ({ id: g.id, label: `${shortId(g.id)} · ${g.name}` }))]"
                         />
-                        <FormControl
-                          v-model="targetForm.group_ids_text"
-                          type="textarea"
-                          placeholder="List GROUP_ID (kode 4 karakter)"
-                        />
+                        <input v-model="targetForm.group_ids_text" type="hidden" />
+                        <div class="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm dark:border-slate-700 dark:bg-slate-900/50">
+                          <div v-if="selectedGroupItems.length" class="flex flex-wrap gap-2">
+                            <span
+                              v-for="item in selectedGroupItems"
+                              :key="item.id"
+                              class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
+                            >
+                              <span>{{ item.label }}</span>
+                              <button
+                                type="button"
+                                class="text-indigo-500 transition-colors hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-200"
+                                @click="removeTargetValue('group_ids_text', item.id)"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          </div>
+                          <div v-else class="text-slate-400 dark:text-slate-500">
+                            Belum ada group dipilih.
+                          </div>
+                          <div class="mt-3 flex justify-end" v-if="selectedGroupItems.length">
+                            <button
+                              type="button"
+                              class="text-xs font-semibold text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                              @click="clearTargetValue('group_ids_text')"
+                            >
+                              Bersihkan
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </FormField>
-                    <div class="mt-2 flex flex-wrap gap-1">
-                      <span v-for="name in selectedGroupNames" :key="name" class="rounded bg-indigo-100 dark:bg-indigo-900/30 px-2 py-0.5 text-[10px] text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
-                        {{ name }}
-                      </span>
-                    </div>
                   </div>
 
                   <div>
@@ -1002,18 +1322,39 @@ onMounted(async () => {
                           v-model="helperStudent"
                           :options="[{ id: '', label: 'Pilih siswa...' }, ...students.map((s) => ({ id: s.id, label: `${shortId(s.id)} · ${s.name} (${s.nis})` }))]"
                         />
-                        <FormControl
-                          v-model="targetForm.student_ids_text"
-                          type="textarea"
-                          placeholder="List SISWA_ID (kode 4 karakter)"
-                        />
+                        <input v-model="targetForm.student_ids_text" type="hidden" />
+                        <div class="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm dark:border-slate-700 dark:bg-slate-900/50">
+                          <div v-if="selectedStudentItems.length" class="flex flex-wrap gap-2">
+                            <span
+                              v-for="item in selectedStudentItems"
+                              :key="item.id"
+                              class="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+                            >
+                              <span>{{ item.label }}</span>
+                              <button
+                                type="button"
+                                class="text-emerald-500 transition-colors hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-200"
+                                @click="removeTargetValue('student_ids_text', item.id)"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          </div>
+                          <div v-else class="text-slate-400 dark:text-slate-500">
+                            Belum ada siswa dipilih.
+                          </div>
+                          <div class="mt-3 flex justify-end" v-if="selectedStudentItems.length">
+                            <button
+                              type="button"
+                              class="text-xs font-semibold text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                              @click="clearTargetValue('student_ids_text')"
+                            >
+                              Bersihkan
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </FormField>
-                    <div class="mt-2 flex flex-wrap gap-1">
-                      <span v-for="name in selectedStudentNames" :key="name" class="rounded bg-emerald-100 dark:bg-emerald-900/30 px-2 py-0.5 text-[10px] text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                        {{ name }}
-                      </span>
-                    </div>
                   </div>
                 </div>
                 <BaseButton
@@ -1025,7 +1366,7 @@ onMounted(async () => {
               </div>
 
               <div class="mt-4">
-                <div class="mb-2 text-sm font-medium text-slate-700 dark:text-slate-300 border-t dark:border-slate-800 pt-3">Target Tersimpan</div>
+                <div class="mb-3 border-t border-slate-200 pt-4 text-sm font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300">Target Tersimpan</div>
                 <div v-if="isLoadingDetails" class="text-sm text-slate-500 dark:text-slate-400 italic">Memuat target...</div>
                 <div v-else class="space-y-2 text-sm">
                   <div

@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -59,6 +60,29 @@ func (h *UploadsHandler) UploadImage(c *gin.Context) {
 			"url": url,
 		},
 	})
+}
+
+func (h *UploadsHandler) ServeObject(c *gin.Context) {
+	objectKey := strings.TrimLeft(strings.TrimSpace(c.Param("filepath")), "/")
+	if objectKey == "" {
+		c.Status(http.StatusNotFound)
+		return
+	}
+
+	reader, contentType, err := h.store.GetObject(c.Request.Context(), objectKey)
+	if err != nil {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	defer reader.Close()
+
+	if strings.TrimSpace(contentType) == "" {
+		contentType = "application/octet-stream"
+	}
+	c.Header("Content-Type", contentType)
+	c.Header("Cache-Control", "public, max-age=31536000, immutable")
+	c.Status(http.StatusOK)
+	_, _ = io.Copy(c.Writer, reader)
 }
 
 func randHex(nbytes int) string {

@@ -1132,6 +1132,7 @@ func (h *AdminMasterHandler) CreateTeacher(c *gin.Context) {
 		c.Request.Context(),
 		strings.TrimSpace(req.Username),
 		hash,
+		strings.TrimSpace(req.Password),
 		strings.TrimSpace(req.Name),
 		strings.TrimSpace(req.Email),
 		strings.TrimSpace(req.Phone),
@@ -1195,6 +1196,7 @@ func (h *AdminMasterHandler) UpdateTeacher(c *gin.Context) {
 		strings.TrimSpace(req.Jenjang),
 		*req.IsActive,
 		passHash,
+		strings.TrimSpace(req.Password),
 	)
 	if err != nil {
 		if pgerr.Code(err) == pgerr.CodeUniqueViolation {
@@ -1285,6 +1287,7 @@ func (h *AdminMasterHandler) CreateStudent(c *gin.Context) {
 		c.Request.Context(),
 		strings.TrimSpace(req.Username),
 		hash,
+		strings.TrimSpace(req.Password),
 		strings.TrimSpace(req.Name),
 		strings.TrimSpace(req.Email),
 		strings.TrimSpace(req.Phone),
@@ -1345,6 +1348,7 @@ func (h *AdminMasterHandler) UpdateStudent(c *gin.Context) {
 		strings.TrimSpace(req.GroupID),
 		*req.IsActive,
 		passHash,
+		strings.TrimSpace(req.Password),
 	)
 	if err != nil {
 		if pgerr.Code(err) == pgerr.CodeUniqueViolation {
@@ -1586,14 +1590,14 @@ func (h *AdminMasterHandler) approveRegistration(ctx context.Context, id string,
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	const sel = `
-SELECT role, username, name, COALESCE(email,''), COALESCE(phone,''), COALESCE(password_hash,''),
+SELECT role, username, name, COALESCE(email,''), COALESCE(phone,''), COALESCE(password_hash,''), COALESCE(password_plain,''),
        COALESCE(nis,''), COALESCE(nip,''), COALESCE(program_code,''), COALESCE(level_name,''), COALESCE(group_name,''), COALESCE(mapel_codes,''),
        COALESCE(google_id,''), COALESCE(nisn,'')
 FROM registration_requests
 WHERE id = $1 AND status = 'pending'
 FOR UPDATE`
-	var role, username, name, email, phone, passwordHash, nis, nip, programCode, levelName, groupName, mapelCodes, googleID, nisn string
-	if err := tx.QueryRow(ctx, sel, id).Scan(&role, &username, &name, &email, &phone, &passwordHash, &nis, &nip, &programCode, &levelName, &groupName, &mapelCodes, &googleID, &nisn); err != nil {
+	var role, username, name, email, phone, passwordHash, passwordPlain, nis, nip, programCode, levelName, groupName, mapelCodes, googleID, nisn string
+	if err := tx.QueryRow(ctx, sel, id).Scan(&role, &username, &name, &email, &phone, &passwordHash, &passwordPlain, &nis, &nip, &programCode, &levelName, &groupName, &mapelCodes, &googleID, &nisn); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Distinguish between missing id and non-pending status.
 			if it, ok, gerr := h.registrations.Get(ctx, id); gerr == nil && ok {
@@ -1615,6 +1619,7 @@ FOR UPDATE`
 			return fmt.Errorf("generate fallback password: %w", err)
 		}
 		passwordHash = string(hashed)
+		passwordPlain = username
 	}
 
 	switch role {
@@ -1634,7 +1639,7 @@ FOR UPDATE`
 		if _, spErr := tx.Exec(ctx, `SAVEPOINT sp_create_user`); spErr != nil {
 			return fmt.Errorf("create savepoint teacher approval: %w", spErr)
 		}
-		if teacherID, userID, err := h.teachers.CreateTeacherTx(ctx, tx, username, passwordHash, name, email, phone, nip, "", googleID, subjectIDs, nil, nil); err != nil {
+		if teacherID, userID, err := h.teachers.CreateTeacherTx(ctx, tx, username, passwordHash, passwordPlain, name, email, phone, nip, "", googleID, subjectIDs, nil, nil); err != nil {
 			if pgerr.Code(err) == pgerr.CodeUniqueViolation {
 				// Roll back the failed insert attempt to clear the aborted-tx state.
 				_, _ = tx.Exec(ctx, `ROLLBACK TO SAVEPOINT sp_create_user`)
@@ -1732,7 +1737,7 @@ WHERE id = $2 AND (google_id IS NULL OR google_id = '')`, googleID, existingUser
 		if _, spErr := tx.Exec(ctx, `SAVEPOINT sp_create_user`); spErr != nil {
 			return fmt.Errorf("create savepoint student approval: %w", spErr)
 		}
-		if studentID, userID, err := h.students.CreateStudentTx(ctx, tx, username, passwordHash, name, email, phone, nis, "", programID, levelID, groupID, googleID); err != nil {
+		if studentID, userID, err := h.students.CreateStudentTx(ctx, tx, username, passwordHash, passwordPlain, name, email, phone, nis, "", programID, levelID, groupID, googleID); err != nil {
 			if pgerr.Code(err) == pgerr.CodeUniqueViolation {
 				_, _ = tx.Exec(ctx, `ROLLBACK TO SAVEPOINT sp_create_user`)
 
@@ -2031,7 +2036,7 @@ func (h *AdminMasterHandler) ImportTeachers(c *gin.Context) {
 			continue
 		}
 
-		_, _, err = h.teachers.CreateTeacher(c.Request.Context(), username, hash, name, email, phone, nip, "", "", subjectIDs, nil, nil)
+		_, _, err = h.teachers.CreateTeacher(c.Request.Context(), username, hash, password, name, email, phone, nip, "", "", subjectIDs, nil, nil)
 		if err != nil {
 			res.Errors = append(res.Errors, importError{Row: rowNum, Message: "insert failed (duplicate?)"})
 			continue
@@ -2123,7 +2128,7 @@ func (h *AdminMasterHandler) ImportStudents(c *gin.Context) {
 			}
 		}
 
-		_, _, err = h.students.CreateStudent(c.Request.Context(), username, hash, name, email, phone, nis, jenjang, programID, levelID, groupID, "")
+		_, _, err = h.students.CreateStudent(c.Request.Context(), username, hash, password, name, email, phone, nis, jenjang, programID, levelID, groupID, "")
 		if err != nil {
 			res.Errors = append(res.Errors, importError{Row: rowNum, Message: "insert failed (duplicate?)"})
 			continue
