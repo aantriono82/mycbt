@@ -52,6 +52,7 @@ type mockUserStore struct {
 	updateProfileErr   error
 	updatedPasswordID  string
 	updatedPassword    string
+	updatedPasswordRaw string
 	updatePasswordErr  error
 	updatePhotoID      string
 	updatePhotoURL     string
@@ -69,9 +70,10 @@ func (m *mockUserStore) UpdateProfile(_ context.Context, id, name, email string)
 	return m.updateProfileErr
 }
 
-func (m *mockUserStore) UpdatePassword(_ context.Context, id string, hash string) error {
+func (m *mockUserStore) UpdatePassword(_ context.Context, id string, hash string, plain string) error {
 	m.updatedPasswordID = id
 	m.updatedPassword = hash
+	m.updatedPasswordRaw = plain
 	return m.updatePasswordErr
 }
 

@@ -39,6 +39,7 @@ type studentExamRepo interface {
 	Heartbeat(ctx context.Context, sessionID, studentID string, payload json.RawMessage) error
 	ListStudentResults(ctx context.Context, studentID string, f studentexamrepo.ListStudentResultsFilter) ([]studentexamrepo.StudentResultSummary, int, error)
 	ListStudentAnnouncements(ctx context.Context, studentID, levelID, groupID string, f studentexamrepo.ListStudentAnnouncementsFilter) ([]studentexamrepo.StudentAnnouncement, int, error)
+	MarkAnnouncementsRead(ctx context.Context, studentID string, announcementIDs []string) error
 	EnsureStudentCanAttendExam(ctx context.Context, examID, studentID, levelID, groupID string) (bool, error)
 	UpsertAttendance(ctx context.Context, examID, studentID, note string, clientIP net.IP, nowUTC time.Time, opts ...studentexamrepo.AttendanceOption) (studentexamrepo.AttendanceSubmission, error)
 	ListAttendanceHistory(ctx context.Context, studentID string, f studentexamrepo.ListAttendanceHistoryFilter) ([]studentexamrepo.AttendanceHistoryItem, int, error)
@@ -966,6 +967,7 @@ func (h *StudentExamHandler) ListAnnouncements(c *gin.Context) {
 	q := params.StringQueryTrim(c, "q")
 	limit := params.IntQuery(c, "limit", 20, 1, 200)
 	offset := params.IntQuery(c, "offset", 0, 0, 1_000_000)
+	unreadOnly := strings.EqualFold(strings.TrimSpace(c.Query("unread_only")), "true")
 
 	items, total, err := h.repo.ListStudentAnnouncements(
 		c.Request.Context(),
@@ -973,10 +975,11 @@ func (h *StudentExamHandler) ListAnnouncements(c *gin.Context) {
 		st.LevelID,
 		st.GroupID,
 		studentexamrepo.ListStudentAnnouncementsFilter{
-			Q:      q,
-			Limit:  limit,
-			Offset: offset,
-			NowUTC: time.Now().UTC(),
+			Q:          q,
+			Limit:      limit,
+			Offset:     offset,
+			NowUTC:     time.Now().UTC(),
+			UnreadOnly: unreadOnly,
 		},
 	)
 	if err != nil {
@@ -984,7 +987,46 @@ func (h *StudentExamHandler) ListAnnouncements(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, gin.H{"data": items, "meta": gin.H{"q": q, "limit": limit, "offset": offset, "total": total}})
+	c.JSON(200, gin.H{"data": items, "meta": gin.H{"q": q, "limit": limit, "offset": offset, "total": total, "unread_only": unreadOnly}})
+}
+
+type markAnnouncementsReadReq struct {
+	AnnouncementIDs []string `json:"announcement_ids"`
+}
+
+func (h *StudentExamHandler) MarkAnnouncementsRead(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+
+	st, ok, err := h.repo.StudentByUserID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if !ok {
+		c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "student not registered"}})
+		return
+	}
+	if !st.IsActive {
+		c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "user inactive"}})
+		return
+	}
+
+	var req markAnnouncementsReadReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "invalid json"}})
+		return
+	}
+	if len(req.AnnouncementIDs) == 0 {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "announcement_ids required"}})
+		return
+	}
+
+	if err := h.repo.MarkAnnouncementsRead(c.Request.Context(), st.StudentID, req.AnnouncementIDs); err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+
+	c.JSON(200, gin.H{"data": gin.H{"ok": true}})
 }
 
 type attendanceReq struct {

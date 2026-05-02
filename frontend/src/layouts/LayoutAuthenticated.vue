@@ -1,6 +1,6 @@
 <script setup>
 import { mdiForwardburger, mdiBackburger, mdiMenu, mdiAccountCircleOutline, mdiBellOutline, mdiClipboardTextClockOutline, mdiMagnify, mdiCloseCircle } from '@mdi/js'
-import { computed, onMounted, ref, onUnmounted } from 'vue'
+import { computed, onMounted, ref, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getMenuAsideMain, menuAsideBottom } from '@/menuAside.js'
 import { getMenuNavBar } from '@/menuNavBar.js'
@@ -109,7 +109,7 @@ const toggleDesktopAside = () => {
   isAsideDesktopHidden.value = !isAsideDesktopHidden.value
 }
 
-router.beforeEach(() => {
+watch(() => router.currentRoute.value.fullPath, () => {
   isAsideMobileExpanded.value = false
   isAsideLgActive.value = false
   isSearchFocused.value = false
@@ -122,12 +122,14 @@ const menuNavBar = computed(() => getMenuNavBar(authStore.role, authStore.userDi
 
 const announcements = ref([])
 const exams = ref([])
+const announcementsTotal = ref(0)
+const examsTotal = ref(0)
 const isNotificationsExpanded = ref(false)
 const showBadge = ref(false)
 const isLoadingAnnouncements = ref(false)
 const notificationsFingerprint = ref('')
 const lastSeenNotificationsFingerprint = ref('')
-const NOTIF_READ_KEY_PREFIX = 'mycbt:last_seen_notifications:'
+const NOTIF_READ_KEY_PREFIX = 'atigacbt:last_seen_notifications:'
 let notificationsPollTimer = null
 let notificationsEventSource = null
 let clockTimer = null
@@ -143,20 +145,23 @@ const updateDigitalClock = () => {
   }).replace(/\./g, ':')
 }
 
-const notificationsCount = computed(() => announcements.value.length + exams.value.length)
+const currentUserId = computed(() => String(authStore.user?.id || authStore.user?.username || 'anon'))
+const unreadAnnouncements = computed(() =>
+  announcements.value.filter((item) => !item?.is_read),
+)
+const notificationsCount = computed(() => announcementsTotal.value + examsTotal.value)
 const notificationsReadStorageKey = computed(() => {
-  const userId = String(authStore.user?.id || authStore.user?.username || 'anon')
-  return `${NOTIF_READ_KEY_PREFIX}${userId}`
+  return `${NOTIF_READ_KEY_PREFIX}${currentUserId.value}`
 })
 
-const buildNotificationsFingerprint = (newAnns = [], newExams = []) => {
+const buildNotificationsFingerprint = (newAnns = [], newExams = [], annTotal = 0, examTotal = 0) => {
   const annKeys = (newAnns || []).map((item) =>
     `ann:${String(item?.id || '')}:${String(item?.updated_at || item?.published_at || '')}`,
   )
   const examKeys = (newExams || []).map((item) =>
     `exam:${String(item?.id || '')}:${String(item?.updated_at || item?.starts_at || '')}`,
   )
-  return [...annKeys, ...examKeys].join('|')
+  return [`ann_total:${annTotal}`, ...annKeys, `exam_total:${examTotal}`, ...examKeys].join('|')
 }
 
 const markNotificationsAsRead = () => {
@@ -169,10 +174,44 @@ const markNotificationsAsRead = () => {
   showBadge.value = false
 }
 
+const markAnnouncementItemsAsRead = async (items = []) => {
+  const ids = items.map((item) => item?.id).filter(Boolean)
+  if (!ids.length) return
+  await api.post('/api/v1/student/announcements/read', {
+    announcement_ids: ids,
+  })
+}
+
+const openAnnouncementCenter = async () => {
+  try {
+    await markAnnouncementItemsAsRead(unreadAnnouncements.value)
+  } catch (e) {
+    console.error('Failed to mark announcements as read:', e)
+  }
+  markNotificationsAsRead()
+  isNotificationsExpanded.value = false
+  router.push('/student/announcements')
+}
+
+const openAnnouncementItem = async (item) => {
+  if (item?.id) {
+    try {
+      await markAnnouncementItemsAsRead([item])
+    } catch (e) {
+      console.error('Failed to mark announcement as read:', e)
+    }
+  }
+  markNotificationsAsRead()
+  isNotificationsExpanded.value = false
+  router.push('/student/announcements')
+}
+
 const loadNotifications = async ({ silent = false } = {}) => {
   if (authStore.role !== 'student') {
     announcements.value = []
     exams.value = []
+    announcementsTotal.value = 0
+    examsTotal.value = 0
     return
   }
 
@@ -181,7 +220,7 @@ const loadNotifications = async ({ silent = false } = {}) => {
   }
   try {
     const [annResp, examResp] = await Promise.all([
-      api.get('/api/v1/student/announcements', { params: { limit: 5, offset: 0 } }),
+      api.get('/api/v1/student/announcements', { params: { limit: 5, offset: 0, unread_only: true } }),
       api.get('/api/v1/student/exams', { params: { limit: 5, offset: 0 } }),
     ])
 
@@ -189,7 +228,9 @@ const loadNotifications = async ({ silent = false } = {}) => {
     const newExams = examResp.data?.data || []
     announcements.value = newAnns
     exams.value = newExams
-    notificationsFingerprint.value = buildNotificationsFingerprint(newAnns, newExams)
+    announcementsTotal.value = Number(annResp.data?.meta?.total ?? newAnns.length)
+    examsTotal.value = Number(examResp.data?.meta?.total ?? newExams.length)
+    notificationsFingerprint.value = buildNotificationsFingerprint(newAnns, newExams, announcementsTotal.value, examsTotal.value)
 
     if (!notificationsFingerprint.value) {
       showBadge.value = false
@@ -207,6 +248,8 @@ const loadNotifications = async ({ silent = false } = {}) => {
     console.error('Failed to fetch notifications:', e)
     announcements.value = []
     exams.value = []
+    announcementsTotal.value = 0
+    examsTotal.value = 0
   } finally {
     isLoadingAnnouncements.value = false
   }
@@ -240,8 +283,8 @@ onMounted(() => {
   }, 60000)
 
   const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-  const token = localStorage.getItem('mycbt_token')
-  notificationsEventSource = new EventSource(`${baseUrl}/api/v1/student/notifications/stream?token=${token}`)
+  const token = localStorage.getItem('atigacbt_token')
+  notificationsEventSource = new EventSource(`${baseUrl}/api/v1/student/notifications/stream?access_token=${token}`)
   notificationsEventSource.addEventListener('update', () => {
     loadNotifications({ silent: true })
   })
@@ -254,6 +297,15 @@ onUnmounted(() => {
   }
   stopNotificationsSync()
 })
+
+watch(
+  () => currentUserId.value,
+  () => {
+    if (authStore.role === 'student') {
+      loadNotifications({ silent: true })
+    }
+  },
+)
 
 const menuClick = (event, item) => {
   if (item.isToggleLightDark) {
@@ -381,13 +433,13 @@ const menuClick = (event, item) => {
 
               <div class="max-h-[400px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
                 <!-- Announcements Section -->
-                <div v-if="announcements.length">
+                <div v-if="unreadAnnouncements.length">
                   <div class="px-4 py-2 bg-slate-50/50 dark:bg-slate-800/30 text-[9px] font-black uppercase tracking-widest text-slate-400">Pengumuman</div>
                   <div 
-                    v-for="a in announcements" 
+                    v-for="a in unreadAnnouncements" 
                     :key="a.id"
                     class="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
-                    @click="router.push('/student/announcements'); isNotificationsExpanded = false"
+                    @click="openAnnouncementItem(a)"
                   >
                     <div class="text-[10px] font-bold text-blue-600 dark:text-blue-400 mb-1 flex justify-between uppercase">
                       <span>{{ a.category || 'INFO' }}</span>
@@ -421,14 +473,14 @@ const menuClick = (event, item) => {
                 <div v-if="isLoadingAnnouncements" class="p-8 text-center text-xs text-slate-400 italic">
                   Memuat data...
                 </div>
-                <div v-else-if="!announcements.length && !exams.length" class="p-8 text-center text-xs text-slate-400 italic">
+                <div v-else-if="!unreadAnnouncements.length && !exams.length" class="p-8 text-center text-xs text-slate-400 italic">
                   Tidak ada informasi baru.
                 </div>
               </div>
 
               <div class="p-3 border-t border-slate-100 dark:border-slate-800 text-center bg-slate-50 dark:bg-slate-800/50">
                 <button 
-                  @click="router.push('/student/announcements'); isNotificationsExpanded = false"
+                  @click="openAnnouncementCenter"
                   class="text-[10px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-700 dark:text-blue-400"
                 >
                   Buka Pusat Informasi
@@ -449,7 +501,7 @@ const menuClick = (event, item) => {
       />
       <div
         v-if="authStore.isAuthenticated"
-        class="border-b border-slate-200 bg-white px-6 py-2 text-xs text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 flex items-center"
+        class="border-b border-slate-200 bg-white/60 px-6 py-2 text-xs text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 flex items-center backdrop-blur-md"
       >
         <BaseIcon :path="mdiAccountCircleOutline" size="14" class="mr-2 text-blue-600 dark:text-blue-400" />
         <span>

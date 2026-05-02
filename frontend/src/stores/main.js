@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 
 export const useMainStore = defineStore('main', () => {
   const userName = ref('Pengguna')
-  const userEmail = ref('pengguna@mycbt.local')
+  const userEmail = ref('pengguna@atigacbt.local')
 
   const userAvatar = computed(
     () =>

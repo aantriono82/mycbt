@@ -1,6 +1,6 @@
 # Template Soal (Untuk Import DOCX)
 
-Backend import DOCX membaca **teks** dan mengenali pola tertentu. Cara termudah: copy template `.txt` ini ke Microsoft Word/LibreOffice, isi soalnya, lalu **Save As `.docx`**, kemudian import dari menu Bank Soal.
+Backend import DOCX membaca **teks** dan mengenali pola tertentu. Template yang di-download dari UI sekarang sudah berupa file `.docx`, jadi bisa langsung dibuka, diisi, lalu di-import kembali.
 
 ## Aturan Umum
 
@@ -22,4 +22,4 @@ Catatan:
 
 ## Contoh Lengkap Semua Tipe
 
-Lihat file: `frontend/public/templates/template-soal-docx.txt` (bisa langsung di-download dari UI).
+Lihat file: `frontend/public/templates/template-soal-docx.docx` (bisa langsung di-download dari UI).

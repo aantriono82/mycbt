@@ -54,7 +54,7 @@ const rolePrefix = computed(() => (route.path.startsWith('/admin') ? '/admin' : 
 const templateDocxUrl = computed(() => {
   const base = import.meta.env.BASE_URL || '/'
   const normalized = base.endsWith('/') ? base : `${base}/`
-  return `${normalized}templates/template-soal-docx.txt`
+  return `${normalized}templates/template-soal-docx.docx`
 })
 
 const selectedSet = computed(() => questionSets.value.find((item) => item.id === selectedSetId.value) || null)
@@ -662,7 +662,13 @@ onMounted(async () => {
                     Template sudah menyiapkan format semua tipe soal, termasuk LaTeX dengan delimiter <span class="font-mono">$...$</span> dan <span class="font-mono">$$...$$</span>.
                   </p>
                 </div>
-                <BaseButton :icon="mdiDownload" color="purple" label="Template" :href="templateDocxUrl" target="_blank" />
+                <BaseButton
+                  :icon="mdiDownload"
+                  color="purple"
+                  label="Template"
+                  :href="templateDocxUrl"
+                  download="template-soal-docx.docx"
+                />
               </div>
             </div>
 

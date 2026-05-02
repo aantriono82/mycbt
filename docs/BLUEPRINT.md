@@ -1,4 +1,4 @@
-# Blueprint Implementasi mycbt (Gin + Vue Admin One)
+# Blueprint Implementasi AtigaCBT (Gin + Vue Admin One)
 
 Dokumen ini adalah panduan implementasi end-to-end untuk membangun aplikasi CBT dari scaffold repo ini. Targetnya: cepat jadi, mudah dirawat, dan aman untuk produksi.
 

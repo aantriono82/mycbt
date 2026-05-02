@@ -48,7 +48,7 @@ const isActive = (to) => route.path.startsWith(to)
 </script>
 
 <template>
-  <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-t border-slate-200 pb-safe">
+  <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/60 backdrop-blur-xl border-t border-slate-200 pb-safe">
     <div class="flex items-center justify-around h-16 px-2">
       <router-link
         v-for="item in menuItems"

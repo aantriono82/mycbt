@@ -231,7 +231,7 @@ onBeforeUnmount(() => {
       </SectionTitleLineWithButton>
 
       <CardBox class="mb-6">
-        <div class="grid gap-4 md:grid-cols-[280px_220px_1fr] md:items-end">
+        <div class="grid gap-4 md:grid-cols-[280px_220px_1fr] md:items-start">
           <FormField label="Pilih Ujian">
             <FormControl
               v-model="selectedExamId"
@@ -250,7 +250,7 @@ onBeforeUnmount(() => {
               ]"
             />
           </FormField>
-          <div class="text-sm text-slate-600 dark:text-slate-400">
+          <div class="text-sm text-slate-600 dark:text-slate-400 md:pt-9">
             Monitor memakai <span class="text-sky-600 dark:text-sky-400 font-semibold">SSE</span> saat tersedia, lalu fallback ke polling 10 detik jika koneksi live gagal.
           </div>
         </div>

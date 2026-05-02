@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { api } from '@/services/api.js'
 
 const health = ref({
@@ -7,6 +7,7 @@ const health = ref({
   time: null,
   error: null,
 })
+let healthTimer = null
 
 const formattedTime = computed(() => {
   if (!health.value.time) return 'N/A'
@@ -39,8 +40,14 @@ const fetchHealth = async () => {
 
 onMounted(() => {
   fetchHealth()
-  // Refresh every 30 seconds
-  setInterval(fetchHealth, 30000)
+  healthTimer = setInterval(fetchHealth, 60000)
+})
+
+onUnmounted(() => {
+  if (healthTimer) {
+    clearInterval(healthTimer)
+    healthTimer = null
+  }
 })
 </script>
 

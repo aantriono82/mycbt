@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { api } from '@/services/api.js'
+import { getApiOrigin, resolveBackendAssetUrl } from '@/utils/assetUrl.js'
 
 const props = defineProps({
   modelValue: {
@@ -67,11 +68,7 @@ const uploadImageFile = async (file) => {
   const { data } = await api.post('/api/v1/uploads/images', formData)
   let url = data?.data?.url
   if (!url) throw new Error('Upload gagal: URL kosong')
-  if (url.startsWith('/uploads')) {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    url = `${baseUrl}${url}`
-  }
-  return url
+  return resolveBackendAssetUrl(url)
 }
 
 const buildMathHtml = (latex, displayMode) => {
@@ -135,6 +132,12 @@ const syncModelValue = (editor) => {
   if (content !== props.modelValue) {
     emit('update:modelValue', content)
   }
+}
+
+const syncModelValueSoon = (editor) => {
+  window.setTimeout(() => {
+    syncModelValue(editor)
+  }, 0)
 }
 
 const openMathDialog = (editor, initialLatex = '', initialDisplay = false, targetEl = null) => {
@@ -214,12 +217,14 @@ const initEditor = async () => {
     ].join(';'),
     custom_elements: customMathElements,
     extended_valid_elements: [
+      'img[src|alt|title|width|height|style|class|loading|data-mce-src|data-mce-style]',
       'span[class|data-latex|data-display|contenteditable]',
       'div[class|data-latex|data-display|contenteditable]',
       extendedMathElements,
     ].join(','),
     valid_children: '+span[math],+div[math],+math[semantics|mrow|mi|mn|mo|msqrt|mroot|mfrac|msub|msup|msubsup|munder|mover|munderover|mtable|mtr|mtd|mstyle|mspace|mtext|mpadded|menclose|mfenced]',
     content_css: ['default', '/fonts/amiri/amiri.css'],
+    document_base_url: `${getApiOrigin().replace(/\/+$/, '')}/`,
     content_style: `
       body { font-family:"Plus Jakarta Sans",Inter,Helvetica,Arial,sans-serif; font-size:14px; color: #475569; padding: 10px; }
       body[dir="rtl"] { text-align: right; font-family: "Noto Naskh Arabic", "Amiri", Arial, sans-serif; }
@@ -229,14 +234,20 @@ const initEditor = async () => {
       .math-tex math { font-size: 1em; line-height: 1.2; }
       .math-tex[data-display="1"] { display: block; white-space: normal; margin: 0.5rem 0; }
       .math-tex[data-display="1"] math { display: block; margin: 0; }
+      img { display: block; max-width: min(100%, 720px); height: auto; margin: 0.75rem 0; }
     `,
+    convert_urls: false,
+    relative_urls: false,
+    remove_script_host: false,
     automatic_uploads: true,
     file_picker_types: 'image',
     images_file_types: 'jpg,jpeg,png,gif,webp',
     images_upload_handler: async (blobInfo) => {
       const blob = blobInfo.blob()
       const file = new File([blob], blobInfo.filename(), { type: blob.type })
-      return uploadImageFile(file)
+      const url = await uploadImageFile(file)
+      syncModelValueSoon(editorInstance.value)
+      return url
     },
     file_picker_callback: (cb, _value, meta) => {
       if (meta.filetype !== 'image') return
@@ -249,6 +260,7 @@ const initEditor = async () => {
         try {
           const url = await uploadImageFile(file)
           cb(url, { title: file.name })
+          syncModelValueSoon(editorInstance.value)
         } catch (err) {
           console.error('Upload image failed', err)
           alert('Gagal upload gambar. Coba lagi.')
@@ -292,6 +304,12 @@ const initEditor = async () => {
       })
 
       editor.on('change input undo redo SetContent ExecCommand', () => {
+        if (!isEditorReady.value) return
+        if (isApplyingExternalContent.value) return
+        syncModelValue(editor)
+      })
+
+      editor.on('blur', () => {
         if (!isEditorReady.value) return
         if (isApplyingExternalContent.value) return
         syncModelValue(editor)

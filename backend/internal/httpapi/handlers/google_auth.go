@@ -279,6 +279,7 @@ func (h *GoogleAuthHandler) SubmitRegistration(c *gin.Context) {
 		GooglePicture *string `json:"google_picture"`
 		Name          string  `json:"name" binding:"required"`
 		Email         string  `json:"email" binding:"required"`
+		Password      string  `json:"password" binding:"required"`
 		Phone         string  `json:"phone" binding:"required"`
 		NIS           *string `json:"nis"`
 		NIP           *string `json:"nip"`
@@ -302,6 +303,16 @@ func (h *GoogleAuthHandler) SubmitRegistration(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
+	password := strings.TrimSpace(req.Password)
+	if len(password) < 8 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Password minimal 8 karakter."})
+		return
+	}
+	passwordHash, err := authsvc.HashPassword(password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal memproses password."})
+		return
+	}
 
 	// 1. Check if user already exists with this email
 	_, ok, err := h.users.GetByEmail(ctx, req.Email)
@@ -371,6 +382,8 @@ func (h *GoogleAuthHandler) SubmitRegistration(c *gin.Context) {
 		Username:      username,
 		Name:          req.Name,
 		Email:         req.Email,
+		PasswordHash:  passwordHash,
+		PasswordPlain: password,
 		GoogleID:      str(req.GoogleID),
 		GooglePicture: str(req.GooglePicture),
 		Status:        "pending",

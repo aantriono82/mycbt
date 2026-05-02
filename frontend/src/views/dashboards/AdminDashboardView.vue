@@ -108,7 +108,7 @@ onMounted(loadStats)
       </div>
 
       <!-- Stats Cards Row -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      <div class="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
         <DashboardCard 
           label="Total Siswa" 
           :number="stats.totalSiswa" 
@@ -265,4 +265,3 @@ onMounted(loadStats)
     </SectionMain>
   </LayoutAuthenticated>
 </template>
-

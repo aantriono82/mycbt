@@ -1,7 +1,6 @@
 import { expect, test } from '@playwright/test'
 
 test.setTimeout(150000)
-test.skip(({ browserName }) => browserName !== 'chromium', 'Suite exam flow distabilkan untuk Chromium')
 
 const EXAM_ID = 'exam-1'
 const SESSION_ID = 'session-1'
@@ -12,8 +11,8 @@ const examListPayload = [
     title: 'Ujian Matematika',
     subject_name: 'Matematika',
     teacher_name: 'Bu Rina',
-    starts_at: '2026-04-24T00:00:00Z',
-    ends_at: '2026-04-30T23:59:59Z',
+    starts_at: '2026-01-01T00:00:00Z',
+    ends_at: '2099-12-31T23:59:59Z',
     can_join: true,
     duration_minutes: 60,
     active_token: 'TOK123',
@@ -254,54 +253,35 @@ async function loginAsStudent(page) {
 async function goToWorkspaceAndStartExam(page) {
   await page.goto('/#/student/ujian')
   await expect(page.getByRole('heading', { name: 'Ruang Ujian' })).toBeVisible()
+  await page.getByRole('button', { name: 'Masuk Ruang Ujian' }).first().click()
+  await expect(page).toHaveURL(/\/#\/student\/ujian\/exam-1\/token/)
+  await expect(page.getByRole('heading', { name: 'Verifikasi Token Ujian' })).toBeVisible()
+  await page.getByPlaceholder('Masukkan token dari pengawas').fill('TOK123')
+  const tokenCard = page.locator('.mx-auto.w-full.max-w-2xl')
   await Promise.all([
     page.waitForResponse(
       (resp) =>
         resp.url().includes(`/api/v1/student/exams/${EXAM_ID}/join`) &&
         resp.request().method() === 'POST',
     ),
-    page.getByRole('button', { name: 'Masuk Ruang Ujian' }).first().click(),
+    tokenCard.getByRole('button', { name: 'Masuk Ruang Ujian' }).click(),
   ])
   await expect(page).toHaveURL(/\/#\/student\/workspace\/session-1/)
-
-  const tokenPrompt = page.getByRole('heading', { name: 'Masukkan Token Ujian' })
   const firstQuestionMarker = page.getByText('SOAL NOMOR: 1')
-
-  await expect
-    .poll(async () => {
-      const tokenVisible = await tokenPrompt.isVisible().catch(() => false)
-      const questionVisible = await firstQuestionMarker.isVisible().catch(() => false)
-      return tokenVisible || questionVisible
-    }, { timeout: 10000 })
-    .toBeTruthy()
-
-  if (await tokenPrompt.isVisible().catch(() => false)) {
-    await page.getByPlaceholder('TOKEN').fill('TOK123')
-    await Promise.all([
-      page.waitForResponse(
-        (resp) =>
-          resp.url().includes(`/api/v1/student/sessions/${SESSION_ID}/verify-token`) &&
-          resp.request().method() === 'POST',
-      ),
-      page.getByRole('button', { name: 'Mulai Ujian' }).click(),
-    ])
-    await page.waitForResponse(
-      (resp) =>
-        resp.url().includes(`/api/v1/student/sessions/${SESSION_ID}/questions`) &&
-        resp.request().method() === 'GET',
-    )
-  }
-
   await expect(firstQuestionMarker).toBeVisible({ timeout: 10000 })
+}
+
+async function selectMcOption(page, optionIndex) {
+  await page.locator('main label').nth(optionIndex).click()
 }
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     if (!sessionStorage.getItem('__e2e_bootstrapped__')) {
       localStorage.clear()
-      localStorage.removeItem('mycbt_session_token_ok_session-1')
+      localStorage.removeItem('atigacbt_session_token_ok_session-1')
       localStorage.setItem(
-        'mycbt:exam-store',
+        'atigacbt:exam-store',
         JSON.stringify({
           sessionId: 'session-1',
           startTime: '2026-04-24T10:00:00+07:00',
@@ -344,7 +324,7 @@ test('exam flow: login, mulai ujian, jawab, submit, dan lihat hasil', async ({ p
     .toBeTruthy()
 
   // 3) JAWAB SOAL
-  await page.locator('input[name="mc-q-1"]').nth(0).check()
+  await selectMcOption(page, 0)
   await expect(page.locator('input[name="mc-q-1"]').nth(0)).toBeChecked()
   await page.getByRole('button', { name: 'Soal Berikutnya' }).click()
   await expect(page.getByText('SOAL NOMOR: 2')).toBeVisible()
@@ -352,7 +332,7 @@ test('exam flow: login, mulai ujian, jawab, submit, dan lihat hasil', async ({ p
   await expect(page.getByText('SOAL NOMOR: 3')).toBeVisible()
   await page.locator('[data-qnav-idx="0"]').click()
   await expect(page.getByText('SOAL NOMOR: 1')).toBeVisible()
-  await page.locator('input[name="mc-q-1"]').nth(1).check()
+  await selectMcOption(page, 1)
   await expect(page.locator('input[name="mc-q-1"]').nth(1)).toBeChecked()
   await expect(page.locator('input[name="mc-q-1"]').nth(0)).not.toBeChecked()
 
@@ -372,8 +352,8 @@ test('exam flow: login, mulai ujian, jawab, submit, dan lihat hasil', async ({ p
 
   // 5) HASIL
   await expect(page.getByRole('heading', { name: 'Hasil Ujian' })).toBeVisible()
-  await expect(page.getByRole('cell', { name: '100' })).toBeVisible()
-  await expect(page.getByText('3/3')).toBeVisible()
+  await expect(page.getByText('100').first()).toBeVisible()
+  await expect(page.getByText('Benar: 3/3')).toBeVisible()
   await expect(page.getByText('Submitted')).toBeVisible()
 
   expect(state.saveAnswerCalls).toBeGreaterThan(0)
@@ -385,7 +365,7 @@ test('edge case: waktu ujian habis memicu auto-submit', async ({ page }) => {
 
   await loginAsStudent(page)
   await goToWorkspaceAndStartExam(page)
-  await expect(page.locator('header .font-mono').first()).toContainText('00:01')
+  await expect(page.locator('header .font-mono').first()).toContainText(/00:0[01]:\d{2}/)
   await page.waitForResponse(
     (resp) =>
       resp.url().includes(`/api/v1/student/sessions/${SESSION_ID}/submit`) &&
@@ -401,7 +381,7 @@ test('edge case: submit saat masih ada soal kosong menampilkan peringatan', asyn
 
   await loginAsStudent(page)
   await goToWorkspaceAndStartExam(page)
-  await page.locator('input[name="mc-q-1"]').nth(0).check()
+  await selectMcOption(page, 0)
   await page.locator('[data-qnav-idx="2"]').click()
   await page.getByRole('button', { name: 'Selesai', exact: true }).click()
 
@@ -444,13 +424,13 @@ test('edge case: refresh halaman saat ujian mempertahankan jawaban tersimpan', a
         resp.url().includes(`/api/v1/student/sessions/${SESSION_ID}/answers`) &&
         resp.request().method() === 'POST',
     ),
-    page.locator('input[name="mc-q-1"]').nth(1).check(),
+    selectMcOption(page, 1),
   ])
 
   await page.reload()
   const tokenPrompt = page.getByRole('heading', { name: 'Masukkan Token Ujian' })
   if (await tokenPrompt.isVisible().catch(() => false)) {
-    await page.getByPlaceholder('TOKEN').fill('TOK123')
+    await page.getByPlaceholder('Masukkan token dari pengawas').fill('TOK123')
     await Promise.all([
       page.waitForResponse(
         (resp) =>

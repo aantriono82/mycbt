@@ -80,17 +80,18 @@ func (h *RegistrationPublicHandler) Register(c *gin.Context) {
 	}
 
 	id, err := h.registrations.Create(c.Request.Context(), masterrepo.RegistrationRequest{
-		Role:         role,
-		Username:     username,
-		Name:         name,
-		Email:        email,
-		PasswordHash: hash,
-		NIS:          strings.TrimSpace(req.NIS),
-		NIP:          strings.TrimSpace(req.NIP),
-		ProgramCode:  strings.TrimSpace(req.ProgramCode),
-		LevelName:    strings.TrimSpace(req.LevelName),
-		GroupName:    strings.TrimSpace(req.GroupName),
-		MapelCodes:   strings.TrimSpace(req.MapelCodes),
+		Role:          role,
+		Username:      username,
+		Name:          name,
+		Email:         email,
+		PasswordHash:  hash,
+		PasswordPlain: password,
+		NIS:           strings.TrimSpace(req.NIS),
+		NIP:           strings.TrimSpace(req.NIP),
+		ProgramCode:   strings.TrimSpace(req.ProgramCode),
+		LevelName:     strings.TrimSpace(req.LevelName),
+		GroupName:     strings.TrimSpace(req.GroupName),
+		MapelCodes:    strings.TrimSpace(req.MapelCodes),
 	})
 	if err != nil {
 		if pgerr.Code(err) == pgerr.CodeUniqueViolation {

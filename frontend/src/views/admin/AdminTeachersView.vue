@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { mdiAccountTie, mdiRefresh, mdiPlus, mdiDelete, mdiPencil, mdiContentSave, mdiEye, mdiContentCopy, mdiDownload, mdiUpload, mdiAccountSwitch } from '@mdi/js'
+import { mdiAccountTie, mdiRefresh, mdiPlus, mdiDelete, mdiPencil, mdiContentSave, mdiEye, mdiEyeOff, mdiContentCopy, mdiDownload, mdiUpload, mdiAccountSwitch } from '@mdi/js'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
@@ -10,6 +10,7 @@ import BaseButtons from '@/components/BaseButtons.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
 import FormField from '@/components/FormField.vue'
 import FormControl from '@/components/FormControl.vue'
+import PasswordField from '@/components/PasswordField.vue'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
 
@@ -325,7 +326,7 @@ onMounted(async () => {
               <FormControl v-model="form.username" placeholder="guru.baru" />
             </FormField>
             <FormField :label="isEditing ? 'Password Baru (Opsional)' : 'Password'">
-              <FormControl v-model="form.password" type="password" placeholder="Minimal 8 karakter" />
+              <PasswordField v-model="form.password" placeholder="Minimal 8 karakter" autocomplete="new-password" />
             </FormField>
             <FormField label="Nama">
               <FormControl v-model="form.name" placeholder="Nama lengkap guru" />
@@ -429,7 +430,7 @@ onMounted(async () => {
           </div>
 
           <div class="mb-4">
-            <BaseButton color="whiteDark" outline label="Terapkan Pencarian" @click="loadTeachers" />
+            <BaseButton color="purple" label="Terapkan Pencarian" @click="loadTeachers" />
           </div>
 
           <div v-if="isLoading" class="text-sm text-slate-500 dark:text-slate-400">Memuat data guru...</div>
@@ -439,6 +440,7 @@ onMounted(async () => {
                 <tr>
                   <th class="px-3 py-3">Nama</th>
                   <th class="px-3 py-3">Username</th>
+                  <th class="px-3 py-3">Password</th>
                   <th class="px-3 py-3">Email</th>
                   <th class="px-3 py-3">NIP</th>
                   <th class="px-3 py-3">Level/Grup Diampu</th>
@@ -454,8 +456,9 @@ onMounted(async () => {
                     <div v-if="teacher.mapel_summary" class="inline-block text-[10px] text-slate-500 dark:text-slate-400 font-normal">Mapel: {{ teacher.mapel_summary }}</div>
                   </td>
                   <td class="px-3 py-3 text-slate-500 dark:text-slate-400">{{ teacher.username }}</td>
-                  <td class="px-3 py-3 text-slate-500 dark:text-slate-400">{{ teacher.email || '-' }}</td>
-                  <td class="px-3 py-3 text-slate-500 dark:text-slate-400">{{ teacher.nip || '-' }}</td>
+                  <td class="px-3 py-3 text-slate-500 dark:text-slate-400 font-mono">{{ teacher.password_plain || "-" }}</td>
+                  <td class="px-3 py-3 text-slate-500 dark:text-slate-400">{{ teacher.email || "-" }}</td>
+                  <td class="px-3 py-3 text-slate-500 dark:text-slate-400">{{ teacher.nip || "-" }}</td>
                   <td class="px-3 py-3">
                     <div v-if="teacher.level_summary || teacher.group_summary" class="flex flex-col gap-1">
                       <div v-if="teacher.level_summary" class="flex flex-wrap gap-1">
@@ -520,7 +523,7 @@ onMounted(async () => {
                   </td>
                 </tr>
                 <tr v-if="!teachers.length && !isLoading">
-                  <td colspan="6" class="px-3 py-8 text-center text-slate-400 dark:text-slate-500 italic">Belum ada data guru.</td>
+                  <td colspan="8" class="px-3 py-8 text-center text-slate-400 dark:text-slate-500 italic">Belum ada data guru.</td>
                 </tr>
               </tbody>
             </table>

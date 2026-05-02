@@ -14,6 +14,29 @@ const announcements = ref([])
 const isLoading = ref(false)
 const errorMessage = ref('')
 
+const renderAnnouncementHtml = (value) => {
+  const html = String(value || '').trim()
+  if (!html) return ''
+  if (typeof window === 'undefined' || typeof DOMParser === 'undefined') return html
+
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  doc.querySelectorAll('script, style, iframe, object, embed').forEach((node) => node.remove())
+  for (const el of doc.body.querySelectorAll('*')) {
+    for (const attr of [...el.attributes]) {
+      const name = attr.name.toLowerCase()
+      const value = String(attr.value || '')
+      if (name.startsWith('on')) {
+        el.removeAttribute(attr.name)
+        continue
+      }
+      if ((name === 'href' || name === 'src') && value.trim().toLowerCase().startsWith('javascript:')) {
+        el.removeAttribute(attr.name)
+      }
+    }
+  }
+  return doc.body.innerHTML
+}
+
 const loadAnnouncements = async () => {
   isLoading.value = true
   errorMessage.value = ''
@@ -22,6 +45,16 @@ const loadAnnouncements = async () => {
       params: { limit: 50, offset: 0 },
     })
     announcements.value = data?.data || []
+    const ids = announcements.value.map((item) => item?.id).filter(Boolean)
+    if (ids.length) {
+      try {
+        await api.post('/api/v1/student/announcements/read', {
+          announcement_ids: ids,
+        })
+      } catch (err) {
+        console.error('Failed to mark announcements as read:', err)
+      }
+    }
   } catch (err) {
     errorMessage.value = err?.response?.data?.error?.message || 'Gagal memuat pengumuman'
   } finally {
@@ -122,10 +155,10 @@ onMounted(() => {
               {{ item.title }}
             </h3>
             
-            <div class="max-w-4xl border-l-2 border-slate-100 pl-4 dark:border-slate-800">
-              <p class="text-sm leading-relaxed text-slate-600 dark:text-slate-400 whitespace-pre-wrap">
-                {{ item.body }}
-              </p>
+            <div
+              class="max-w-4xl border-l-2 border-slate-100 pl-4 text-sm leading-relaxed text-slate-600 dark:border-slate-800 dark:text-slate-400 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-blue-600 [&_a]:underline dark:[&_a]:text-blue-400"
+              v-html="renderAnnouncementHtml(item.body)"
+            >
             </div>
             
             <div v-if="item.expires_at" class="mt-4 sm:hidden text-[10px] font-bold text-slate-400 uppercase">

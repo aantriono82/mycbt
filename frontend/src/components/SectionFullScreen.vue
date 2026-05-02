@@ -6,8 +6,8 @@ import { gradientBgPurplePink, gradientBgDark, gradientBgPinkRed } from '@/color
 const props = defineProps({
   bg: {
     type: String,
-    required: true,
-    validator: (value) => ['purplePink', 'pinkRed', 'white'].includes(value),
+    default: 'white',
+    validator: (value) => ['purplePink', 'pinkRed', 'white', 'cream'].includes(value),
   },
 })
 
@@ -23,6 +23,8 @@ const colorClass = computed(() => {
       return gradientBgPinkRed
     case 'white':
       return 'bg-white dark:bg-slate-900'
+    case 'cream':
+      return 'bg-amber-50 dark:bg-slate-900'
   }
 
   return ''

@@ -62,6 +62,12 @@ type mockStudentExamRepo struct {
 	attemptsErr     error
 	sessionExists   bool
 	sessionExistErr error
+
+	announcements            []studentexamrepo.StudentAnnouncement
+	announcementsTotal       int
+	announcementsErr         error
+	markAnnouncementsReadErr error
+	markedAnnouncementIDs    []string
 }
 
 func (m *mockStudentExamRepo) StudentByUserID(ctx context.Context, userID string) (studentexamrepo.StudentInfo, bool, error) {
@@ -185,7 +191,12 @@ func (m *mockStudentExamRepo) ListStudentResults(ctx context.Context, studentID 
 }
 
 func (m *mockStudentExamRepo) ListStudentAnnouncements(ctx context.Context, studentID, levelID, groupID string, f studentexamrepo.ListStudentAnnouncementsFilter) ([]studentexamrepo.StudentAnnouncement, int, error) {
-	return nil, 0, nil
+	return m.announcements, m.announcementsTotal, m.announcementsErr
+}
+
+func (m *mockStudentExamRepo) MarkAnnouncementsRead(ctx context.Context, studentID string, announcementIDs []string) error {
+	m.markedAnnouncementIDs = append([]string(nil), announcementIDs...)
+	return m.markAnnouncementsReadErr
 }
 
 func (m *mockStudentExamRepo) EnsureStudentCanAttendExam(ctx context.Context, examID, studentID, levelID, groupID string) (bool, error) {
@@ -259,6 +270,59 @@ func TestStudentExamHandler_Join_CreateSessionAndConflict(t *testing.T) {
 	r.ServeHTTP(rec2, req2)
 	if rec2.Code != http.StatusConflict {
 		t.Fatalf("expected 409 for finished existing session, got %d body=%s", rec2.Code, rec2.Body.String())
+	}
+}
+
+func TestStudentExamHandler_ListAnnouncementsUnreadOnly(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	mockRepo := &mockStudentExamRepo{
+		studentInfo:        studentexamrepo.StudentInfo{StudentID: "stu-1", LevelID: "lvl-1", GroupID: "grp-1", IsActive: true},
+		studentOK:          true,
+		announcements:      []studentexamrepo.StudentAnnouncement{{ID: "ann-1", Title: "A", IsRead: false}},
+		announcementsTotal: 1,
+	}
+	h := NewStudentExamHandler(mockRepo, nil)
+
+	r := gin.New()
+	r.Use(withAuthUser())
+	r.GET("/api/v1/student/announcements", h.ListAnnouncements)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/student/announcements?unread_only=true", nil)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"unread_only":true`) {
+		t.Fatalf("expected unread_only meta in response, body=%s", rec.Body.String())
+	}
+}
+
+func TestStudentExamHandler_MarkAnnouncementsRead(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	mockRepo := &mockStudentExamRepo{
+		studentInfo: studentexamrepo.StudentInfo{StudentID: "stu-1", LevelID: "lvl-1", GroupID: "grp-1", IsActive: true},
+		studentOK:   true,
+	}
+	h := NewStudentExamHandler(mockRepo, nil)
+
+	r := gin.New()
+	r.Use(withAuthUser())
+	r.POST("/api/v1/student/announcements/read", h.MarkAnnouncementsRead)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/student/announcements/read", strings.NewReader(`{"announcement_ids":["ann-1","ann-2"]}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if len(mockRepo.markedAnnouncementIDs) != 2 || mockRepo.markedAnnouncementIDs[0] != "ann-1" || mockRepo.markedAnnouncementIDs[1] != "ann-2" {
+		t.Fatalf("expected marked ids to be forwarded, got %#v", mockRepo.markedAnnouncementIDs)
 	}
 }
 

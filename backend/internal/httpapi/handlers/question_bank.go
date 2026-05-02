@@ -371,6 +371,10 @@ LIMIT 1`
 
 	ok, err := h.qb.DeleteQuestion(c.Request.Context(), c.Param("id"))
 	if err != nil {
+		if pgerr.Code(err) == pgerr.CodeForeignKeyViolation {
+			c.JSON(409, gin.H{"error": gin.H{"code": "conflict", "message": "soal sudah dipakai dalam ujian dan tidak bisa dihapus"}})
+			return
+		}
 		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
 		return
 	}

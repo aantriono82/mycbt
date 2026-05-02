@@ -52,7 +52,7 @@ const storeSessionTokenGate = (sessionId) => {
   const sid = String(sessionId || '').trim()
   if (!sid) return
   try {
-    localStorage.setItem(`mycbt_session_token_ok_${sid}`, '1')
+    localStorage.setItem(`atigacbt_session_token_ok_${sid}`, '1')
   } catch {
     // ignore
   }

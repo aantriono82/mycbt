@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { mdiAccountSchool, mdiRefresh, mdiPlus, mdiDelete, mdiPencil, mdiContentSave, mdiEye, mdiContentCopy, mdiFileExcel, mdiDownload, mdiUpload, mdiAccountSwitch, mdiImageMultiple, mdiClose, mdiCheckCircle, mdiAlertCircle, mdiHelpCircle, mdiMinus, mdiCamera } from '@mdi/js'
+import { mdiAccountSchool, mdiRefresh, mdiPlus, mdiDelete, mdiPencil, mdiContentSave, mdiEye, mdiEyeOff, mdiContentCopy, mdiFileExcel, mdiDownload, mdiUpload, mdiAccountSwitch, mdiImageMultiple, mdiClose, mdiCheckCircle, mdiAlertCircle, mdiHelpCircle, mdiMinus, mdiCamera } from '@mdi/js'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
@@ -10,9 +10,11 @@ import BaseButtons from '@/components/BaseButtons.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
 import FormField from '@/components/FormField.vue'
 import FormControl from '@/components/FormControl.vue'
+import PasswordField from '@/components/PasswordField.vue'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
 import { shortCode2 } from '@/utils/shortCode.js'
+import { resolveBackendAssetUrl } from '@/utils/assetUrl.js'
 
 const authStore = useAuthStore()
 
@@ -333,13 +335,7 @@ const uploadStudentPhoto = async () => {
 
 const getStudentAvatar = (student) => {
   const photo = student.photo_url
-  if (photo) {
-    if (photo.startsWith('/uploads')) {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-      return `${baseUrl}${photo}`
-    }
-    return photo
-  }
+  if (photo) return resolveBackendAssetUrl(photo)
   return `https://api.dicebear.com/7.x/initials/svg?seed=${student.username || 'Student'}&backgroundColor=0033ff`
 }
 
@@ -448,7 +444,7 @@ onMounted(async () => {
               <FormControl v-model="form.username" placeholder="siswa.baru" />
             </FormField>
             <FormField :label="isEditing ? 'Password Baru (Opsional)' : 'Password'">
-              <FormControl v-model="form.password" type="password" placeholder="Minimal 8 karakter" />
+              <PasswordField v-model="form.password" placeholder="Minimal 8 karakter" autocomplete="new-password" />
             </FormField>
             <FormField label="Nama">
               <FormControl v-model="form.name" placeholder="Nama lengkap siswa" />
@@ -560,6 +556,7 @@ onMounted(async () => {
                   <th class="px-3 py-3">Foto</th>
                   <th class="px-3 py-3">Nama</th>
                   <th class="px-3 py-3">Username</th>
+                  <th class="px-3 py-3">Password</th>
                   <th class="px-3 py-3">NIS</th>
                   <th class="px-3 py-3">Jenjang</th>
                   <th class="px-3 py-3">Email</th>
@@ -577,6 +574,7 @@ onMounted(async () => {
                   </td>
                   <td class="px-3 py-3 font-medium dark:text-slate-200">{{ student.name }}</td>
                   <td class="px-3 py-3 text-slate-500 dark:text-slate-400">{{ student.username }}</td>
+                  <td class="px-3 py-3 text-slate-500 dark:text-slate-400 font-mono">{{ student.password_plain || '-' }}</td>
                   <td class="px-3 py-3 text-slate-500 dark:text-slate-400">{{ student.nis }}</td>
                   <td class="px-3 py-3">
                     <span

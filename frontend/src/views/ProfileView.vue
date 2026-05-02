@@ -14,6 +14,7 @@ import CardBox from '@/components/CardBox.vue'
 import BaseDivider from '@/components/BaseDivider.vue'
 import FormField from '@/components/FormField.vue'
 import FormControl from '@/components/FormControl.vue'
+import PasswordField from '@/components/PasswordField.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseButtons from '@/components/BaseButtons.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
@@ -21,6 +22,7 @@ import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
 import { useAuthStore } from '@/stores/auth.js'
 import { api } from '@/services/api.js'
+import { resolveBackendAssetUrl } from '@/utils/assetUrl.js'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -31,13 +33,7 @@ const roleLabel = computed(() => authStore.roleLabel)
 const userAvatar = computed(() => {
   const user = authStore.user
   const photo = user?.photo_url || user?.photo || user?.avatar
-  if (photo) {
-    if (photo.startsWith('/uploads')) {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-      return `${baseUrl}${photo}`
-    }
-    return photo
-  }
+  if (photo) return resolveBackendAssetUrl(photo)
   return `https://api.dicebear.com/7.x/initials/svg?seed=${user?.username || 'Admin'}&backgroundColor=0033ff`
 })
 
@@ -237,11 +233,10 @@ const submitPass = async () => {
 
         <CardBox is-form @submit.prevent="submitPass">
           <FormField label="Password Saat Ini">
-            <FormControl
+            <PasswordField
               v-model="passwordForm.password_current"
               :icon="mdiAsterisk"
               name="password_current"
-              type="password"
               autocomplete="current-password"
             />
           </FormField>
@@ -249,21 +244,19 @@ const submitPass = async () => {
           <BaseDivider />
 
           <FormField label="Password Baru">
-            <FormControl
+            <PasswordField
               v-model="passwordForm.password"
               :icon="mdiFormTextboxPassword"
               name="password"
-              type="password"
               autocomplete="new-password"
             />
           </FormField>
 
           <FormField label="Konfirmasi Password">
-            <FormControl
+            <PasswordField
               v-model="passwordForm.password_confirmation"
               :icon="mdiFormTextboxPassword"
               name="password_confirmation"
-              type="password"
               autocomplete="new-password"
             />
           </FormField>

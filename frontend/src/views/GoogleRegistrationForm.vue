@@ -6,6 +6,7 @@ import SectionFullScreen from '@/components/SectionFullScreen.vue'
 import LayoutGuest from '@/layouts/LayoutGuest.vue'
 import FormField from '@/components/FormField.vue'
 import FormControl from '@/components/FormControl.vue'
+import PasswordField from '@/components/PasswordField.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseButtons from '@/components/BaseButtons.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
@@ -33,6 +34,8 @@ const form = reactive({
   role: route.query.role || 'student',
   name: '',
   email: '',
+  password: '',
+  password_confirmation: '',
   
   // Step 1: Identitas
   nisn: '',
@@ -56,8 +59,16 @@ const form = reactive({
 const nextStep = () => {
   // Simple validation for step 1
   if (currentStep.value === 1) {
-    if (!form.name || !form.email || !form.phone) {
-      errorMessage.value = 'Mohon lengkapi Nama, Email, dan No HP.'
+    if (!form.name || !form.email || !form.phone || !form.password || !form.password_confirmation) {
+      errorMessage.value = 'Mohon lengkapi Nama, Email, Password, Konfirmasi Password, dan No HP.'
+      return
+    }
+    if (form.password.length < 8) {
+      errorMessage.value = 'Password minimal 8 karakter.'
+      return
+    }
+    if (form.password !== form.password_confirmation) {
+      errorMessage.value = 'Konfirmasi password tidak cocok.'
       return
     }
     errorMessage.value = ''
@@ -73,18 +84,36 @@ const goToStep = (step) => {
   currentStep.value = step
 }
 
+const backToLogin = () => {
+  router.push('/login')
+}
+
+const handleSecondaryBack = () => {
+  if (currentStep.value <= 1) {
+    backToLogin()
+    return
+  }
+  prevStep()
+}
+
 const submit = async () => {
   isLoading.value = true
   errorMessage.value = ''
   
   try {
+    if (!form.password || form.password.length < 8) {
+      throw new Error('Password minimal 8 karakter.')
+    }
+    if (form.password !== form.password_confirmation) {
+      throw new Error('Konfirmasi password tidak cocok.')
+    }
     const response = await api.post('/api/v1/auth/google/register', {
       ...form,
       birth_date: form.birth_date ? new Date(form.birth_date).toISOString() : null
     })
     successMessage.value = response.data.message
   } catch (err) {
-    errorMessage.value = err.response?.data?.error || 'Gagal mengirim pendaftaran.'
+    errorMessage.value = err.response?.data?.error || err.message || 'Gagal mengirim pendaftaran.'
   } finally {
     isLoading.value = false
   }
@@ -227,9 +256,28 @@ const groupOptions = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
                     <input v-model="form.name" type="text" placeholder="Masukkan Nama Lengkap" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 transition-all text-slate-800 outline-none" />
                   </div>
  
-                   <div>
+                  <div>
                      <label class="block text-sm font-medium text-slate-700 mb-1.5">Email <span class="text-rose-500">*</span></label>
                     <input v-model="form.email" type="email" placeholder="contoh@gmail.com" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 transition-all text-slate-800 outline-none" />
+                  </div>
+
+                  <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label class="block text-sm font-medium text-slate-700 mb-1.5">Password <span class="text-rose-500">*</span></label>
+                      <PasswordField
+                        v-model="form.password"
+                        placeholder="Minimal 8 karakter"
+                        autocomplete="new-password"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-slate-700 mb-1.5">Konfirmasi Password <span class="text-rose-500">*</span></label>
+                      <PasswordField
+                        v-model="form.password_confirmation"
+                        placeholder="Ulangi password"
+                        autocomplete="new-password"
+                      />
+                    </div>
                   </div>
  
                    <div v-if="form.role === 'student'" class="grid grid-cols-2 gap-4">
@@ -275,6 +323,9 @@ const groupOptions = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
                     class="w-full flex items-center justify-center py-3.5 px-6 rounded-xl border-2 border-slate-100 text-slate-700 font-bold hover:bg-slate-50 transition-all gap-2"
                   >
                     Lanjut ke info sekolah <BaseIcon :path="mdiArrowRight" size="20" />
+                  </button>
+                  <button @click="handleSecondaryBack" class="w-full text-sm text-slate-400 font-medium py-3 hover:text-slate-600 transition-colors mt-2">
+                    Kembali ke login
                   </button>
                 </div>
               </div>
@@ -330,7 +381,7 @@ const groupOptions = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
                   >
                     Lanjut ke konfirmasi <BaseIcon :path="mdiArrowRight" size="20" />
                   </button>
-                  <button @click="prevStep" class="w-full text-sm text-slate-400 font-medium py-3 hover:text-slate-600 transition-colors mt-2">
+                  <button @click="handleSecondaryBack" class="w-full text-sm text-slate-400 font-medium py-3 hover:text-slate-600 transition-colors mt-2">
                     Kembali
                   </button>
                 </div>
@@ -356,6 +407,10 @@ const groupOptions = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
                     <div class="flex justify-between text-sm">
                       <span class="text-slate-500 text-xs">Email</span>
                       <span class="font-medium text-slate-800 font-mono">{{ form.email }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                      <span class="text-slate-500 text-xs">Password</span>
+                      <span class="font-medium text-slate-800">{{ form.password ? 'Tersimpan' : '-' }}</span>
                     </div>
                     <div v-if="form.role === 'student'" class="flex justify-between text-sm">
                       <span class="text-slate-500 text-xs">NIS / NISN</span>
@@ -391,7 +446,7 @@ const groupOptions = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
                   >
                     {{ isLoading ? 'Memproses...' : 'Daftar Sekarang' }}
                   </button>
-                   <button @click="prevStep" class="w-full text-sm text-slate-400 font-medium py-3 hover:text-slate-600 transition-colors mt-2">
+                  <button @click="handleSecondaryBack" class="w-full text-sm text-slate-400 font-medium py-3 hover:text-slate-600 transition-colors mt-2">
                     Kembali
                   </button>
                 </div>

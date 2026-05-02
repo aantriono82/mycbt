@@ -11,6 +11,7 @@ const props = defineProps({
   iconSize: [String, Number],
   href: String,
   target: String,
+  download: [Boolean, String],
   to: [String, Object],
   type: String,
   color: {
@@ -61,7 +62,7 @@ const componentClass = computed(() => {
     useDarkModeStore().isInProgress ? '' : 'transition-all duration-300',
     'focus:ring-3',
     'border',
-    props.disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:shadow-md active:scale-95 hover:-translate-y-0.5',
+    props.disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:shadow-lg active:scale-95 hover:-translate-y-0.5',
     props.roundedFull ? 'rounded-full' : 'rounded-xl',
     getButtonColor(props.color, props.outline, !props.disabled, props.active),
   ]
@@ -90,6 +91,7 @@ const componentClass = computed(() => {
     :type="computedType"
     :to="to"
     :target="target"
+    :download="download"
     :disabled="disabled"
   >
     <BaseIcon v-if="icon" :path="icon" :size="iconSize" />

@@ -1,6 +1,6 @@
 # Frontend (Vue 3 + Vite)
 
-Frontend aplikasi CBT ini berbasis template UI `admin-one-vue-tailwind`, lalu disesuaikan untuk kebutuhan `mycbt` (routing/menu per role dan halaman placeholder modul).
+Frontend aplikasi CBT ini berbasis template UI `admin-one-vue-tailwind`, lalu disesuaikan untuk kebutuhan `AtigaCBT` (routing/menu per role dan halaman placeholder modul).
 
 ## Dev
 

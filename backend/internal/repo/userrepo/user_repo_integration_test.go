@@ -61,7 +61,7 @@ func TestUserRepo_CreateLookupAndUpdateFlow(t *testing.T) {
 	if err := repo.UpdateProfile(ctx, userID, "Alice Updated", "alice.updated@example.com"); err != nil {
 		t.Fatalf("UpdateProfile error: %v", err)
 	}
-	if err := repo.UpdatePassword(ctx, userID, "hash-2"); err != nil {
+	if err := repo.UpdatePassword(ctx, userID, "hash-2", "plain-2"); err != nil {
 		t.Fatalf("UpdatePassword error: %v", err)
 	}
 	if err := repo.UpdatePhoto(ctx, userID, "/uploads/alice.jpg"); err != nil {
@@ -81,7 +81,7 @@ func TestUserRepo_CreateLookupAndUpdateFlow(t *testing.T) {
 	if updated.Name != "Alice Updated" || updated.Email != "alice.updated@example.com" {
 		t.Fatalf("unexpected updated profile: %+v", updated)
 	}
-	if updated.PasswordHash != "hash-2" || updated.PhotoURL != "/uploads/alice.jpg" {
+	if updated.PasswordHash != "hash-2" || updated.PasswordPlain != "plain-2" || updated.PhotoURL != "/uploads/alice.jpg" {
 		t.Fatalf("unexpected updated password/photo: %+v", updated)
 	}
 	if updated.Role != "admin" || updated.GoogleID != "google-2" {

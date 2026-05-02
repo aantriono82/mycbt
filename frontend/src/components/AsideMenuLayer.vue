@@ -33,7 +33,7 @@ const asideLgCloseClick = (event) => {
     id="aside"
     class="fixed top-0 z-40 flex h-screen w-60 overflow-hidden transition-(--transition-position) lg:py-2 lg:pl-2"
   >
-    <div class="aside flex flex-1 flex-col overflow-hidden lg:rounded-[2rem] bg-white dark:bg-[#13082a] backdrop-blur-xl border-r lg:border border-slate-200 dark:border-blue-900/30 shadow-2xl shadow-blue-300/40 dark:shadow-blue-900/30 mb-2">
+    <div class="aside flex flex-1 flex-col overflow-hidden lg:rounded-[2rem] bg-white/70 dark:bg-[#13082a]/70 backdrop-blur-xl border-r lg:border border-slate-200 dark:border-blue-900/30 shadow-2xl shadow-blue-300/40 dark:shadow-blue-900/30 mb-2">
       <div class="aside-brand flex h-20 flex-row items-center justify-between px-6">
         <div class="flex items-center cursor-pointer" @click="router.push('/dashboard')">
           <img src="/logo_a3_blue.png" class="mr-3 h-10 w-10 rounded-xl shadow-lg hover:scale-110 transition-transform duration-300 brightness-110" alt="Logo" />

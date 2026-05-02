@@ -28,34 +28,28 @@ type ExamScoreDistribution struct {
 
 func (r *Repo) GetExamScoreDistribution(ctx context.Context, examID string, nowUTC time.Time) (ExamScoreDistribution, error) {
 	rows, err := r.pool.Query(ctx, `
-SELECT id::text, status
-FROM exam_sessions
-WHERE exam_id = $1
-  AND status <> 'in_progress'`, examID)
+SELECT s.id::text,
+       s.status,
+       COALESCE(s.attempt_no, ROW_NUMBER() OVER (PARTITION BY s.student_id ORDER BY s.started_at ASC, s.id ASC)) AS attempt_number,
+       st.id::text,
+       to_char(s.started_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS started_at,
+       COALESCE(to_char(s.finished_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),'') AS finished_at
+FROM exam_sessions s
+JOIN students st ON st.id = s.student_id
+WHERE s.exam_id = $1
+  AND s.status <> 'in_progress'`, examID)
 	if err != nil {
 		return ExamScoreDistribution{}, fmt.Errorf("list sessions for score distribution: %w", err)
 	}
 	defer rows.Close()
 
-	type sessionRow struct {
-		ID     string
-		Status string
-	}
-	sessions := make([]sessionRow, 0)
-	submitted := 0
-	expired := 0
+	allRows := make([]ExamSessionRow, 0)
 	for rows.Next() {
-		var it sessionRow
-		if scanErr := rows.Scan(&it.ID, &it.Status); scanErr != nil {
+		var it ExamSessionRow
+		if scanErr := rows.Scan(&it.SessionID, &it.Status, &it.AttemptNumber, &it.StudentID, &it.StartedAt, &it.FinishedAt); scanErr != nil {
 			return ExamScoreDistribution{}, fmt.Errorf("scan session for score distribution: %w", scanErr)
 		}
-		if it.Status == "submitted" {
-			submitted++
-		}
-		if it.Status == "expired" {
-			expired++
-		}
-		sessions = append(sessions, it)
+		allRows = append(allRows, it)
 	}
 	if rowsErr := rows.Err(); rowsErr != nil {
 		return ExamScoreDistribution{}, rowsErr
@@ -75,7 +69,7 @@ WHERE exam_id = $1
 		}
 	}
 
-	if len(sessions) == 0 {
+	if len(allRows) == 0 {
 		return ExamScoreDistribution{
 			TotalSessions:   0,
 			SubmittedCount:  0,
@@ -88,14 +82,27 @@ WHERE exam_id = $1
 		}, nil
 	}
 
-	scores := make([]int, 0, len(sessions))
-	totalScore := 0
-	for _, s := range sessions {
-		sum, sErr := r.ComputeAutoScoreAny(ctx, s.ID, nowUTC)
+	for i := range allRows {
+		sum, sErr := r.ComputeAutoScoreAny(ctx, allRows[i].SessionID, nowUTC)
 		if sErr != nil {
 			return ExamScoreDistribution{}, fmt.Errorf("compute score for distribution: %w", sErr)
 		}
-		score := sum.Score
+		allRows[i].Score = sum.Score
+	}
+
+	sessions := selectBestSessionsByStudent(allRows)
+	submitted := 0
+	expired := 0
+	scores := make([]int, 0, len(sessions))
+	totalScore := 0
+	for _, s := range sessions {
+		if s.Status == "submitted" || s.Status == "forced" {
+			submitted++
+		}
+		if s.Status == "expired" {
+			expired++
+		}
+		score := s.Score
 		if score < 0 {
 			score = 0
 		}

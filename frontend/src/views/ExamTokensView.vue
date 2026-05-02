@@ -288,7 +288,7 @@ onMounted(async () => {
 
             <div class="mt-2 flex flex-wrap gap-2">
               <BaseButton :icon="mdiPlus" color="info" label="Generate Token" :disabled="isMutating" @click="createToken" />
-              <BaseButton :icon="mdiRefresh" color="warning" label="Rotate Token" :disabled="isMutating" @click="rotateToken" />
+              <BaseButton :icon="mdiRefresh" color="purple" label="Rotate Token" :disabled="isMutating" @click="rotateToken" />
               <BaseButton
                 :icon="mdiToggleSwitchOffOutline"
                 color="danger"

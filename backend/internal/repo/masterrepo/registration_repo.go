@@ -9,33 +9,34 @@ import (
 )
 
 type RegistrationRequest struct {
-	ID           string     `json:"id"`
-	Role         string     `json:"role"`
-	Username     string     `json:"username"`
-	Name         string     `json:"name"`
-	Email        string     `json:"email"`
-	Status       string     `json:"status"`
-	Note         string     `json:"note"`
-	PasswordHash string     `json:"-"`
-	DecidedAt    *time.Time `json:"decided_at,omitempty"`
+	ID            string     `json:"id"`
+	Role          string     `json:"role"`
+	Username      string     `json:"username"`
+	Name          string     `json:"name"`
+	Email         string     `json:"email"`
+	Status        string     `json:"status"`
+	Note          string     `json:"note"`
+	PasswordHash  string     `json:"-"`
+	PasswordPlain string     `json:"password_plain,omitempty"`
+	DecidedAt     *time.Time `json:"decided_at,omitempty"`
 
 	// Optional payload for approval-to-create.
-	NIS          string     `json:"nis"`
-	NIP          string     `json:"nip"`
-	ProgramCode  string     `json:"program_code"`
-	LevelName    string     `json:"level_name"`
-	GroupName    string     `json:"group_name"`
-	MapelCodes   string     `json:"mapel_codes"`
-	GoogleID     string     `json:"google_id"`
-	GooglePicture string    `json:"google_picture"`
-	Phone        string     `json:"phone"`
-	Jenjang      string     `json:"jenjang"`
-	Gender       string     `json:"gender"`
-	BirthDate    *time.Time `json:"birth_date"`
-	SchoolName   string     `json:"school_name"`
-	AcademicYear string     `json:"academic_year"`
-	NISN         string     `json:"nisn"`
-	NISSekolah   string     `json:"nis_sekolah"`
+	NIS           string     `json:"nis"`
+	NIP           string     `json:"nip"`
+	ProgramCode   string     `json:"program_code"`
+	LevelName     string     `json:"level_name"`
+	GroupName     string     `json:"group_name"`
+	MapelCodes    string     `json:"mapel_codes"`
+	GoogleID      string     `json:"google_id"`
+	GooglePicture string     `json:"google_picture"`
+	Phone         string     `json:"phone"`
+	Jenjang       string     `json:"jenjang"`
+	Gender        string     `json:"gender"`
+	BirthDate     *time.Time `json:"birth_date"`
+	SchoolName    string     `json:"school_name"`
+	AcademicYear  string     `json:"academic_year"`
+	NISN          string     `json:"nisn"`
+	NISSekolah    string     `json:"nis_sekolah"`
 }
 
 type RegistrationRepo struct{ pool *pgxpool.Pool }
@@ -124,7 +125,7 @@ LIMIT $4 OFFSET $5`
 func (r *RegistrationRepo) Get(ctx context.Context, id string) (RegistrationRequest, bool, error) {
 	const q = `
 SELECT id, role, username, name, COALESCE(email,''), status, COALESCE(note,''), decided_at,
-       COALESCE(password_hash,''),
+       COALESCE(password_hash,''), COALESCE(password_plain,''),
        COALESCE(nis,''), COALESCE(nip,''), COALESCE(program_code,''), COALESCE(level_name,''), COALESCE(group_name,''), COALESCE(mapel_codes,''),
        COALESCE(google_id,''), COALESCE(google_picture,''), COALESCE(phone,''), COALESCE(jenjang,''), COALESCE(gender,''), birth_date,
        COALESCE(school_name,''), COALESCE(academic_year,''), COALESCE(nisn,''), COALESCE(nis_sekolah,'')
@@ -134,7 +135,7 @@ LIMIT 1`
 	var it RegistrationRequest
 	err := r.pool.QueryRow(ctx, q, id).Scan(
 		&it.ID, &it.Role, &it.Username, &it.Name, &it.Email, &it.Status, &it.Note, &it.DecidedAt,
-		&it.PasswordHash,
+		&it.PasswordHash, &it.PasswordPlain,
 		&it.NIS, &it.NIP, &it.ProgramCode, &it.LevelName, &it.GroupName, &it.MapelCodes,
 		&it.GoogleID, &it.GooglePicture, &it.Phone, &it.Jenjang, &it.Gender, &it.BirthDate,
 		&it.SchoolName, &it.AcademicYear, &it.NISN, &it.NISSekolah,
@@ -150,14 +151,14 @@ LIMIT 1`
 
 func (r *RegistrationRepo) Create(ctx context.Context, req RegistrationRequest) (string, error) {
 	const q = `
-INSERT INTO registration_requests (role, username, name, email, password_hash, nis, nip, program_code, level_name, group_name, mapel_codes, google_id, google_picture, phone, jenjang, gender, birth_date, school_name, academic_year, nisn, nis_sekolah, status)
-VALUES ($1,$2,$3,NULLIF($4,''),NULLIF($5,''),NULLIF($6,''),NULLIF($7,''),NULLIF($8,''),NULLIF($9,''),NULLIF($10,''),NULLIF($11,''),NULLIF($12,''),NULLIF($13,''),NULLIF($14,''),NULLIF($15,''),NULLIF($16,''),$17,NULLIF($18,''),NULLIF($19,''),NULLIF($20,''),NULLIF($21,''),'pending')
+INSERT INTO registration_requests (role, username, name, email, password_hash, password_plain, nis, nip, program_code, level_name, group_name, mapel_codes, google_id, google_picture, phone, jenjang, gender, birth_date, school_name, academic_year, nisn, nis_sekolah, status)
+VALUES ($1,$2,$3,NULLIF($4,''),NULLIF($5,''),NULLIF($6,''),NULLIF($7,''),NULLIF($8,''),NULLIF($9,''),NULLIF($10,''),NULLIF($11,''),NULLIF($12,''),NULLIF($13,''),NULLIF($14,''),NULLIF($15,''),NULLIF($16,''),NULLIF($17,''),$18,NULLIF($19,''),NULLIF($20,''),NULLIF($21,''),NULLIF($22,''),'pending')
 RETURNING id`
 	var id string
 	if err := r.pool.QueryRow(
 		ctx,
 		q,
-		req.Role, req.Username, req.Name, req.Email, req.PasswordHash, req.NIS, req.NIP, req.ProgramCode, req.LevelName, req.GroupName, req.MapelCodes, req.GoogleID, req.GooglePicture,
+		req.Role, req.Username, req.Name, req.Email, req.PasswordHash, req.PasswordPlain, req.NIS, req.NIP, req.ProgramCode, req.LevelName, req.GroupName, req.MapelCodes, req.GoogleID, req.GooglePicture,
 		req.Phone, req.Jenjang, req.Gender, req.BirthDate, req.SchoolName, req.AcademicYear, req.NISN, req.NISSekolah,
 	).Scan(&id); err != nil {
 		return "", fmt.Errorf("create registration: %w", err)
@@ -180,7 +181,7 @@ SET role = $2,
     mapel_codes = NULLIF($11,'')
 WHERE id = $1 AND status = 'pending'
 RETURNING id, role, username, name, COALESCE(email,''), status, COALESCE(note,''), decided_at,
-          COALESCE(password_hash,''),
+          COALESCE(password_hash,''), COALESCE(password_plain,''),
           COALESCE(nis,''), COALESCE(nip,''), COALESCE(program_code,''), COALESCE(level_name,''), COALESCE(group_name,''), COALESCE(mapel_codes,''),
           COALESCE(google_id,''), COALESCE(google_picture,''), COALESCE(phone,''), COALESCE(jenjang,''), COALESCE(gender,''), birth_date,
           COALESCE(school_name,''), COALESCE(academic_year,''), COALESCE(nisn,''), COALESCE(nis_sekolah,'')`
@@ -202,7 +203,7 @@ RETURNING id, role, username, name, COALESCE(email,''), status, COALESCE(note,''
 		req.MapelCodes,
 	).Scan(
 		&it.ID, &it.Role, &it.Username, &it.Name, &it.Email, &it.Status, &it.Note, &it.DecidedAt,
-		&it.PasswordHash,
+		&it.PasswordHash, &it.PasswordPlain,
 		&it.NIS, &it.NIP, &it.ProgramCode, &it.LevelName, &it.GroupName, &it.MapelCodes,
 		&it.GoogleID, &it.GooglePicture, &it.Phone, &it.Jenjang, &it.Gender, &it.BirthDate,
 		&it.SchoolName, &it.AcademicYear, &it.NISN, &it.NISSekolah,
@@ -243,7 +244,7 @@ WHERE id = $1 AND status = 'pending'`
 func (r *RegistrationRepo) GetByGoogleID(ctx context.Context, googleID string) (RegistrationRequest, bool, error) {
 	const q = `
 SELECT id, role, username, name, COALESCE(email,''), status, COALESCE(note,''), decided_at,
-       COALESCE(password_hash,''),
+       COALESCE(password_hash,''), COALESCE(password_plain,''),
        COALESCE(nis,''), COALESCE(nip,''), COALESCE(program_code,''), COALESCE(level_name,''), COALESCE(group_name,''), COALESCE(mapel_codes,''),
        COALESCE(google_id,''), COALESCE(google_picture,''), COALESCE(phone,''), COALESCE(jenjang,''), COALESCE(gender,''), birth_date,
        COALESCE(school_name,''), COALESCE(academic_year,''), COALESCE(nisn,''), COALESCE(nis_sekolah,'')
@@ -254,7 +255,7 @@ LIMIT 1`
 	var it RegistrationRequest
 	err := r.pool.QueryRow(ctx, q, googleID).Scan(
 		&it.ID, &it.Role, &it.Username, &it.Name, &it.Email, &it.Status, &it.Note, &it.DecidedAt,
-		&it.PasswordHash,
+		&it.PasswordHash, &it.PasswordPlain,
 		&it.NIS, &it.NIP, &it.ProgramCode, &it.LevelName, &it.GroupName, &it.MapelCodes,
 		&it.GoogleID, &it.GooglePicture, &it.Phone, &it.Jenjang, &it.Gender, &it.BirthDate,
 		&it.SchoolName, &it.AcademicYear, &it.NISN, &it.NISSekolah,
@@ -271,7 +272,7 @@ LIMIT 1`
 func (r *RegistrationRepo) GetByEmail(ctx context.Context, email string) (RegistrationRequest, bool, error) {
 	const q = `
 SELECT id, role, username, name, COALESCE(email,''), status, COALESCE(note,''), decided_at,
-       COALESCE(password_hash,''),
+       COALESCE(password_hash,''), COALESCE(password_plain,''),
        COALESCE(nis,''), COALESCE(nip,''), COALESCE(program_code,''), COALESCE(level_name,''), COALESCE(group_name,''), COALESCE(mapel_codes,''),
        COALESCE(google_id,''), COALESCE(google_picture,''), COALESCE(phone,''), COALESCE(jenjang,''), COALESCE(gender,''), birth_date,
        COALESCE(school_name,''), COALESCE(academic_year,''), COALESCE(nisn,''), COALESCE(nis_sekolah,'')
@@ -282,7 +283,7 @@ LIMIT 1`
 	var it RegistrationRequest
 	err := r.pool.QueryRow(ctx, q, email).Scan(
 		&it.ID, &it.Role, &it.Username, &it.Name, &it.Email, &it.Status, &it.Note, &it.DecidedAt,
-		&it.PasswordHash,
+		&it.PasswordHash, &it.PasswordPlain,
 		&it.NIS, &it.NIP, &it.ProgramCode, &it.LevelName, &it.GroupName, &it.MapelCodes,
 		&it.GoogleID, &it.GooglePicture, &it.Phone, &it.Jenjang, &it.Gender, &it.BirthDate,
 		&it.SchoolName, &it.AcademicYear, &it.NISN, &it.NISSekolah,

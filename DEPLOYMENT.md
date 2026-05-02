@@ -1,6 +1,6 @@
-# 🚀 MyCBT — Deployment Checklist untuk VPS
+# 🚀 AtigaCBT — Deployment Checklist untuk VPS
 
-> Dokumen ini adalah panduan langkah demi langkah untuk men-deploy MyCBT
+> Dokumen ini adalah panduan langkah demi langkah untuk men-deploy AtigaCBT
 > ke VPS dari awal (fresh install). Ikuti urutan ini dengan tepat.
 
 ---
@@ -30,8 +30,8 @@
 ### ☑ Build backend binary
 ```bash
 cd backend
-GIN_MODE=release go build -o mycbt-api ./cmd/api
-# Binary hasilnya: backend/mycbt-api
+GIN_MODE=release go build -o atigacbt-api ./cmd/api
+# Binary hasilnya: backend/atigacbt-api
 ```
 
 ### ☑ Build frontend static files
@@ -73,16 +73,16 @@ sudo apt update && sudo apt upgrade -y
 
 ### ☑ Buat user non-root untuk deploy
 ```bash
-sudo adduser mycbt
-sudo usermod -aG sudo mycbt
-# Login sebagai user mycbt untuk langkah berikutnya
-su - mycbt
+sudo adduser atigacbt
+sudo usermod -aG sudo atigacbt
+# Login sebagai user atigacbt untuk langkah berikutnya
+su - atigacbt
 ```
 
 ### ☑ Setup SSH key (nonaktifkan password login)
 ```bash
 # Di mesin lokal Anda:
-ssh-copy-id mycbt@IP_VPS
+ssh-copy-id atigacbt@IP_VPS
 
 # Di VPS, edit /etc/ssh/sshd_config:
 PasswordAuthentication no
@@ -100,9 +100,9 @@ sudo systemctl reload sshd
 **Opsi A — copy binary (direkomendasikan):**
 ```bash
 # Di lokal:
-scp backend/mycbt-api mycbt@IP_VPS:/home/mycbt/app/
-scp -r frontend/dist mycbt@IP_VPS:/home/mycbt/www/
-scp -r backend/migrations mycbt@IP_VPS:/home/mycbt/app/
+scp backend/atigacbt-api atigacbt@IP_VPS:/home/atigacbt/app/
+scp -r frontend/dist atigacbt@IP_VPS:/home/atigacbt/www/
+scp -r backend/migrations atigacbt@IP_VPS:/home/atigacbt/app/
 ```
 
 **Opsi B — install Go di VPS:**
@@ -130,28 +130,28 @@ sudo systemctl enable postgresql
 sudo systemctl start postgresql
 ```
 
-### ☑ Buat database & user untuk MyCBT
+### ☑ Buat database & user untuk AtigaCBT
 ```bash
 sudo -u postgres psql
 ```
 ```sql
 -- Di dalam psql:
-CREATE USER mycbt WITH PASSWORD 'GANTI_PASSWORD_KUAT_DI_SINI';
-CREATE DATABASE mycbt OWNER mycbt;
-GRANT ALL PRIVILEGES ON DATABASE mycbt TO mycbt;
+CREATE USER atigacbt WITH PASSWORD 'GANTI_PASSWORD_KUAT_DI_SINI';
+CREATE DATABASE atigacbt OWNER atigacbt;
+GRANT ALL PRIVILEGES ON DATABASE atigacbt TO atigacbt;
 \q
 ```
 
 ### ☑ Verifikasi koneksi
 ```bash
-psql -U mycbt -h localhost -d mycbt
+psql -U atigacbt -h localhost -d atigacbt
 # Harus berhasil masuk tanpa error
 \q
 ```
 
 ### ⚠️ PENTING
 - Gunakan password yang **panjang dan acak** (min. 20 karakter)
-- Jangan pakai password `mycbt` seperti di `docker-compose.yml` development!
+- Jangan pakai password `atigacbt` seperti di `docker-compose.yml` development!
 - Simpan password di tempat yang aman (password manager)
 
 ---
@@ -185,7 +185,7 @@ redis-cli -a REDIS_PASSWORD ping
 
 ### ☑ Buat file konfigurasi di VPS
 ```bash
-nano /home/mycbt/app/.env
+nano /home/atigacbt/app/.env
 ```
 
 ### ☑ Isi `.env` lengkap (ganti semua nilai dalam `<...>`)
@@ -199,18 +199,18 @@ APP_URL=https://<domain-anda.com>
 CORS_ORIGINS=https://<domain-anda.com>
 
 # ===== DATABASE =====
-DATABASE_URL=postgres://mycbt:<DB_PASSWORD>@localhost:5432/mycbt?sslmode=disable
+DATABASE_URL=postgres://atigacbt:<DB_PASSWORD>@localhost:5432/atigacbt?sslmode=disable
 
 # ===== REDIS (untuk rate limiting & token blocklist) =====
 REDIS_ADDR=localhost:6379
 REDIS_PASSWORD=<REDIS_PASSWORD_KUAT>
 REDIS_DB=0
-REDIS_PREFIX=mycbt
+REDIS_PREFIX=atigacbt
 
 # ===== JWT (WAJIB DIISI DENGAN STRING ACAK KUAT) =====
 # Generate dengan: openssl rand -hex 32
 JWT_SECRET=<GANTI_DENGAN_STRING_ACAK_64_KARAKTER>
-JWT_ISSUER=mycbt
+JWT_ISSUER=atigacbt
 JWT_TTL_MINUTES=120
 
 # ===== AKUN ADMIN PERTAMA =====
@@ -223,7 +223,7 @@ ADMIN_EMAIL=<email_admin@sekolah.sch.id>
 # ===== UPLOAD FILE =====
 # Pilihan: local | rustfs | s3
 UPLOAD_PROVIDER=local
-UPLOAD_LOCAL_DIR=/home/mycbt/uploads
+UPLOAD_LOCAL_DIR=/home/atigacbt/uploads
 
 # ===== SMTP (opsional, untuk reset password via email) =====
 # SMTP_HOST=smtp.gmail.com
@@ -246,7 +246,7 @@ openssl rand -hex 32
 
 ### ☑ Set permission file .env
 ```bash
-chmod 600 /home/mycbt/app/.env
+chmod 600 /home/atigacbt/app/.env
 ```
 
 ---
@@ -273,9 +273,9 @@ npm run build
 
 ### ☑ Struktur direktori di VPS
 ```
-/home/mycbt/
+/home/atigacbt/
 ├── app/
-│   ├── mycbt-api          ← binary Go
+│   ├── atigacbt-api          ← binary Go
 │   ├── migrations/        ← folder migrasi SQL
 │   └── .env               ← konfigurasi
 ├── uploads/               ← foto & file upload
@@ -285,17 +285,17 @@ npm run build
 
 ### ☑ Buat struktur folder
 ```bash
-mkdir -p /home/mycbt/app /home/mycbt/uploads /home/mycbt/www
+mkdir -p /home/atigacbt/app /home/atigacbt/uploads /home/atigacbt/www
 ```
 
 ### ☑ Copy file ke VPS (dari lokal)
 ```bash
 # Binary
-scp backend/mycbt-api mycbt@IP_VPS:/home/mycbt/app/
+scp backend/atigacbt-api atigacbt@IP_VPS:/home/atigacbt/app/
 # Folder migrasi (WAJIB ada di samping binary)
-scp -r backend/migrations mycbt@IP_VPS:/home/mycbt/app/
+scp -r backend/migrations atigacbt@IP_VPS:/home/atigacbt/app/
 # Pastikan binary bisa dieksekusi
-ssh mycbt@IP_VPS "chmod +x /home/mycbt/app/mycbt-api"
+ssh atigacbt@IP_VPS "chmod +x /home/atigacbt/app/atigacbt-api"
 ```
 
 ---
@@ -304,7 +304,7 @@ ssh mycbt@IP_VPS "chmod +x /home/mycbt/app/mycbt-api"
 
 ### ☑ Copy hasil build frontend
 ```bash
-scp -r frontend/dist/* mycbt@IP_VPS:/home/mycbt/www/
+scp -r frontend/dist/* atigacbt@IP_VPS:/home/atigacbt/www/
 ```
 
 ---
@@ -313,9 +313,9 @@ scp -r frontend/dist/* mycbt@IP_VPS:/home/mycbt/www/
 
 ### ☑ Opsi A: Local Storage (paling mudah)
 ```bash
-# Sudah diatur via UPLOAD_LOCAL_DIR=/home/mycbt/uploads
-mkdir -p /home/mycbt/uploads
-chmod 755 /home/mycbt/uploads
+# Sudah diatur via UPLOAD_LOCAL_DIR=/home/atigacbt/uploads
+mkdir -p /home/atigacbt/uploads
+chmod 755 /home/atigacbt/uploads
 ```
 > ⚠️ Pastikan direktori `/uploads` di-serve oleh Nginx (lihat bagian Nginx)
 
@@ -329,9 +329,9 @@ chmod 755 /home/mycbt/uploads
 
 ## 11. Setup Nginx
 
-### ☑ Buat konfigurasi Nginx untuk MyCBT
+### ☑ Buat konfigurasi Nginx untuk AtigaCBT
 ```bash
-sudo nano /etc/nginx/sites-available/mycbt
+sudo nano /etc/nginx/sites-available/atigacbt
 ```
 
 ```nginx
@@ -343,7 +343,7 @@ server {
     # return 301 https://$host$request_uri;
 
     # Frontend (Vue SPA)
-    root /home/mycbt/www;
+    root /home/atigacbt/www;
     index index.html;
 
     location / {
@@ -367,7 +367,7 @@ server {
 
     # Upload files (foto siswa dll)
     location /uploads/ {
-        alias /home/mycbt/uploads/;
+        alias /home/atigacbt/uploads/;
         expires 30d;
         add_header Cache-Control "public, immutable";
         access_log off;
@@ -389,7 +389,7 @@ server {
 
 ### ☑ Aktifkan konfigurasi
 ```bash
-sudo ln -s /etc/nginx/sites-available/mycbt /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/atigacbt /etc/nginx/sites-enabled/
 sudo nginx -t        # harus: configuration file test is successful
 sudo systemctl reload nginx
 ```
@@ -411,7 +411,7 @@ sudo certbot --nginx -d <domain-anda.com>
 
 ### ☑ Aktifkan redirect HTTP → HTTPS di Nginx
 ```bash
-# Edit /etc/nginx/sites-available/mycbt
+# Edit /etc/nginx/sites-available/atigacbt
 # Hapus komentar pada: return 301 https://$host$request_uri;
 sudo systemctl reload nginx
 ```
@@ -428,28 +428,28 @@ sudo certbot renew --dry-run
 
 ### ☑ Jalankan migrasi database (WAJIB pertama kali)
 ```bash
-cd /home/mycbt/app
-DATABASE_URL="postgres://mycbt:<DB_PASSWORD>@localhost:5432/mycbt?sslmode=disable" \
-  /home/mycbt/app/mycbt-api migrate
+cd /home/atigacbt/app
+DATABASE_URL="postgres://atigacbt:<DB_PASSWORD>@localhost:5432/atigacbt?sslmode=disable" \
+  /home/atigacbt/app/atigacbt-api migrate
 ```
 > **Catatan:** Atau jalankan binary migrate terpisah jika sudah di-build:
 ```bash
 # Build migrate binary di lokal:
-cd backend && go build -o mycbt-migrate ./cmd/migrate
-scp mycbt-migrate mycbt@IP_VPS:/home/mycbt/app/
+cd backend && go build -o atigacbt-migrate ./cmd/migrate
+scp atigacbt-migrate atigacbt@IP_VPS:/home/atigacbt/app/
 
 # Di VPS:
-cd /home/mycbt/app && ./mycbt-migrate
+cd /home/atigacbt/app && ./atigacbt-migrate
 ```
 
 ### ☑ Seed akun admin pertama
 ```bash
 # Build seed binary di lokal:
-cd backend && go build -o mycbt-seed ./cmd/seed
-scp mycbt-seed mycbt@IP_VPS:/home/mycbt/app/
+cd backend && go build -o atigacbt-seed ./cmd/seed
+scp atigacbt-seed atigacbt@IP_VPS:/home/atigacbt/app/
 
 # Di VPS (pastikan .env sudah berisi ADMIN_USERNAME, ADMIN_PASSWORD):
-cd /home/mycbt/app && ./mycbt-seed
+cd /home/atigacbt/app && ./atigacbt-seed
 # Output: seeded admin user id=xxx username=xxx
 ```
 
@@ -467,25 +467,25 @@ curl -X POST https://<domain>/api/v1/auth/login \
 
 ### ☑ Buat service unit untuk backend
 ```bash
-sudo nano /etc/systemd/system/mycbt.service
+sudo nano /etc/systemd/system/atigacbt.service
 ```
 
 ```ini
 [Unit]
-Description=MyCBT Backend API
+Description=AtigaCBT Backend API
 After=network.target postgresql.service redis-server.service
 
 [Service]
 Type=simple
-User=mycbt
-WorkingDirectory=/home/mycbt/app
-EnvironmentFile=/home/mycbt/app/.env
-ExecStart=/home/mycbt/app/mycbt-api
+User=atigacbt
+WorkingDirectory=/home/atigacbt/app
+EnvironmentFile=/home/atigacbt/app/.env
+ExecStart=/home/atigacbt/app/atigacbt-api
 Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=mycbt
+SyslogIdentifier=atigacbt
 
 [Install]
 WantedBy=multi-user.target
@@ -494,15 +494,15 @@ WantedBy=multi-user.target
 ### ☑ Aktifkan dan jalankan service
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable mycbt
-sudo systemctl start mycbt
-sudo systemctl status mycbt
+sudo systemctl enable atigacbt
+sudo systemctl start atigacbt
+sudo systemctl status atigacbt
 # Harus: active (running)
 ```
 
 ### ☑ Lihat log real-time
 ```bash
-sudo journalctl -u mycbt -f
+sudo journalctl -u atigacbt -f
 ```
 
 ---
@@ -549,7 +549,7 @@ curl -I https://<domain>/uploads/avatars/xxx.jpg
 - [ ] Password admin bukan default (`admin12345`) — ganti via seed atau UI
 - [ ] Password PostgreSQL kuat dan unik
 - [ ] Password Redis kuat dan unik
-- [ ] File `.env` permission `600` (`chmod 600 /home/mycbt/app/.env`)
+- [ ] File `.env` permission `600` (`chmod 600 /home/atigacbt/app/.env`)
 - [ ] HTTPS aktif (Let's Encrypt)
 - [ ] Port PostgreSQL (5432) **tidak** terbuka ke internet (hanya localhost)
 - [ ] Port Redis (6379) **tidak** terbuka ke internet (hanya localhost)
@@ -561,7 +561,7 @@ curl -I https://<domain>/uploads/avatars/xxx.jpg
 - [ ] Fail2ban terpasang untuk proteksi brute force
 - [ ] Regular backup database terjadwal (cron `pg_dump`)
 - [ ] Monitoring uptime (UptimeRobot / Healthchecks.io)
-- [ ] Setup log rotation untuk `/home/mycbt/uploads`
+- [ ] Setup log rotation untuk `/home/atigacbt/uploads`
 
 ---
 
@@ -570,25 +570,25 @@ curl -I https://<domain>/uploads/avatars/xxx.jpg
 ```bash
 # 1. Di lokal — build binary baru
 cd backend
-GIN_MODE=release go build -o mycbt-api ./cmd/api
+GIN_MODE=release go build -o atigacbt-api ./cmd/api
 cd ../frontend
 npm run build
 
 # 2. Copy ke VPS
-scp backend/mycbt-api mycbt@IP_VPS:/home/mycbt/app/mycbt-api.new
-scp -r frontend/dist/* mycbt@IP_VPS:/home/mycbt/www/
+scp backend/atigacbt-api atigacbt@IP_VPS:/home/atigacbt/app/atigacbt-api.new
+scp -r frontend/dist/* atigacbt@IP_VPS:/home/atigacbt/www/
 
 # 3. Di VPS — ganti binary & restart
-ssh mycbt@IP_VPS
-mv /home/mycbt/app/mycbt-api.new /home/mycbt/app/mycbt-api
-chmod +x /home/mycbt/app/mycbt-api
+ssh atigacbt@IP_VPS
+mv /home/atigacbt/app/atigacbt-api.new /home/atigacbt/app/atigacbt-api
+chmod +x /home/atigacbt/app/atigacbt-api
 
 # 4. Jalankan migrasi baru (jika ada)
-cd /home/mycbt/app && ./mycbt-migrate
+cd /home/atigacbt/app && ./atigacbt-migrate
 
 # 5. Restart service
-sudo systemctl restart mycbt
-sudo journalctl -u mycbt -f  # pantau log
+sudo systemctl restart atigacbt
+sudo journalctl -u atigacbt -f  # pantau log
 ```
 
 ---
@@ -597,15 +597,15 @@ sudo journalctl -u mycbt -f  # pantau log
 
 ```bash
 # Backup manual
-pg_dump -U mycbt -h localhost mycbt | gzip > /tmp/mycbt_backup_$(date +%Y%m%d).sql.gz
+pg_dump -U atigacbt -h localhost atigacbt | gzip > /tmp/atigacbt_backup_$(date +%Y%m%d).sql.gz
 
 # Cron job backup otomatis harian (jam 02:00)
 crontab -e
 # Tambahkan:
-0 2 * * * pg_dump -U mycbt -h localhost mycbt | gzip > /home/mycbt/backups/mycbt_$(date +\%Y\%m\%d).sql.gz
+0 2 * * * pg_dump -U atigacbt -h localhost atigacbt | gzip > /home/atigacbt/backups/atigacbt_$(date +\%Y\%m\%d).sql.gz
 ```
 
 ---
 
-*Dokumen ini dibuat otomatis berdasarkan konfigurasi sumber kode MyCBT.*
+*Dokumen ini dibuat otomatis berdasarkan konfigurasi sumber kode AtigaCBT.*
 *Terakhir diperbarui: 2026-04-28*

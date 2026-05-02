@@ -1,6 +1,8 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { homeRouteForRole, routeAllowedForRole, useAuthStore } from '@/stores/auth.js'
 
+const ROUTE_CHUNK_RELOAD_KEY = 'atigacbt:route-chunk-reload'
+
 const routes = [
   {
     meta: {
@@ -585,6 +587,31 @@ router.beforeEach(async (to) => {
   }
 
   return true
+})
+
+router.onError((error, to) => {
+  const message = String(error?.message || '')
+  const isChunkLoadError =
+    message.includes('Failed to fetch dynamically imported module') ||
+    message.includes('Importing a module script failed') ||
+    message.includes('Unable to preload CSS for') ||
+    message.includes('Loading chunk')
+
+  if (!isChunkLoadError || typeof window === 'undefined') {
+    console.error('Router navigation error:', error)
+    return
+  }
+
+  const currentTarget = String(to?.fullPath || window.location.hash || '')
+  const previousTarget = sessionStorage.getItem(ROUTE_CHUNK_RELOAD_KEY) || ''
+  if (previousTarget === currentTarget) {
+    sessionStorage.removeItem(ROUTE_CHUNK_RELOAD_KEY)
+    console.error('Router chunk reload retry failed:', error)
+    return
+  }
+
+  sessionStorage.setItem(ROUTE_CHUNK_RELOAD_KEY, currentTarget)
+  window.location.reload()
 })
 
 export default router
