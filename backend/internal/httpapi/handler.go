@@ -529,11 +529,11 @@ func NewHandler(deps Deps) http.Handler {
 	// Serve uploaded assets.
 	provider := strings.ToLower(strings.TrimSpace(deps.Config.UploadProvider))
 	if provider == "" || provider == "local" {
-		localUploadDir := strings.TrimSpace(deps.Config.UploadLocalDir)
+		localUploadDir := strings.TrimSpace(config.ResolveAppPath(deps.Config.UploadLocalDir))
 		if localUploadDir == "" {
-			localUploadDir = "uploads"
+			localUploadDir = config.ResolveAppPath("uploads")
 		}
-		r.Static("/uploads", "./"+filepath.ToSlash(localUploadDir))
+		r.Static("/uploads", filepath.Clean(localUploadDir))
 	} else {
 		r.GET("/uploads/*filepath", up.ServeObject)
 	}

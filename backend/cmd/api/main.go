@@ -31,7 +31,8 @@ func main() {
 
 	var deps httpapi.Deps
 	deps.Config = cfg
-	deps.ObjectStore = storage.NewLocalObjectStore(cfg.UploadLocalDir)
+	localUploadDir := config.ResolveAppPath(cfg.UploadLocalDir)
+	deps.ObjectStore = storage.NewLocalObjectStore(localUploadDir)
 
 	if redisClient := newRedisClient(ctx, cfg); redisClient != nil {
 		deps.Redis = redisClient

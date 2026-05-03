@@ -16,8 +16,8 @@ import { useAuthStore } from '@/stores/auth.js'
 import { api } from '@/services/api.js'
 
 const form = reactive({
-  login: 'admin',
-  pass: 'admin12345',
+  login: '',
+  pass: '',
   remember: true,
   showPassword: false
 })
@@ -222,4 +222,3 @@ form {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 </style>
-

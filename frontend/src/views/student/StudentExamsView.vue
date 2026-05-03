@@ -162,7 +162,7 @@ onBeforeUnmount(() => {
       <!-- Stats bar -->
       <div class="mb-6 grid gap-4 sm:grid-cols-3">
         <div
-          class="flex items-center gap-4 rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/50"
+          class="flex items-center gap-4 rounded-2xl border border-sky-400/60 bg-white px-5 py-4 shadow-sm dark:border-sky-800/80 dark:bg-slate-900/50"
         >
           <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100 dark:bg-sky-900/30">
             <svg class="h-5 w-5 text-sky-600 dark:text-sky-400" viewBox="0 0 24 24" fill="currentColor">
@@ -176,7 +176,7 @@ onBeforeUnmount(() => {
         </div>
 
         <div
-          class="flex items-center gap-4 rounded-2xl border border-emerald-100 bg-emerald-50/40 px-5 py-4 shadow-sm dark:border-emerald-900/30 dark:bg-emerald-900/10"
+          class="flex items-center gap-4 rounded-2xl border border-emerald-400/60 bg-emerald-50/40 px-5 py-4 shadow-sm dark:border-emerald-800/80 dark:bg-emerald-900/10"
         >
           <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/40">
             <svg class="h-5 w-5 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="currentColor">
@@ -190,7 +190,7 @@ onBeforeUnmount(() => {
         </div>
 
         <div
-          class="flex items-center gap-4 rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/50"
+          class="flex items-center gap-4 rounded-2xl border border-purple-400/60 bg-white px-5 py-4 shadow-sm dark:border-purple-800/80 dark:bg-slate-900/50"
         >
           <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
             <svg class="h-5 w-5 text-slate-500 dark:text-slate-400" viewBox="0 0 24 24" fill="currentColor">
@@ -205,7 +205,7 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- Filter & Search -->
-      <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center border border-blue-400/60 dark:border-blue-800/80 p-4 rounded-2xl bg-blue-50/10 dark:bg-blue-900/10">
         <div class="relative flex-1">
           <svg
             class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
@@ -290,8 +290,9 @@ onBeforeUnmount(() => {
           :key="exam.id"
           class="group relative flex flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg dark:bg-slate-900/60"
           :class="{
-            'border-emerald-200 dark:border-emerald-900/40': exam._ui_status === 'active',
-            'border-slate-100 dark:border-slate-800': exam._ui_status !== 'active',
+            'border-emerald-400/60 dark:border-emerald-800/80 shadow-emerald-500/10': exam._ui_status === 'active',
+            'border-sky-400/60 dark:border-sky-800/80': exam._ui_status === 'upcoming',
+            'border-purple-400/60 dark:border-purple-800/80': exam._ui_status === 'completed',
           }"
         >
           <!-- Top accent bar -->

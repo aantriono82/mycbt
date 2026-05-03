@@ -153,7 +153,7 @@ const submitPass = async () => {
     <SectionMain>
       <SectionTitleLineWithButton :icon="mdiAccount" :title="title" main />
 
-      <CardBox class="mb-6">
+      <CardBox class="mb-6" color="blue">
         <div class="flex flex-col md:flex-row items-center gap-8 py-4">
           <!-- Photo Section -->
           <div class="relative group">
@@ -187,7 +187,7 @@ const submitPass = async () => {
             <p class="text-sm text-slate-400 mt-4 italic">Format foto: JPG, PNG. Maksimal: 2MB.</p>
           </div>
 
-          <div class="hidden lg:block rounded-2xl bg-slate-50 dark:bg-slate-800/40 p-6 border border-slate-100 dark:border-slate-800 max-w-xs transition-colors hover:bg-blue-50/50 dark:hover:bg-blue-900/20">
+          <div class="hidden lg:block rounded-2xl bg-slate-50 dark:bg-slate-800/40 p-6 border border-emerald-400/60 dark:border-emerald-800/80 max-w-xs transition-colors hover:bg-blue-50/50 dark:hover:bg-blue-900/20">
             <h4 class="font-bold text-slate-700 dark:text-slate-200 mb-1 leading-tight">Keamanan Sesi</h4>
             <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">Data profil Anda dikelola melalui sesi JWT terenkripsi. Pastikan data akun tetap rahasia.</p>
           </div>
@@ -195,7 +195,7 @@ const submitPass = async () => {
       </CardBox>
 
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <CardBox is-form @submit.prevent="submitProfile">
+        <CardBox is-form @submit.prevent="submitProfile" color="purple">
           <FormField label="Username">
             <FormControl
               v-model="profileForm.username"
@@ -231,7 +231,7 @@ const submitPass = async () => {
           </template>
         </CardBox>
 
-        <CardBox is-form @submit.prevent="submitPass">
+        <CardBox is-form @submit.prevent="submitPass" color="blue">
           <FormField label="Password Saat Ini">
             <PasswordField
               v-model="passwordForm.password_current"

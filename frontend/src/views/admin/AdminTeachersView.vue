@@ -317,7 +317,7 @@ onMounted(async () => {
       </SectionTitleLineWithButton>
 
       <div class="mb-6 grid gap-6 xl:grid-cols-5">
-        <CardBox class="xl:col-span-2">
+        <CardBox class="xl:col-span-2" color="blue">
           <h3 class="mb-4 text-lg font-semibold dark:text-slate-100">
             {{ isEditing ? 'Edit Guru' : 'Tambah Guru' }}
           </h3>
@@ -406,7 +406,7 @@ onMounted(async () => {
           </div>
         </CardBox>
 
-        <CardBox class="xl:col-span-3">
+        <CardBox class="xl:col-span-3" color="indigo">
           <div class="mb-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h3 class="text-lg font-semibold dark:text-slate-100">Daftar Guru</h3>

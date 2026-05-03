@@ -426,18 +426,6 @@ const routes = [
     component: () => import('@/views/monitor/ParticipantMonitorView.vue'),
   },
   {
-    meta: { title: 'Absensi Peserta'},
-    path: '/teacher/ujian/absensi',
-    name: 'teacher-ujian-absensi',
-    component: () => import('@/views/monitor/AttendanceMonitorView.vue'),
-  },
-  {
-    meta: { title: 'Generate QR Absensi' },
-    path: '/teacher/ujian/absensi/qr/:id',
-    name: 'teacher-ujian-absensi-qr',
-    component: () => import('@/views/monitor/AttendanceQRView.vue'),
-  },
-  {
     meta: { title: 'Reset Login'},
     path: '/teacher/ujian/reset-login',
     name: 'teacher-ujian-reset-login',

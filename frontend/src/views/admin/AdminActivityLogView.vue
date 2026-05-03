@@ -157,7 +157,7 @@ onMounted(load)
         </div>
       </SectionTitleLineWithButton>
 
-      <CardBox class="shadow-md">
+      <CardBox class="shadow-md" color="blue">
         <div v-if="errorMessage" class="mb-4 rounded-lg bg-red-50 p-3 text-xs text-red-700 border border-red-100">
           {{ errorMessage }}
         </div>
@@ -165,8 +165,8 @@ onMounted(load)
           {{ successMessage }}
         </div>
 
-        <div class="mb-5 grid gap-4 md:grid-cols-12">
-          <div class="md:col-span-12 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
+        <div class="mb-5 grid gap-4 md:grid-cols-12 border border-emerald-400/60 dark:border-emerald-800/80 p-4 rounded-2xl bg-emerald-50/20 dark:bg-emerald-900/10">
+          <div class="md:col-span-12 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
             <BaseIcon :path="mdiFilterOutline" size="16" />
             Filter
           </div>
@@ -222,7 +222,7 @@ onMounted(load)
           </div>
         </div>
 
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto rounded-xl border border-purple-400/60 dark:border-purple-800/80">
           <table class="w-full text-left text-sm">
             <thead class="border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 uppercase text-[10px] tracking-widest font-black">
               <tr>

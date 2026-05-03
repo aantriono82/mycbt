@@ -699,7 +699,7 @@ onMounted(async () => {
       </SectionTitleLineWithButton>
 
       <div class="mb-6 grid gap-6 2xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.35fr)]">
-        <CardBox>
+        <CardBox color="blue">
           <div class="mb-6 flex flex-col gap-2 border-b border-slate-100 pb-4 dark:border-slate-800">
             <h3 class="text-lg font-semibold dark:text-slate-100">Tambah Jadwal Ujian</h3>
             <p class="text-sm text-slate-500 dark:text-slate-400">
@@ -822,7 +822,7 @@ onMounted(async () => {
           </div>
         </CardBox>
 
-        <CardBox>
+        <CardBox color="purple">
           <div class="mb-6 flex flex-col gap-4 border-b border-slate-100 pb-4 dark:border-slate-800 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h3 class="text-lg font-semibold dark:text-slate-100">Daftar Jadwal Ujian</h3>
@@ -1086,7 +1086,7 @@ onMounted(async () => {
               </div>
             </div>
 
-            <div class="hidden overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 lg:block">
+            <div class="hidden overflow-hidden rounded-2xl border border-purple-400/60 dark:border-purple-800/80 lg:block">
               <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
               <thead class="border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 uppercase text-xs tracking-wider font-bold">
@@ -1180,7 +1180,7 @@ onMounted(async () => {
           </div>
 
           <div v-if="selectedExamId" class="grid gap-6 xl:grid-cols-2">
-            <div class="rounded-2xl border border-emerald-100 bg-emerald-50/30 p-5 dark:border-emerald-900/30 dark:bg-emerald-900/10">
+            <div class="rounded-2xl border border-emerald-400/60 bg-emerald-50/30 p-5 dark:border-emerald-900/30 dark:bg-emerald-900/10">
               <div class="mb-5 flex flex-col gap-1 border-b border-emerald-100/80 pb-4 dark:border-emerald-900/30">
                 <h4 class="text-base font-semibold dark:text-slate-200">Attach Bank Soal</h4>
                 <p class="text-sm text-slate-500 dark:text-slate-400">Tentukan bank soal yang dipakai dan batasi jumlah soal bila diperlukan.</p>
@@ -1224,7 +1224,7 @@ onMounted(async () => {
               </div>
             </div>
 
-            <div class="rounded-2xl border border-slate-200 bg-slate-50/20 p-5 dark:border-slate-800 dark:bg-slate-800/10">
+            <div class="rounded-2xl border border-blue-400/60 bg-slate-50/20 p-5 dark:border-blue-800/80 dark:bg-slate-800/10">
               <div class="mb-5 flex flex-col gap-1 border-b border-slate-200 pb-4 dark:border-slate-800">
                 <h4 class="text-base font-semibold dark:text-slate-200">Target Ujian</h4>
                 <p class="text-sm text-slate-500 dark:text-slate-400">Atur cakupan peserta berdasarkan level, group, atau siswa tertentu.</p>

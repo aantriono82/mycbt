@@ -9,6 +9,8 @@ Scaffold aplikasi CBT (Computer Based Test) dengan:
 
 Dokumen implementasi lengkap: lihat [docs/BLUEPRINT.md](/home/aantriono/dev/atigacbt/docs/BLUEPRINT.md).
 Kontrak API awal (OpenAPI): [docs/openapi.yaml](/home/aantriono/dev/atigacbt/docs/openapi.yaml).
+Panduan deploy production: [docs/DEPLOYMENT.md](/home/aantriono/dev/atigacbt/docs/DEPLOYMENT.md).
+Checklist predeploy: [docs/PREDEPLOY_CHECKLIST.md](/home/aantriono/dev/atigacbt/docs/PREDEPLOY_CHECKLIST.md).
 
 ## Status Implementasi (2026-04-23)
 

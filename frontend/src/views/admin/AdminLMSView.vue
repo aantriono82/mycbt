@@ -205,7 +205,7 @@ onMounted(load)
       <div class="grid gap-6 xl:grid-cols-2">
 
         <!-- Export Format picker (shared) -->
-        <CardBox class="xl:col-span-2">
+        <CardBox class="xl:col-span-2" color="blue">
           <h3 class="text-base font-bold dark:text-slate-100 mb-4 flex items-center gap-2">
             <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
               <BaseIcon :path="mdiDatabaseExportOutline" size="16" class="text-slate-500 dark:text-slate-400" />
@@ -235,7 +235,7 @@ onMounted(load)
         </CardBox>
 
         <!-- Export: Students Roster -->
-        <CardBox>
+        <CardBox color="indigo">
           <div class="flex items-center gap-4 mb-5">
             <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-green-600 shadow-lg shadow-emerald-200 dark:shadow-emerald-900/30">
               <BaseIcon :path="mdiAccountSchool" size="26" class="text-white" />
@@ -271,7 +271,7 @@ onMounted(load)
         </CardBox>
 
         <!-- Export: Exam Results -->
-        <CardBox>
+        <CardBox color="blue">
           <div class="flex items-center gap-4 mb-5">
             <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 shadow-lg shadow-violet-200 dark:shadow-violet-900/30">
               <BaseIcon :path="mdiChartBoxOutline" size="26" class="text-white" />
@@ -315,7 +315,7 @@ onMounted(load)
         </CardBox>
 
         <!-- LTI / Platform Guide -->
-        <CardBox class="xl:col-span-2">
+        <CardBox class="xl:col-span-2" color="emerald">
           <h3 class="text-base font-bold dark:text-slate-100 mb-4 flex items-center gap-2">
             <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/40">
               <BaseIcon :path="mdiLinkVariant" size="16" class="text-blue-600 dark:text-blue-400" />

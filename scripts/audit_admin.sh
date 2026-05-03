@@ -9,7 +9,7 @@ set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://127.0.0.1:8080}"
 ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
-ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin12345}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
 
 need_cmd() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -20,6 +20,11 @@ need_cmd() {
 
 need_cmd curl
 need_cmd python3
+
+if [[ -z "${ADMIN_PASSWORD}" ]]; then
+  echo "ADMIN_PASSWORD is required" >&2
+  exit 2
+fi
 
 json_get() {
   local url="$1"

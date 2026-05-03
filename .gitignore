@@ -1,6 +1,9 @@
 # Node
 frontend/node_modules
 frontend/dist
+frontend/playwright-report
+frontend/test-results
+frontend/.env
 
 # Go
 *.exe
@@ -10,6 +13,12 @@ backend/api_bin
 
 # Git
 .git
+
+# Local runtime data / secrets
+backend/.env
+backend/uploads/*
+!backend/uploads/.gitkeep
+deploy/.env.production
 
 # OS
 .DS_Store

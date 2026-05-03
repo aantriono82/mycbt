@@ -1,27 +1,34 @@
-FROM golang:1.22-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
-# copy go mod dulu
 COPY backend/go.mod backend/go.sum ./backend/
-
 WORKDIR /app/backend
-
 RUN go mod download
 
-# copy semua source
 COPY backend/ .
+RUN go build -o /out/api ./cmd/api
+RUN go build -o /out/migrate ./cmd/migrate
+RUN go build -o /out/seed ./cmd/seed
+RUN go build -o /out/cleanup ./cmd/cleanup
 
-# build dari cmd/api
-RUN go build -o app ./cmd/api
-
-# ===== runtime =====
 FROM alpine:latest
 
-WORKDIR /root/
+RUN apk add --no-cache ca-certificates tzdata wget
 
-COPY --from=builder /app/backend/app .
+WORKDIR /app
+
+COPY --from=builder /out/api ./api
+COPY --from=builder /out/migrate ./migrate
+COPY --from=builder /out/seed ./seed
+COPY --from=builder /out/cleanup ./cleanup
+COPY --from=builder /app/backend/migrations ./migrations
+
+RUN mkdir -p /app/uploads
+
+ENV GIN_MODE=release
+ENV UPLOAD_LOCAL_DIR=/app/uploads
 
 EXPOSE 8080
 
-CMD ["./app"]
+CMD ["./api"]

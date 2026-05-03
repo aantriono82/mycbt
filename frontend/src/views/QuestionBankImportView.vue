@@ -550,7 +550,7 @@ onMounted(async () => {
       </SectionTitleLineWithButton>
 
       <div class="grid gap-6 xl:grid-cols-5">
-        <CardBox class="xl:col-span-2 shadow-md">
+        <CardBox class="xl:col-span-2 shadow-md" color="blue">
           <div class="grid gap-5">
             <div>
               <h3 class="text-lg font-bold text-slate-900 dark:text-slate-100">Tujuan Import</h3>
@@ -693,7 +693,7 @@ onMounted(async () => {
           </div>
         </CardBox>
 
-        <CardBox class="xl:col-span-3 shadow-md">
+        <CardBox class="xl:col-span-3 shadow-md" color="purple">
           <div class="grid gap-5">
             <div class="flex items-center justify-between gap-4">
               <div>

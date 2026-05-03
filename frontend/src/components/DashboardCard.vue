@@ -25,58 +25,58 @@ const colorClasses = computed(() => {
   const map = {
     blue: {
       text: 'text-slate-900 dark:text-white',
-      label: 'text-blue-600 dark:text-blue-400',
-      bg: 'bg-blue-100/50 dark:bg-blue-900/30',
-      cardBg: 'bg-blue-400/10 dark:bg-blue-500/10 backdrop-blur-md',
-      cardBorder: 'border-blue-200/50 dark:border-blue-700/50',
+      label: 'text-blue-700 dark:text-blue-400',
+      bg: 'bg-blue-100 dark:bg-blue-900/40',
+      cardBg: 'bg-blue-50 dark:bg-blue-950/40',
+      cardBorder: 'border-blue-400/60 dark:border-blue-800/80',
       icon: 'text-blue-600 dark:text-blue-400'
     },
     emerald: {
       text: 'text-slate-900 dark:text-white',
-      label: 'text-emerald-600 dark:text-emerald-400',
-      bg: 'bg-emerald-100/50 dark:bg-emerald-900/30',
-      cardBg: 'bg-emerald-400/10 dark:bg-emerald-500/10 backdrop-blur-md',
-      cardBorder: 'border-emerald-200/50 dark:border-emerald-700/50',
+      label: 'text-emerald-700 dark:text-emerald-400',
+      bg: 'bg-emerald-100 dark:bg-emerald-900/40',
+      cardBg: 'bg-emerald-50 dark:bg-emerald-950/40',
+      cardBorder: 'border-emerald-400/60 dark:border-emerald-800/80',
       icon: 'text-emerald-600 dark:text-emerald-400'
     },
     cyan: {
       text: 'text-slate-900 dark:text-white',
-      label: 'text-cyan-600 dark:text-cyan-400',
-      bg: 'bg-cyan-100/50 dark:bg-cyan-900/30',
-      cardBg: 'bg-cyan-400/10 dark:bg-cyan-500/10 backdrop-blur-md',
-      cardBorder: 'border-cyan-200/50 dark:border-cyan-700/50',
+      label: 'text-cyan-700 dark:text-cyan-400',
+      bg: 'bg-cyan-100 dark:bg-cyan-900/40',
+      cardBg: 'bg-cyan-50 dark:bg-cyan-950/40',
+      cardBorder: 'border-cyan-400/60 dark:border-cyan-800/80',
       icon: 'text-cyan-600 dark:text-cyan-400'
     },
     orange: {
       text: 'text-slate-900 dark:text-white',
-      label: 'text-orange-600 dark:text-orange-400',
-      bg: 'bg-orange-100/50 dark:bg-orange-900/30',
-      cardBg: 'bg-orange-400/10 dark:bg-orange-500/10 backdrop-blur-md',
-      cardBorder: 'border-orange-200/50 dark:border-orange-700/50',
+      label: 'text-orange-700 dark:text-orange-400',
+      bg: 'bg-orange-100 dark:bg-orange-900/40',
+      cardBg: 'bg-orange-50 dark:bg-orange-950/40',
+      cardBorder: 'border-orange-400/60 dark:border-orange-800/80',
       icon: 'text-orange-600 dark:text-orange-400'
     },
     indigo: {
       text: 'text-slate-900 dark:text-white',
-      label: 'text-indigo-600 dark:text-indigo-400',
-      bg: 'bg-indigo-100/50 dark:bg-indigo-900/30',
-      cardBg: 'bg-indigo-400/10 dark:bg-indigo-500/10 backdrop-blur-md',
-      cardBorder: 'border-indigo-200/50 dark:border-indigo-700/50',
+      label: 'text-indigo-700 dark:text-indigo-400',
+      bg: 'bg-indigo-100 dark:bg-indigo-900/40',
+      cardBg: 'bg-indigo-50 dark:bg-indigo-950/40',
+      cardBorder: 'border-indigo-400/60 dark:border-indigo-800/80',
       icon: 'text-indigo-600 dark:text-indigo-400'
     },
     red: {
       text: 'text-slate-900 dark:text-white',
-      label: 'text-red-600 dark:text-red-400',
-      bg: 'bg-red-100/50 dark:bg-red-900/30',
-      cardBg: 'bg-red-400/10 dark:bg-red-500/10 backdrop-blur-md',
-      cardBorder: 'border-red-200/50 dark:border-red-700/50',
+      label: 'text-red-700 dark:text-red-400',
+      bg: 'bg-red-100 dark:bg-red-900/40',
+      cardBg: 'bg-red-50 dark:bg-red-950/40',
+      cardBorder: 'border-red-400/60 dark:border-red-800/80',
       icon: 'text-red-600 dark:text-red-400'
     },
     amber: {
       text: 'text-slate-900 dark:text-white',
-      label: 'text-amber-600 dark:text-amber-400',
-      bg: 'bg-amber-100/50 dark:bg-amber-900/30',
-      cardBg: 'bg-amber-400/10 dark:bg-amber-500/10 backdrop-blur-md',
-      cardBorder: 'border-amber-200/50 dark:border-amber-700/50',
+      label: 'text-amber-700 dark:text-amber-400',
+      bg: 'bg-amber-100 dark:bg-amber-900/40',
+      cardBg: 'bg-amber-50 dark:bg-amber-950/40',
+      cardBorder: 'border-amber-400/60 dark:border-amber-800/80',
       icon: 'text-amber-600 dark:text-amber-400'
     }
   }

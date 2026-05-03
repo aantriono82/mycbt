@@ -222,7 +222,7 @@ onMounted(async () => {
 
       <div class="mb-6 grid gap-6 xl:grid-cols-5 animate-fade-in">
         <!-- Create/Edit Form -->
-        <CardBox class="xl:col-span-2 shadow-md">
+        <CardBox class="xl:col-span-2 shadow-md" color="blue">
           <h3 class="mb-4 text-lg font-bold dark:text-slate-100 flex items-center gap-2">
             <BaseIcon :path="mdiPlus" size="20" />
             Tambah Bank Soal
@@ -255,7 +255,7 @@ onMounted(async () => {
         </CardBox>
 
         <!-- List Table -->
-        <CardBox class="xl:col-span-3 shadow-md">
+        <CardBox class="xl:col-span-3 shadow-md" color="emerald">
           <div v-if="errorMessage" class="mb-4 rounded-lg bg-red-50 p-3 text-xs text-red-700 border border-red-100">{{ errorMessage }}</div>
           <div v-if="successMessage" class="mb-4 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700 border border-emerald-100">{{ successMessage }}</div>
 

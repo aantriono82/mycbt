@@ -234,7 +234,7 @@ onMounted(loadData)
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Trend Chart -->
-        <CardBox class="lg:col-span-2">
+        <CardBox class="lg:col-span-2" color="blue">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-bold dark:text-slate-100">Tren Performa Ujian (10 Terakhir)</h3>
             <div class="text-xs text-slate-500 font-mono italic">Average score per exam</div>
@@ -248,7 +248,7 @@ onMounted(loadData)
         </CardBox>
 
         <!-- Subject Performance -->
-        <CardBox>
+        <CardBox color="emerald">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-bold dark:text-slate-100">Performa per Mata Pelajaran</h3>
             <div class="text-xs text-slate-500 font-mono italic">Lower score = difficult</div>
@@ -262,7 +262,7 @@ onMounted(loadData)
         </CardBox>
 
         <!-- Group Performance -->
-        <CardBox>
+        <CardBox color="emerald">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-bold dark:text-slate-100">Performa per Rombel / Group</h3>
             <div class="text-xs text-slate-500 font-mono italic">Comparing class averages</div>

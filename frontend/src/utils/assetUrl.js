@@ -10,8 +10,8 @@ export const getApiOrigin = () => {
       // ignore malformed env and fall back below
     }
   }
-  if (typeof window !== 'undefined' && window.location?.protocol && window.location?.hostname) {
-    return `${window.location.protocol}//${window.location.hostname}:8080`
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin
   }
   return DEFAULT_API_ORIGIN
 }

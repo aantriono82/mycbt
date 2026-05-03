@@ -1190,7 +1190,7 @@ watch(levelFilter, () => {
         </button>
       </div>
 
-      <CardBox>
+      <CardBox color="blue">
         <div class="p-3 md:p-5 mb-6 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/10">
           <h3 class="font-black text-slate-800 dark:text-slate-100 mb-5 uppercase tracking-tighter text-sm flex items-center gap-2">
             <div class="w-1.5 h-4 bg-info rounded-full"></div>

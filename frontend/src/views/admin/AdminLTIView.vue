@@ -107,7 +107,7 @@ onMounted(loadPlatforms)
       </NotificationBar>
 
       <!-- Connection Details Card (ReadOnly for LMS Config) -->
-      <CardBox class="mb-6 bg-slate-50 dark:bg-slate-900/50 border-dashed border-2 border-slate-200 dark:border-slate-800">
+      <CardBox class="mb-6 bg-slate-50 dark:bg-slate-900/50 border-dashed border-2 border-slate-200 dark:border-slate-800" color="blue">
         <h4 class="font-bold mb-4 flex items-center">
           <BaseIcon :path="mdiInformationOutline" class="mr-2" />
           Detail Konfigurasi untuk LMS (Moodle, Canvas, dll)
@@ -131,7 +131,7 @@ onMounted(loadPlatforms)
       </CardBox>
 
       <!-- Platform List -->
-      <CardBox has-table>
+      <CardBox has-table color="blue">
         <div v-if="isLoading" class="p-6 text-center text-slate-500 italic">Memuat data...</div>
         <div v-else-if="platforms.length === 0" class="p-6 text-center text-slate-500 italic">Belum ada platform terdaftar.</div>
         <table v-else>
@@ -162,7 +162,7 @@ onMounted(loadPlatforms)
       </CardBox>
 
       <!-- Add Platform Modal / Form -->
-      <CardBox v-if="showModal" is-form class="mt-6" @submit.prevent="savePlatform">
+      <CardBox v-if="showModal" is-form class="mt-6" color="indigo" @submit.prevent="savePlatform">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-xl font-bold">Registrasi Platform Baru</h3>
           <BaseButton :icon="mdiRefresh" small label="Generate Tool Keys" color="warning" @click="generateKeys" />

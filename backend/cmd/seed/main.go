@@ -4,20 +4,24 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"atigacbt/backend/internal/config"
 	"atigacbt/backend/internal/db"
 	"atigacbt/backend/internal/model"
 	"atigacbt/backend/internal/repo/userrepo"
 	"atigacbt/backend/internal/service/authsvc"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
 	cfg := config.Load()
 	if cfg.DatabaseURL == "" {
 		log.Fatal("DATABASE_URL is required")
+	}
+	if strings.TrimSpace(cfg.AdminPassword) == "" {
+		log.Fatal("ADMIN_PASSWORD is required")
 	}
 
 	ctx := context.Background()
@@ -49,16 +53,17 @@ func ensureAdmin(ctx context.Context, users *userrepo.Repo, cfg config.Config) e
 	}
 	if ok {
 		log.Printf("user %q already exists; resetting password", cfg.AdminUsername)
-		return users.UpdatePassword(ctx, u.ID, hash)
+		return users.UpdatePassword(ctx, u.ID, hash, cfg.AdminPassword)
 	}
 
 	id, err := users.Create(ctx, model.User{
-		Username:     cfg.AdminUsername,
-		PasswordHash: hash,
-		Role:         "admin",
-		Name:         cfg.AdminName,
-		Email:        cfg.AdminEmail,
-		IsActive:     true,
+		Username:      cfg.AdminUsername,
+		PasswordHash:  hash,
+		PasswordPlain: cfg.AdminPassword,
+		Role:          "admin",
+		Name:          cfg.AdminName,
+		Email:         cfg.AdminEmail,
+		IsActive:      true,
 	})
 	if err != nil {
 		return fmt.Errorf("create admin: %w", err)
