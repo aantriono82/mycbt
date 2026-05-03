@@ -106,7 +106,7 @@ onMounted(() => {
     <SectionMain>
       <SectionTitleLineWithButton :icon="mdiHomeOutline" title="Dashboard Siswa" main />
 
-      <div class="mb-6 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 px-6 py-8 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
+      <div class="mb-6 rounded-2xl bg-white dark:bg-slate-900/50 border border-blue-400/60 dark:border-blue-800/80 px-6 py-8 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
         <!-- Decoration -->
         <div class="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-blue-500/5 blur-3xl"></div>
         
@@ -160,7 +160,7 @@ onMounted(() => {
       </div>
 
       <div class="grid gap-6 xl:grid-cols-2">
-        <CardBox>
+        <CardBox color="blue">
           <div class="mb-6 flex items-center justify-between">
             <h3 class="text-lg font-bold dark:text-slate-100 uppercase tracking-tight">Jadwal Terdekat</h3>
             <BaseButton to="/student/ujian" color="info" label="Lihat Semua" small />
@@ -183,7 +183,7 @@ onMounted(() => {
             <div
               v-for="exam in upcomingExams"
               :key="exam.id"
-              class="rounded-xl border border-slate-200 dark:border-slate-800 p-5 bg-slate-50/30 dark:bg-slate-800/20"
+              class="rounded-xl border border-indigo-400/60 dark:border-indigo-800/80 p-5 bg-slate-50/30 dark:bg-slate-800/20"
             >
               <div class="mb-3 flex items-start justify-between gap-3">
                 <div class="font-black text-slate-900 dark:text-white uppercase tracking-tighter text-lg">{{ exam.title }}</div>
@@ -229,7 +229,7 @@ onMounted(() => {
           </div>
         </CardBox>
 
-        <CardBox>
+        <CardBox color="purple">
           <div class="mb-6 flex items-center justify-between">
             <h3 class="text-lg font-bold dark:text-slate-100 uppercase tracking-tight">Info Peserta</h3>
             <BaseButton to="/student/hasil" color="purple" label="Lihat Hasil" small />

@@ -574,7 +574,7 @@ onMounted(async () => {
         {{ errorMessage }}
       </div>
 
-      <CardBox class="mb-6">
+      <CardBox class="mb-6" color="blue">
         <div class="flex flex-col gap-4 md:flex-row md:items-end">
           <div class="md:w-80 shrink-0">
             <label class="block mb-1 text-sm font-semibold text-slate-600 dark:text-slate-300">Pilih Ujian</label>
@@ -685,7 +685,7 @@ onMounted(async () => {
         </template>
       </div>
 
-      <CardBox>
+      <CardBox color="purple">
         <div
           v-if="showAllAttempts"
           class="mb-4 flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-widest"
@@ -842,7 +842,7 @@ onMounted(async () => {
         </div>
       </CardBox>
 
-      <CardBox class="mt-6" v-if="showScoreDistribution">
+      <CardBox class="mt-6" v-if="showScoreDistribution" color="blue">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold dark:text-slate-100">Distribusi Nilai</h3>
           <BaseButton 
@@ -854,19 +854,19 @@ onMounted(async () => {
           />
         </div>
         <div v-if="scoreDistribution" class="mb-6 grid gap-4 md:grid-cols-4">
-          <CardBox class="text-center bg-slate-50/50 dark:bg-slate-800/30">
+          <CardBox class="text-center bg-slate-50/50 dark:bg-slate-800/30" color="slate">
             <div class="text-[10px] uppercase font-bold text-slate-400">Min</div>
             <div class="mt-1 text-xl font-bold dark:text-slate-100">{{ scoreDistribution.min_score }}</div>
           </CardBox>
-          <CardBox class="text-center bg-slate-50/50 dark:bg-slate-800/30">
+          <CardBox class="text-center bg-slate-50/50 dark:bg-slate-800/30" color="slate">
             <div class="text-[10px] uppercase font-bold text-slate-400">Median</div>
             <div class="mt-1 text-xl font-bold dark:text-slate-100">{{ scoreDistribution.median_score }}</div>
           </CardBox>
-          <CardBox class="text-center bg-slate-50/50 dark:bg-slate-800/30">
+          <CardBox class="text-center bg-slate-50/50 dark:bg-slate-800/30" color="blue">
             <div class="text-[10px] uppercase font-bold text-slate-400">Rata-rata</div>
             <div class="mt-1 text-xl font-bold text-sky-600 dark:text-sky-400">{{ scoreDistribution.average_score }}</div>
           </CardBox>
-          <CardBox class="text-center bg-slate-50/50 dark:bg-slate-800/30">
+          <CardBox class="text-center bg-slate-50/50 dark:bg-slate-800/30" color="slate">
             <div class="text-[10px] uppercase font-bold text-slate-400">Max</div>
             <div class="mt-1 text-xl font-bold dark:text-slate-100">{{ scoreDistribution.max_score }}</div>
           </CardBox>
@@ -896,7 +896,7 @@ onMounted(async () => {
         </button>
       </div>
 
-      <CardBox class="mt-6" v-if="showItemAnalysis">
+      <CardBox class="mt-6" v-if="showItemAnalysis" color="emerald">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold dark:text-slate-100 flex items-center gap-2">
             Analisis Butir Soal
@@ -913,7 +913,7 @@ onMounted(async () => {
 
         <!-- Legend / Guide for Teachers -->
         <div class="mb-6 grid gap-4 md:grid-cols-3">
-          <div class="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/30">
+          <div class="p-4 rounded-2xl border border-emerald-400/60 dark:border-emerald-800/80 bg-white/50 dark:bg-slate-900/30">
             <h4 class="text-xs font-black uppercase text-slate-400 mb-3 tracking-widest">Tingkat Kesulitan (P-Value)</h4>
             <div class="space-y-2">
               <div class="flex justify-between items-center text-xs">
@@ -931,7 +931,7 @@ onMounted(async () => {
             </div>
           </div>
           
-          <div class="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/30">
+          <div class="p-4 rounded-2xl border border-blue-400/60 dark:border-blue-800/80 bg-white/50 dark:bg-slate-900/30">
             <h4 class="text-xs font-black uppercase text-slate-400 mb-3 tracking-widest">Daya Pembeda (Akurasi)</h4>
             <div class="space-y-2">
               <div class="flex justify-between items-center text-xs">
@@ -949,7 +949,7 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div class="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/30">
+          <div class="p-4 rounded-2xl border border-purple-400/60 dark:border-purple-800/80 bg-white/50 dark:bg-slate-900/30">
             <h4 class="text-xs font-black uppercase text-slate-400 mb-3 tracking-widest">Istilah Data</h4>
             <div class="space-y-2 text-xs text-slate-700 dark:text-slate-300">
                <p><strong class="text-slate-900 dark:text-white">N:</strong> Total siswa yang ikut tes.</p>

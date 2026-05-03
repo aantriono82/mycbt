@@ -97,7 +97,7 @@ onMounted(() => {
 
       <div class="grid gap-6">
         <template v-if="isLoading">
-          <div v-for="i in 3" :key="i" class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+        <div v-for="i in 3" :key="i" class="rounded-3xl border border-blue-400/60 bg-white p-6 shadow-sm dark:border-blue-800/80 dark:bg-slate-950">
              <div class="mb-6 flex items-center gap-3">
                <BaseSkeleton width="w-10" height="h-10" rounded="rounded-2xl" />
                <div class="space-y-2">
@@ -118,12 +118,19 @@ onMounted(() => {
           <p class="text-sm text-red-700 dark:text-red-400 font-bold text-center py-4">{{ errorMessage }}</p>
         </CardBox>
 
-        <div v-else-if="!announcements.length" class="flex flex-col items-center justify-center py-20 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl">
-           <BaseIcon :path="mdiBullhornOutline" size="64" class="text-slate-100 dark:text-slate-900 mb-4" />
-           <p class="text-slate-400 text-center px-6">Saat ini belum ada pengumuman aktif untuk Anda.<br><span class="text-xs">Cek kembali secara berkala untuk info terbaru.</span></p>
+        <div v-else-if="!announcements.length" class="flex flex-col items-center justify-center py-20 border border-emerald-400/60 dark:border-emerald-800/80 rounded-3xl bg-emerald-50/5 dark:bg-emerald-900/5">
+           <BaseIcon :path="mdiBullhornOutline" size="64" class="text-emerald-100 dark:text-emerald-900 mb-4" />
+           <p class="text-emerald-600 dark:text-emerald-400 font-medium text-center px-6">Saat ini belum ada pengumuman aktif untuk Anda.<br><span class="text-xs opacity-70">Cek kembali secara berkala untuk info terbaru.</span></p>
         </div>
 
-        <div v-for="item in announcements" :key="item.id" class="group relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-950">
+        <div v-for="(item, idx) in announcements" :key="item.id" 
+          class="group relative overflow-hidden rounded-3xl border bg-white p-6 shadow-sm transition-all hover:shadow-md dark:bg-slate-950"
+          :class="[
+            idx % 3 === 0 ? 'border-blue-400/60 dark:border-blue-800/80' : 
+            idx % 3 === 1 ? 'border-purple-400/60 dark:border-purple-800/80' : 
+            'border-emerald-400/60 dark:border-emerald-800/80'
+          ]"
+        >
           <!-- Premium Background Decoration -->
           <div class="absolute -top-12 -right-12 h-32 w-32 rounded-full bg-slate-50 opacity-0 transition-opacity group-hover:opacity-100 dark:bg-slate-900" />
           

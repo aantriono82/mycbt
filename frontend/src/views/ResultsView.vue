@@ -87,10 +87,17 @@ const statusLabel = (value) => {
         </div>
         <div v-else-if="errorMessage" class="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700 border border-red-100">{{ errorMessage }}</div>
 
-        <div v-for="item in results" :key="item.session_id || item.id" class="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-lg transition-all p-6 flex flex-col md:flex-row md:items-center gap-6 group">
+        <div v-for="(item, idx) in results" :key="item.session_id || item.id" 
+          class="bg-white dark:bg-slate-900 rounded-[2rem] border shadow-sm hover:shadow-lg transition-all p-6 flex flex-col md:flex-row md:items-center gap-6 group"
+          :class="[
+            idx % 3 === 0 ? 'border-blue-400/60 dark:border-blue-800/80' : 
+            idx % 3 === 1 ? 'border-purple-400/60 dark:border-purple-800/80' : 
+            'border-emerald-400/60 dark:border-emerald-800/80'
+          ]"
+        >
            <!-- Score Circle -->
-           <div class="flex-none h-20 w-20 rounded-full flex items-center justify-center relative shadow-inner overflow-hidden"
-             :class="item.score >= 75 ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'"
+           <div class="flex-none h-20 w-20 rounded-full flex items-center justify-center relative shadow-inner overflow-hidden border-2"
+             :class="item.score >= 75 ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-blue-50 text-blue-600 border-blue-200'"
            >
               <!-- Decorative background flare -->
               <div class="absolute inset-0 bg-white/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -131,9 +138,9 @@ const statusLabel = (value) => {
            </div>
         </div>
 
-        <div v-if="!results.length && !isLoading" class="bg-white rounded-[2rem] border border-dashed border-slate-200 p-20 text-center">
-           <BaseIcon :path="mdiTrophyOutline" size="48" class="text-slate-200 mb-4 mx-auto" />
-           <p class="text-slate-400 font-bold italic">Belum ada hasil ujian yang tersedia.</p>
+        <div v-if="!results.length && !isLoading" class="bg-white dark:bg-slate-900 rounded-[2rem] border border-emerald-400/60 dark:border-emerald-800/80 p-20 text-center bg-emerald-50/5 dark:bg-emerald-900/5">
+           <BaseIcon :path="mdiTrophyOutline" size="48" class="text-emerald-100 dark:text-emerald-900 mb-4 mx-auto" />
+           <p class="text-emerald-600 dark:text-emerald-400 font-bold italic">Belum ada hasil ujian yang tersedia.</p>
         </div>
       </div>
     </SectionMain>

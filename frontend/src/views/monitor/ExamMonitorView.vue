@@ -230,7 +230,7 @@ onBeforeUnmount(() => {
         <BaseButton :icon="mdiRefresh" color="info" label="Refresh Monitor" @click="refreshMonitor" />
       </SectionTitleLineWithButton>
 
-      <CardBox class="mb-6">
+      <CardBox class="mb-6" color="blue">
         <div class="grid gap-4 md:grid-cols-[280px_220px_1fr] md:items-start">
           <FormField label="Pilih Ujian">
             <FormControl
@@ -272,13 +272,13 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="mb-6 grid gap-6 md:grid-cols-3">
-        <CardBoxWidget :icon="mdiWifi" color="text-emerald-500" label="Peserta Online" :number="stats.online" />
-        <CardBoxWidget :icon="mdiMonitorEye" color="text-sky-500" label="Sedang Mengerjakan" :number="stats.working" />
-        <CardBoxWidget :icon="mdiRefresh" color="text-amber-500" label="Sudah Submit" :number="stats.submitted" />
+        <CardBoxWidget :icon="mdiWifi" color="emerald" label="Peserta Online" :number="stats.online" />
+        <CardBoxWidget :icon="mdiMonitorEye" color="sky" label="Sedang Mengerjakan" :number="stats.working" />
+        <CardBoxWidget :icon="mdiRefresh" color="amber" label="Sudah Submit" :number="stats.submitted" />
       </div>
 
       <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <CardBox>
+        <CardBox color="purple">
           <h3 class="mb-4 text-lg font-semibold dark:text-slate-100">Aktivitas Peserta</h3>
           <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
@@ -326,7 +326,7 @@ onBeforeUnmount(() => {
           </div>
         </CardBox>
 
-        <CardBox>
+        <CardBox color="blue">
           <h3 class="mb-4 text-lg font-semibold dark:text-slate-100">Token Ujian</h3>
           <div v-if="activeTokens.length" class="mb-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3 border border-emerald-100 dark:border-emerald-900/40">
             <div class="text-[10px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">Token Aktif</div>

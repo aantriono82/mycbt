@@ -230,13 +230,13 @@ onMounted(load)
       <CardBoxModal v-model="isDetailOpen" title="Detail Audit Log" has-cancel>
         <div v-if="detail" class="space-y-3">
           <div class="grid gap-3 md:grid-cols-2 text-xs">
-            <div class="rounded-xl border border-slate-200 dark:border-slate-800 p-3">
+            <div class="rounded-xl border border-blue-400/60 dark:border-blue-800/80 p-3 bg-blue-50/20 dark:bg-blue-900/10">
               <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Actor</div>
               <div class="mt-1 font-bold text-slate-800 dark:text-slate-200">{{ detail.username || '-' }}</div>
               <div class="text-[11px] text-slate-500">{{ detail.name || '' }}</div>
               <div class="mt-1 text-[11px] font-mono text-slate-400">{{ detail.user_id ? shortId(detail.user_id) : '' }}</div>
             </div>
-            <div class="rounded-xl border border-slate-200 dark:border-slate-800 p-3">
+            <div class="rounded-xl border border-emerald-400/60 dark:border-emerald-800/80 p-3 bg-emerald-50/20 dark:bg-emerald-900/10">
               <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Request</div>
               <div class="mt-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">{{ shortId(detail.request_id) }}</div>
               <div class="mt-1 text-slate-600 dark:text-slate-300">
@@ -247,7 +247,7 @@ onMounted(load)
             </div>
           </div>
 
-          <div class="rounded-xl border border-slate-200 dark:border-slate-800 p-3 text-xs">
+          <div class="rounded-xl border border-purple-400/60 dark:border-purple-800/80 p-3 text-xs bg-purple-50/20 dark:bg-purple-900/10">
             <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Meta</div>
             <div class="mt-1 text-slate-600 dark:text-slate-300">Waktu: {{ fmtTime(detail.created_at) }}</div>
             <div class="mt-1 text-slate-600 dark:text-slate-300">IP: {{ detail.ip || '-' }}</div>
@@ -255,14 +255,14 @@ onMounted(load)
             <div v-if="detail.query" class="mt-1 text-slate-600 dark:text-slate-300 break-words">Query: {{ detail.query }}</div>
           </div>
 
-          <div class="rounded-xl border border-slate-200 dark:border-slate-800 p-3">
+          <div class="rounded-xl border border-slate-400/60 dark:border-slate-700/80 p-3 bg-slate-50/30 dark:bg-slate-900/20">
             <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Payload</div>
             <pre class="mt-2 max-h-72 overflow-auto rounded-lg bg-slate-950 p-3 text-[11px] text-slate-100">{{ payloadPretty }}</pre>
           </div>
         </div>
       </CardBoxModal>
 
-      <CardBox class="shadow-md">
+      <CardBox class="shadow-md" color="blue">
         <div v-if="errorMessage" class="mb-4 rounded-lg bg-red-50 p-3 text-xs text-red-700 border border-red-100">
           {{ errorMessage }}
         </div>
@@ -270,8 +270,8 @@ onMounted(load)
           {{ successMessage }}
         </div>
 
-        <div class="mb-5 grid gap-4 md:grid-cols-12">
-          <div class="md:col-span-12 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
+        <div class="mb-5 grid gap-4 md:grid-cols-12 border border-emerald-400/60 dark:border-emerald-800/80 p-4 rounded-2xl bg-emerald-50/20 dark:bg-emerald-900/10">
+          <div class="md:col-span-12 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
             <BaseIcon :path="mdiFilterOutline" size="16" />
             Filter
           </div>
@@ -346,7 +346,7 @@ onMounted(load)
           </div>
         </div>
 
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto rounded-xl border border-purple-400/60 dark:border-purple-800/80">
           <table class="w-full text-left text-sm">
             <thead class="border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 uppercase text-[10px] tracking-widest font-black">
               <tr>

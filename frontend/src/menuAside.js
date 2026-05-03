@@ -64,7 +64,6 @@ export const getMenuAsideMain = (role) => {
             label: 'Monitor Peserta',
             icon: mdiAccountSearchOutline,
           },
-          { to: '/teacher/ujian/absensi', label: 'Absensi Peserta', icon: mdiCalendarCheckOutline },
           { to: '/teacher/ujian/reset-login', label: 'Reset Login', icon: mdiAccountSwitchOutline },
         ],
       },

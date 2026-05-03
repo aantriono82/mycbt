@@ -318,7 +318,7 @@ onMounted(async () => {
       </SectionTitleLineWithButton>
 
       <div class="mb-6 grid min-w-0 gap-6 xl:grid-cols-5">
-        <CardBox class="min-w-0 overflow-hidden xl:col-span-2">
+        <CardBox class="min-w-0 overflow-hidden xl:col-span-2" color="blue">
           <h3 class="mb-4 text-xl font-black uppercase tracking-tight dark:text-slate-100">
             {{ isEditing ? 'Edit Pengumuman' : 'Tambah Pengumuman' }}
           </h3>
@@ -381,7 +381,7 @@ onMounted(async () => {
           </div>
         </CardBox>
 
-        <CardBox class="min-w-0 overflow-hidden xl:col-span-3">
+        <CardBox class="min-w-0 overflow-hidden xl:col-span-3" color="purple">
           <div class="mb-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h3 class="text-xl font-black uppercase tracking-tight dark:text-slate-100">Daftar Pengumuman</h3>

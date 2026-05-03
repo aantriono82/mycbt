@@ -148,7 +148,7 @@ watch(
         <BaseButton :icon="mdiRefresh" color="purple" label="Muat Ulang" @click="loadRegistrations" />
       </SectionTitleLineWithButton>
 
-      <CardBox>
+      <CardBox color="amber">
         <div class="mb-6 flex flex-wrap items-end gap-4 overflow-x-auto pb-2">
           <!-- 1: Cari -->
           <div class="w-full md:w-64 flex flex-col gap-1.5">

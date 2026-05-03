@@ -150,7 +150,7 @@ onBeforeUnmount(() => {
         {{ successMessage }}
       </div>
 
-      <CardBox class="mb-6">
+      <CardBox class="mb-6" color="blue">
         <div class="rounded-xl bg-sky-50 dark:bg-sky-900/20 px-4 py-4 text-sm text-sky-900 dark:text-sky-300 border border-sky-100 dark:border-sky-900/40">
           Operasi cepat sekarang tersedia langsung di menu <code class="font-bold dark:text-sky-400">Monitor Peserta</code>.
           Halaman ini tetap dipertahankan untuk operator yang ingin fokus khusus pada reset login dan force submit tanpa panel monitor lain.
@@ -158,7 +158,7 @@ onBeforeUnmount(() => {
       </CardBox>
 
       <div class="mb-6 grid gap-6 md:grid-cols-2 md:items-stretch">
-        <CardBox class="mb-0">
+        <CardBox class="mb-0" color="blue">
           <FormField label="Pilih Ujian" class="mb-0">
             <FormControl
               v-model="selectedExamId"
@@ -166,14 +166,14 @@ onBeforeUnmount(() => {
             />
           </FormField>
         </CardBox>
-        <CardBox class="mb-0">
+        <CardBox class="mb-0" color="purple">
           <FormField label="Cari (nama/username/nis)" class="mb-0">
             <FormControl v-model="q" placeholder="Ketik lalu klik Terapkan" />
           </FormField>
         </CardBox>
       </div>
 
-      <CardBox class="mb-6">
+      <CardBox class="mb-6" color="emerald">
         <div class="flex flex-wrap items-center gap-3">
           <BaseButton color="success" label="Terapkan" :disabled="isLoadingParticipants" @click="loadParticipants" />
           <div v-if="isLoading || isLoadingParticipants" class="text-sm text-slate-500 dark:text-slate-400 italic font-mono animate-pulse">Memuat data...</div>
@@ -183,7 +183,7 @@ onBeforeUnmount(() => {
         </div>
       </CardBox>
 
-      <CardBox>
+      <CardBox color="purple">
         <div class="overflow-x-auto">
           <table class="w-full text-left text-sm">
             <thead class="border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 uppercase text-xs tracking-wider font-bold">

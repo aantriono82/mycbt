@@ -1,9 +1,16 @@
 import axios from 'axios'
 
 const TOKEN_KEY = 'atigacbt_token'
+const FALLBACK_API_ORIGIN = 'http://localhost:8080'
+
+export const getApiBaseUrl = () => {
+  const configured = String(import.meta.env.VITE_API_BASE_URL || '').trim()
+  if (configured) return configured
+  return ''
+}
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
+  baseURL: getApiBaseUrl(),
 })
 
 export const getStoredToken = () => {

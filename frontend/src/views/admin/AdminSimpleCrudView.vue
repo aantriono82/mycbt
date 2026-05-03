@@ -135,7 +135,7 @@ watch(() => route.path, () => {
       </SectionTitleLineWithButton>
 
       <div class="grid gap-6 xl:grid-cols-5">
-        <CardBox class="xl:col-span-2">
+        <CardBox class="xl:col-span-2" color="blue">
           <h3 class="mb-4 text-lg font-semibold dark:text-slate-100">
             {{ editingId ? `Edit ${itemLabel}` : `Tambah ${itemLabel}` }}
           </h3>
@@ -166,7 +166,7 @@ watch(() => route.path, () => {
           </div>
         </CardBox>
 
-        <CardBox class="xl:col-span-3">
+        <CardBox class="xl:col-span-3" color="emerald">
           <h3 class="mb-4 text-lg font-semibold dark:text-slate-100">Daftar {{ title }}</h3>
 
           <div v-if="!authStore.isAuthenticated" class="rounded-lg bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-900/40">

@@ -2,6 +2,8 @@ package config
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -81,7 +83,7 @@ func Load() Config {
 		JWTTTLMinutes: getenv("JWT_TTL_MINUTES", "120"),
 
 		AdminUsername:      getenv("ADMIN_USERNAME", "admin"),
-		AdminPassword:      getenv("ADMIN_PASSWORD", "admin12345"),
+		AdminPassword:      getenv("ADMIN_PASSWORD", ""),
 		AdminName:          getenv("ADMIN_NAME", "Administrator"),
 		AdminEmail:         getenv("ADMIN_EMAIL", "admin@example.com"),
 		GoogleClientID:     getenv("GOOGLE_CLIENT_ID", ""),
@@ -109,4 +111,31 @@ func getenvAny(keys []string, fallback string) string {
 		}
 	}
 	return fallback
+}
+
+func ResolveAppPath(path string) string {
+	path = strings.TrimSpace(path)
+	if path == "" || filepath.IsAbs(path) {
+		return path
+	}
+
+	if wd, err := os.Getwd(); err == nil {
+		if filepath.Base(wd) == "backend" {
+			return filepath.Join(wd, path)
+		}
+		if info, err := os.Stat(filepath.Join(wd, "backend")); err == nil && info.IsDir() {
+			return filepath.Join(wd, "backend", path)
+		}
+		return filepath.Join(wd, path)
+	}
+
+	if exe, err := os.Executable(); err == nil {
+		exeDir := filepath.Dir(exe)
+		if info, err := os.Stat(filepath.Join(exeDir, "backend")); err == nil && info.IsDir() {
+			return filepath.Join(exeDir, "backend", path)
+		}
+		return filepath.Join(exeDir, path)
+	}
+
+	return path
 }

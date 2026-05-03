@@ -71,7 +71,7 @@ onMounted(loadStats)
   <LayoutAuthenticated>
     <SectionMain>
       <!-- Header Section with Mesh Accent -->
-      <div class="relative overflow-hidden rounded-[2rem] bg-white dark:bg-slate-900 shadow-sm border border-slate-100/50 dark:border-slate-800/50 p-8 mb-8">
+      <div class="relative overflow-hidden rounded-[2rem] bg-white dark:bg-slate-900 shadow-sm border border-blue-400/60 dark:border-blue-800/80 p-8 mb-8">
         <div class="absolute top-[-20%] right-[-10%] w-64 h-64 rounded-full bg-blue-400/10 blur-3xl"></div>
         <div class="absolute bottom-[-20%] left-[-10%] w-64 h-64 rounded-full bg-indigo-400/10 blur-3xl"></div>
         
@@ -214,7 +214,7 @@ onMounted(loadStats)
             <h2 class="text-2xl font-bold">Spacer</h2>
           </div>
 
-          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm p-6">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-orange-400/60 dark:border-orange-800/80 shadow-sm p-6">
             <div class="flex items-center mb-6">
               <BaseIcon :path="mdiRocketLaunchOutline" size="24" class="text-orange-500 mr-2" />
               <h3 class="text-xl font-bold text-gray-800 dark:text-slate-100">Mulai Cepat AtigaCBT</h3>

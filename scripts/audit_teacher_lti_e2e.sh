@@ -18,8 +18,13 @@ set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://127.0.0.1:8080}"
 ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
-ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin12345}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
 DATABASE_URL="${DATABASE_URL:-}"
+
+if [[ -z "${ADMIN_PASSWORD}" ]]; then
+  echo "ADMIN_PASSWORD is required" >&2
+  exit 2
+fi
 
 if [[ -z "${DATABASE_URL}" ]]; then
   echo "ERROR: DATABASE_URL is empty. Run: set -a; source backend/.env; set +a" >&2

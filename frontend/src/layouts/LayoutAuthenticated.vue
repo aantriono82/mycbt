@@ -13,7 +13,7 @@ import AsideMenu from '@/components/AsideMenu.vue'
 import FooterBar from '@/components/FooterBar.vue'
 import BackendHealthBanner from '@/components/BackendHealthBanner.vue'
 import BottomNavigation from '@/components/BottomNavigation.vue'
-import { api } from '@/services/api.js'
+import { api, getApiBaseUrl } from '@/services/api.js'
 
 const darkModeStore = useDarkModeStore()
 const authStore = useAuthStore()
@@ -282,7 +282,7 @@ onMounted(() => {
     loadNotifications({ silent: true })
   }, 60000)
 
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const baseUrl = getApiBaseUrl()
   const token = localStorage.getItem('atigacbt_token')
   notificationsEventSource = new EventSource(`${baseUrl}/api/v1/student/notifications/stream?access_token=${token}`)
   notificationsEventSource.addEventListener('update', () => {
@@ -325,10 +325,10 @@ const menuClick = (event, item) => {
       'overflow-hidden lg:overflow-visible': isAsideMobileExpanded,
     }"
   >
-    <div
-      :class="[layoutAsidePadding, { 'ml-60 lg:ml-0': isAsideMobileExpanded }]"
-      class="min-h-screen w-screen bg-gradient-to-br from-purple-50 via-violet-50/60 to-indigo-50 pt-14 transition-(--transition-position) lg:w-auto dark:bg-slate-950 dark:text-slate-100 pb-24 lg:pb-0"
-    >
+      <div
+        :class="[layoutAsidePadding, { 'ml-60 lg:ml-0': isAsideMobileExpanded }]"
+        class="min-h-screen w-screen bg-white pt-14 transition-(--transition-position) lg:w-auto dark:bg-slate-950 dark:text-slate-100 pb-24 lg:pb-0"
+      >
       <NavBar
         :menu="menuNavBar"
         :class="[layoutAsidePadding, { 'ml-60 lg:ml-0': isAsideMobileExpanded }]"

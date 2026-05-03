@@ -13,19 +13,34 @@ defineProps({
 })
 
 const colorMap = {
-  blue: 'text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30',
-  indigo: 'text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30',
-  emerald: 'text-emerald-500 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30',
-  amber: 'text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30',
-  purple: 'text-purple-500 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30',
-  rose: 'text-rose-500 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30'
+  blue: 'text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border-blue-400/60 dark:border-blue-800/60',
+  indigo: 'text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 border-indigo-400/60 dark:border-indigo-800/60',
+  emerald: 'text-emerald-500 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border-emerald-400/60 dark:border-emerald-800/60',
+  amber: 'text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border-amber-400/60 dark:border-amber-800/60',
+  purple: 'text-purple-500 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 border-purple-400/60 dark:border-purple-800/60',
+  rose: 'text-rose-500 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 border-rose-400/60 dark:border-rose-800/60'
+}
+
+const getBorderColor = (color) => {
+  const map = {
+    blue: 'border-blue-400/60 dark:border-blue-800/60',
+    indigo: 'border-indigo-400/60 dark:border-indigo-800/60',
+    emerald: 'border-emerald-400/60 dark:border-emerald-800/60',
+    amber: 'border-amber-400/60 dark:border-amber-800/60',
+    purple: 'border-purple-400/60 dark:border-purple-800/60',
+    rose: 'border-rose-400/60 dark:border-rose-800/60'
+  }
+  return map[color] || map.blue
 }
 </script>
 
 <template>
   <router-link
     :to="to"
-    class="flex items-center p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm hover:shadow-2xl hover:-translate-y-1 hover:border-blue-200 dark:hover:border-blue-800 transition-all duration-300 group overflow-hidden relative"
+    :class="[
+      'flex items-center p-5 bg-white dark:bg-slate-900 border rounded-3xl shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group overflow-hidden relative',
+      getBorderColor(color)
+    ]"
   >
     <!-- Background highlight on hover -->
     <div class="absolute -right-4 -top-4 w-12 h-12 rounded-full bg-blue-500/0 group-hover:bg-blue-500/5 transition-all duration-500 scale-0 group-hover:scale-[4]"></div>

@@ -944,7 +944,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
 
       <!-- Edit Metadata Section (Toggleable when in Editor) -->
       <div v-if="isStepEditor && isEditingMetadata" class="mb-6 animate-fade-in-down">
-         <div class="rounded-3xl bg-purple-600 shadow-2xl shadow-purple-300/40 p-6 text-white">
+         <div class="rounded-3xl bg-purple-600 p-6 text-white">
             <div class="flex items-center justify-between mb-6">
                <h3 class="text-xl font-bold flex items-center gap-3">
                   <div class="h-10 w-10 bg-white/20 rounded-full flex items-center justify-center">
@@ -976,7 +976,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
 
       <!-- STEP 1: CREATION FORM -->
       <div v-if="!isStepEditor" class="max-w-2xl mx-auto py-12 animate-fade-in-up">
-        <CardBox class="shadow-2xl p-10 border-t-8 border-purple-600">
+        <CardBox :has-shadow="false" class="p-10" color="purple">
           <div class="text-center mb-8">
             <div class="h-16 w-16 bg-purple-50 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
               <BaseIcon :path="mdiDatabasePlus" size="32" class="text-purple-600" />
@@ -1027,7 +1027,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                 :icon="mdiContentSave"
                 color="purple"
                 label="Buat & Lanjut ke Editor Soal"
-                class="w-full py-4 text-lg font-bold shadow-lg"
+                class="w-full py-4 text-lg font-bold"
                 :loading="isLoading"
                 @click="createAndContinue"
               />
@@ -1041,12 +1041,12 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
           <div v-if="errorMessage" class="mb-4 rounded-xl bg-red-50 px-5 py-4 text-sm text-red-700 border border-red-200">{{ errorMessage }}</div>
           <div v-if="successMessage" class="mb-4 rounded-xl bg-emerald-50 px-5 py-4 text-sm text-emerald-700 border border-emerald-200">{{ successMessage }}</div>
 
-          <div class="mb-8 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/10 shadow-xs" is-form>
+          <div class="mb-8 overflow-hidden rounded-2xl border border-purple-400/60 dark:border-purple-800/80 bg-slate-50/50 dark:bg-slate-900/10 shadow-none" is-form>
             <div class="bg-white dark:bg-slate-900 px-8 py-6 border-b flex flex-wrap items-center justify-between gap-4">
               <div class="flex items-center gap-6">
                 <h4 class="font-extrabold text-2xl dark:text-slate-100 flex items-center gap-3">
                    <span class="text-slate-800 dark:text-slate-200">No:</span>
-                  <span class="bg-purple-600 text-white px-3 py-1 rounded-xl text-lg min-w-[40px] text-center shadow-lg shadow-purple-200">{{ questionForm.order_no }}</span>
+                  <span class="bg-purple-600 text-white px-3 py-1 rounded-xl text-lg min-w-[40px] text-center shadow-none">{{ questionForm.order_no }}</span>
                 </h4>
                 <div class="h-10 w-[1px] bg-slate-200 dark:bg-slate-800"></div>
                 <div class="flex items-center gap-3">
@@ -1073,7 +1073,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                    <span>Reset</span>
                  </button>
                  <button type="button" 
-                   class="flex items-center gap-2 px-8 py-2.5 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-700 shadow-lg shadow-purple-200 transition-all active:scale-95"
+                   class="flex items-center gap-2 px-8 py-2.5 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-700 shadow-none transition-all active:scale-95"
                    @click="saveQuestion"
                  >
                    <BaseIcon :path="mdiPlus" size="20" />
@@ -1096,7 +1096,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                 <div
                   v-for="(opt, idx) in mcOptions"
                   :key="`${activeEditorScopeKey}-mc-single-${opt.label}`"
-                   class="rounded-xl border overflow-hidden shadow-sm bg-white dark:bg-slate-900 transition-all"
+                   class="rounded-xl border overflow-hidden shadow-none bg-white dark:bg-slate-900 transition-all"
                    :class="opt.is_correct ? 'border-purple-400 ring-4 ring-purple-400/20' : 'border-slate-200 dark:border-slate-800'"
                 >
                   <!-- Card Header -->
@@ -1160,7 +1160,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
              <h4 class="text-sm font-black text-slate-500 uppercase tracking-widest px-2">Daftar Soal Lainya ({{ questions.length }})</h4>
              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                <QuestionQuickAddCard @click="openQuickAddModal" />
-               <div v-for="item in questions" :key="item.id" class="rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900/40 hover:shadow-lg transition-all" :class="{ 'ring-2 ring-blue-500': editingQuestionId === item.id }">
+               <div v-for="item in questions" :key="item.id" class="rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900/40 hover:shadow-none transition-all" :class="{ 'ring-2 ring-blue-500': editingQuestionId === item.id }">
                   <div class="flex items-center justify-between mb-2">
                     <span class="text-xs font-black text-slate-400">#{{ item.order_no }}</span>
                     <div class="flex gap-3">
@@ -1185,7 +1185,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
           <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-4">
               <div class="text-xs font-black uppercase tracking-widest text-slate-400">SOAL NOMOR:</div>
-              <span class="h-10 w-10 flex items-center justify-center bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-black rounded-full text-lg shadow">{{ questionForm.order_no }}</span>
+              <span class="h-10 w-10 flex items-center justify-center bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-black rounded-full text-lg shadow-none">{{ questionForm.order_no }}</span>
               <div class="flex items-center gap-2">
                 <span class="text-xs font-black uppercase tracking-widest text-slate-400">Tipe</span>
                 <FormControl v-model="questionForm.type" :options="questionTypeOptions" transparent class="min-w-[180px]" />
@@ -1210,7 +1210,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                 Reset
               </button>
               <button type="button"
-                class="flex items-center gap-2 px-7 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95"
+                class="flex items-center gap-2 px-7 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-none transition-all active:scale-95"
                 @click="saveQuestion"
               >
                 <BaseIcon :path="mdiPlus" size="18" />
@@ -1229,7 +1229,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
           <!-- Two-column layout: Stem | Answers -->
           <div class="grid gap-6 xl:grid-cols-2 items-start">
             <!-- Left: Question Stem -->
-            <div class="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm bg-white dark:bg-slate-900">
+            <div class="rounded-xl border border-blue-400/60 dark:border-blue-800/80 overflow-hidden shadow-none bg-white dark:bg-slate-900">
               <div class="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60">
                 <label class="font-black text-[11px] uppercase tracking-[0.18em] text-slate-400">Soal</label>
               </div>
@@ -1243,7 +1243,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
               <div
                 v-for="(opt, idx) in mcMultipleOptions"
                 :key="`${activeEditorScopeKey}-mc-multiple-${opt.label || idx}`"
-                class="rounded-xl border overflow-hidden shadow-sm bg-white dark:bg-slate-900 transition-all"
+                class="rounded-xl border overflow-hidden shadow-none bg-white dark:bg-slate-900 transition-all"
                 :class="opt.is_correct ? 'border-blue-400 ring-2 ring-blue-400/40' : 'border-slate-200 dark:border-slate-800'"
               >
                 <!-- Card Header -->
@@ -1303,7 +1303,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
              <h4 class="text-sm font-black text-slate-500 uppercase tracking-widest px-2">Daftar Soal Lainya ({{ questions.length }})</h4>
              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                <QuestionQuickAddCard @click="openQuickAddModal" />
-               <div v-for="item in questions" :key="item.id" class="rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900/40 hover:shadow-lg transition-all" :class="{ 'ring-2 ring-blue-500': editingQuestionId === item.id }">
+               <div v-for="item in questions" :key="item.id" class="rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900/40 hover:shadow-none transition-all" :class="{ 'ring-2 ring-blue-500': editingQuestionId === item.id }">
                   <div class="flex items-center justify-between mb-2">
                     <span class="text-xs font-black text-slate-400">#{{ item.order_no }}</span>
                     <div class="flex gap-3">
@@ -1329,7 +1329,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
           <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-4">
               <div class="text-xs font-black uppercase tracking-widest text-slate-400">SOAL NOMOR:</div>
-              <span class="h-10 w-10 flex items-center justify-center bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-black rounded-full text-lg shadow">{{ questionForm.order_no }}</span>
+              <span class="h-10 w-10 flex items-center justify-center bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-black rounded-full text-lg shadow-none">{{ questionForm.order_no }}</span>
               <div class="flex items-center gap-2">
                 <span class="text-xs font-black uppercase tracking-widest text-slate-400">Tipe</span>
                 <FormControl v-model="questionForm.type" :options="questionTypeOptions" transparent class="min-w-[180px]" />
@@ -1354,7 +1354,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                 Reset
               </button>
               <button type="button"
-                class="flex items-center gap-2 px-7 py-2.5 rounded-xl bg-teal-600 text-white font-bold hover:bg-teal-700 shadow-lg shadow-teal-200 transition-all active:scale-95"
+                class="flex items-center gap-2 px-7 py-2.5 rounded-xl bg-teal-600 text-white font-bold hover:bg-teal-700 shadow-none transition-all active:scale-95"
                 @click="saveQuestion"
               >
                 <BaseIcon :path="mdiContentSave" size="18" />
@@ -1373,7 +1373,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
           <!-- Two-column layout: Stem | Answers -->
           <div class="grid gap-6 xl:grid-cols-2 items-start">
             <!-- Left: Question Stem Card -->
-            <div class="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm bg-white dark:bg-slate-900">
+            <div class="rounded-2xl border border-emerald-400/60 dark:border-emerald-800/80 overflow-hidden shadow-none bg-white dark:bg-slate-900">
               <!-- Card Header -->
               <div class="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/70 flex items-center gap-3">
                 <div class="h-7 w-7 rounded-lg bg-teal-100 dark:bg-teal-900/40 flex items-center justify-center">
@@ -1393,7 +1393,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
               <div
                 v-for="(ans, idx) in shortAnswers"
                 :key="`${activeEditorScopeKey}-short-answer-${idx}`"
-                class="rounded-2xl border border-teal-300 dark:border-teal-700 overflow-hidden shadow-sm bg-white dark:bg-slate-900 ring-2 ring-teal-300/40 dark:ring-teal-700/40 transition-all"
+                class="rounded-2xl border border-teal-300 dark:border-teal-700 overflow-hidden shadow-none bg-white dark:bg-slate-900 ring-2 ring-teal-300/40 dark:ring-teal-700/40 transition-all"
               >
                 <!-- Card Header -->
                 <div class="px-4 py-3 border-b border-teal-100 dark:border-teal-900/50 bg-teal-50 dark:bg-teal-900/20 flex items-center justify-between">
@@ -1452,7 +1452,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
              <h4 class="text-sm font-black text-slate-500 uppercase tracking-widest px-2">Daftar Soal Lainya ({{ questions.length }})</h4>
              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                <QuestionQuickAddCard @click="openQuickAddModal" />
-               <div v-for="item in questions" :key="item.id" class="rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900/40 hover:shadow-lg transition-all" :class="{ 'ring-2 ring-teal-500': editingQuestionId === item.id }">
+               <div v-for="item in questions" :key="item.id" class="rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900/40 hover:shadow-none transition-all" :class="{ 'ring-2 ring-teal-500': editingQuestionId === item.id }">
                   <div class="flex items-center justify-between mb-2">
                     <span class="text-xs font-black text-slate-400">#{{ item.order_no }}</span>
                     <div class="flex gap-3">
@@ -1478,7 +1478,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
           <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-4">
               <div class="text-xs font-black uppercase tracking-widest text-slate-400">SOAL NOMOR:</div>
-              <span class="h-10 w-10 flex items-center justify-center bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-black rounded-full text-lg shadow">{{ questionForm.order_no }}</span>
+              <span class="h-10 w-10 flex items-center justify-center bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-black rounded-full text-lg shadow-none">{{ questionForm.order_no }}</span>
               <div class="flex items-center gap-2">
                 <span class="text-xs font-black uppercase tracking-widest text-slate-400">Tipe</span>
                 <FormControl v-model="questionForm.type" :options="questionTypeOptions" transparent class="min-w-[180px]" />
@@ -1503,7 +1503,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                 Reset
               </button>
               <button type="button"
-                class="flex items-center gap-2 px-7 py-2.5 rounded-xl bg-violet-600 text-white font-bold hover:bg-violet-700 shadow-lg shadow-violet-200 transition-all active:scale-95"
+                class="flex items-center gap-2 px-7 py-2.5 rounded-xl bg-violet-600 text-white font-bold hover:bg-violet-700 shadow-none transition-all active:scale-95"
                 @click="saveQuestion"
               >
                 <BaseIcon :path="mdiContentSave" size="18" />
@@ -1522,7 +1522,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
           <!-- Two-column layout: Stem | Rubric -->
           <div class="grid gap-6 xl:grid-cols-2 items-start">
             <!-- Left: Question Stem Card -->
-            <div class="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm bg-white dark:bg-slate-900">
+            <div class="rounded-2xl border border-purple-400/60 dark:border-purple-800/80 overflow-hidden shadow-none bg-white dark:bg-slate-900">
               <!-- Card Header -->
               <div class="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/70 flex items-center gap-3">
                 <div class="h-7 w-7 rounded-lg bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center">
@@ -1539,7 +1539,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
             <!-- Right: Rubric & Score Card -->
             <div class="space-y-4">
               <!-- Rubric Card -->
-              <div class="rounded-2xl border border-violet-300 dark:border-violet-700 overflow-hidden shadow-sm bg-white dark:bg-slate-900 ring-2 ring-violet-300/40 dark:ring-violet-700/40 transition-all">
+              <div class="rounded-2xl border border-violet-300 dark:border-violet-700 overflow-hidden shadow-none bg-white dark:bg-slate-900 ring-2 ring-violet-300/40 dark:ring-violet-700/40 transition-all">
                 <!-- Card Header -->
                 <div class="px-4 py-3 border-b border-violet-100 dark:border-violet-900/50 bg-violet-50 dark:bg-violet-900/20 flex items-center justify-between">
                   <div class="flex items-center gap-2">
@@ -1566,7 +1566,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
               </div>
 
               <!-- Max Score Card -->
-              <div class="rounded-2xl border border-violet-200 dark:border-violet-800 overflow-hidden shadow-sm bg-white dark:bg-slate-900">
+              <div class="rounded-2xl border border-violet-200 dark:border-violet-800 overflow-hidden shadow-none bg-white dark:bg-slate-900">
                 <!-- Card Header -->
                 <div class="px-4 py-3 border-b border-violet-100 dark:border-violet-900/50 bg-violet-50/60 dark:bg-violet-900/10 flex items-center gap-2">
                   <span class="font-black text-sm text-violet-700 dark:text-violet-300">Skor Maksimal</span>
@@ -1602,7 +1602,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
              <h4 class="text-sm font-black text-slate-500 uppercase tracking-widest px-2">Daftar Soal Lainya ({{ questions.length }})</h4>
              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                <QuestionQuickAddCard @click="openQuickAddModal" />
-               <div v-for="item in questions" :key="item.id" class="rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900/40 hover:shadow-lg transition-all" :class="{ 'ring-2 ring-violet-500': editingQuestionId === item.id }">
+               <div v-for="item in questions" :key="item.id" class="rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900/40 hover:shadow-none transition-all" :class="{ 'ring-2 ring-violet-500': editingQuestionId === item.id }">
                   <div class="flex items-center justify-between mb-2">
                     <span class="text-xs font-black text-slate-400">#{{ item.order_no }}</span>
                     <div class="flex gap-3">
@@ -1625,12 +1625,12 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
           <div v-if="successMessage" class="mb-4 rounded-xl bg-emerald-50 px-5 py-4 text-sm text-emerald-700 border border-emerald-200">{{ successMessage }}</div>
 
           <!-- Premium Header Bar -->
-          <div class="mb-8 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/10 shadow-xs">
+          <div class="mb-8 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/10 shadow-none">
             <div class="bg-white dark:bg-slate-900 px-8 py-6 border-b flex flex-wrap items-center justify-between gap-4">
               <div class="flex items-center gap-6">
                 <h4 class="font-extrabold text-2xl dark:text-slate-100 flex items-center gap-3">
                    <span class="text-slate-800 dark:text-slate-200">No:</span>
-                   <span class="bg-emerald-600 text-white px-3 py-1 rounded-xl text-lg min-w-[40px] text-center shadow-lg shadow-emerald-200">{{ questionForm.order_no }}</span>
+                   <span class="bg-emerald-600 text-white px-3 py-1 rounded-xl text-lg min-w-[40px] text-center shadow-none">{{ questionForm.order_no }}</span>
                 </h4>
                 <div class="h-10 w-[1px] bg-slate-200 dark:bg-slate-800"></div>
                 <div class="flex items-center gap-3">
@@ -1657,7 +1657,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                   <span>Reset</span>
                 </button>
                 <button type="button" 
-                  class="flex items-center gap-2 px-8 py-2.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all active:scale-95"
+                  class="flex items-center gap-2 px-8 py-2.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-none transition-all active:scale-95"
                   @click="saveQuestion"
                 >
                   <BaseIcon :path="mdiPlus" size="20" />
@@ -1689,7 +1689,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                     <div 
                       v-for="(st, idx) in trueFalseStatements" 
                       :key="idx"
-                      class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm"
+                      class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-none"
                     >
                        <div class="px-3 py-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
                           <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pernyataan {{ idx + 1 }}</span>
@@ -1699,12 +1699,12 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                                <button type="button" 
                                  @click="st.correct = true"
                                  class="px-3 py-1 rounded-md text-[10px] font-black transition-all"
-                                 :class="st.correct ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                                 :class="st.correct ? 'bg-emerald-500 text-white shadow-none' : 'text-slate-500 hover:text-slate-700'"
                                >BENAR</button>
                                <button type="button" 
                                  @click="st.correct = false"
                                  class="px-3 py-1 rounded-md text-[10px] font-black transition-all"
-                                 :class="!st.correct ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                                 :class="!st.correct ? 'bg-rose-500 text-white shadow-none' : 'text-slate-500 hover:text-slate-700'"
                                >SALAH</button>
                             </div>
                             <button type="button" 
@@ -1742,7 +1742,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
              <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Daftar Soal Lainya ({{ questions.length }})</h4>
              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                <QuestionQuickAddCard @click="openQuickAddModal" />
-               <div v-for="item in questions" :key="item.id" class="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-900/40 hover:shadow-xl transition-all group" :class="{ 'ring-2 ring-emerald-500 bg-emerald-50/20': editingQuestionId === item.id }">
+               <div v-for="item in questions" :key="item.id" class="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-900/40 hover:shadow-none transition-all group" :class="{ 'ring-2 ring-emerald-500 bg-emerald-50/20': editingQuestionId === item.id }">
                   <div class="flex items-center justify-between mb-3">
                     <span class="text-[10px] font-black text-slate-400 px-2 py-0.5 bg-slate-100 rounded">#{{ item.order_no }}</span>
                     <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1767,12 +1767,12 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
           <div v-if="successMessage" class="mb-4 rounded-xl bg-emerald-50 px-5 py-4 text-sm text-emerald-700 border border-emerald-200">{{ successMessage }}</div>
 
           <!-- Premium Header Bar -->
-          <div class="mb-8 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/10 shadow-xs">
+          <div class="mb-8 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/10 shadow-none">
             <div class="bg-white dark:bg-slate-900 px-8 py-6 border-b flex flex-wrap items-center justify-between gap-4">
               <div class="flex items-center gap-6">
                 <h4 class="font-extrabold text-2xl dark:text-slate-100 flex items-center gap-3">
                    <span class="text-slate-800 dark:text-slate-200">No:</span>
-                   <span class="bg-amber-500 text-white px-3 py-1 rounded-xl text-lg min-w-[40px] text-center shadow-lg shadow-amber-200">{{ questionForm.order_no }}</span>
+                   <span class="bg-amber-500 text-white px-3 py-1 rounded-xl text-lg min-w-[40px] text-center shadow-none">{{ questionForm.order_no }}</span>
                 </h4>
                 <div class="h-10 w-[1px] bg-slate-200 dark:bg-slate-800"></div>
                 <div class="flex items-center gap-3">
@@ -1799,7 +1799,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                   <span>Reset</span>
                 </button>
                 <button type="button" 
-                  class="flex items-center gap-2 px-8 py-2.5 rounded-xl bg-amber-500 text-white font-bold hover:bg-amber-600 shadow-lg shadow-amber-200 transition-all active:scale-95"
+                  class="flex items-center gap-2 px-8 py-2.5 rounded-xl bg-amber-500 text-white font-bold hover:bg-amber-600 shadow-none transition-all active:scale-95"
                   @click="saveQuestion"
                 >
                   <BaseIcon :path="mdiPlus" size="20" />
@@ -1832,11 +1832,11 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                     <div 
                       v-for="(pair, idx) in matchingPairs" 
                       :key="`${activeEditorScopeKey}-matching-${idx}`"
-                      class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/30 overflow-hidden shadow-sm hover:shadow-md transition-all"
+                      class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/30 overflow-hidden shadow-none hover:shadow-none transition-all"
                     >
                        <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between">
                           <div class="flex items-center gap-2">
-                            <span class="h-6 w-6 flex items-center justify-center rounded-lg bg-amber-500 text-white text-[10px] font-black font-mono shadow-sm">{{ idx + 1 }}</span>
+                            <span class="h-6 w-6 flex items-center justify-center rounded-lg bg-amber-500 text-white text-[10px] font-black font-mono shadow-none">{{ idx + 1 }}</span>
                             <span class="text-xs font-black text-slate-500 uppercase tracking-widest">Pasangan #{{ idx + 1 }}</span>
                           </div>
                           <button type="button" 
@@ -1865,7 +1865,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                           
                           <!-- Arrow -->
                           <div class="flex justify-center -my-2 relative z-10">
-                             <div class="bg-white dark:bg-slate-800 border dark:border-slate-700 p-1 rounded-full shadow-sm">
+                             <div class="bg-white dark:bg-slate-800 border dark:border-slate-700 p-1 rounded-full shadow-none">
                                 <BaseIcon :path="mdiArrowDown" size="14" class="text-slate-400" />
                              </div>
                           </div>
@@ -1908,7 +1908,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
              <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Daftar Soal Lainya ({{ questions.length }})</h4>
              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                <QuestionQuickAddCard @click="openQuickAddModal" />
-               <div v-for="item in questions" :key="item.id" class="rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900/40 hover:shadow-lg transition-all" :class="{ 'ring-2 ring-amber-500': editingQuestionId === item.id }">
+               <div v-for="item in questions" :key="item.id" class="rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900/40 hover:shadow-none transition-all" :class="{ 'ring-2 ring-amber-500': editingQuestionId === item.id }">
                   <div class="flex items-center justify-between mb-2">
                     <span class="text-xs font-black text-slate-400">#{{ item.order_no }}</span>
                     <div class="flex gap-3">
@@ -1948,8 +1948,8 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
             />
 
             <div v-if="questions.length" class="space-y-4">
-              <div v-for="item in questions" :key="item.id" class="relative rounded-2xl border border-slate-200 dark:border-slate-800 p-6 bg-white dark:bg-slate-900/40 hover:shadow-xl transition-all" :class="{ 'ring-2 ring-blue-500 bg-blue-50/10': editingQuestionId === item.id }">
-                <div class="absolute -left-3 top-6 h-8 w-8 flex items-center justify-center rounded-lg bg-slate-900 text-sm font-black text-white shadow-lg">{{ item.order_no }}</div>
+              <div v-for="item in questions" :key="item.id" class="relative rounded-2xl border border-slate-200 dark:border-slate-800 p-6 bg-white dark:bg-slate-900/40 hover:shadow-none transition-all" :class="{ 'ring-2 ring-blue-500 bg-blue-50/10': editingQuestionId === item.id }">
+                <div class="absolute -left-3 top-6 h-8 w-8 flex items-center justify-center rounded-lg bg-slate-900 text-sm font-black text-white shadow-none">{{ item.order_no }}</div>
                 <div class="mb-4 flex items-center justify-between pl-6">
                   <span class="rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-1 text-[10px] font-black uppercase text-slate-500 tracking-wider">{{ item.type.replace('_', ' ') }}</span>
                   <div class="flex items-center gap-5">
@@ -1976,7 +1976,7 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
 
           <!-- Right: Form -->
           <div class="xl:col-span-5">
-            <CardBox class="sticky top-24 shadow-2xl p-8">
+            <CardBox :has-shadow="false" class="sticky top-24 p-8">
                <h4 class="text-xl font-black mb-6 flex items-center justify-between">
                   <div class="flex items-center gap-2">
                     <span class="text-blue-500">{{ editingQuestionId ? '📝' : '✨' }}</span>

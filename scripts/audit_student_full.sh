@@ -13,7 +13,7 @@ set -u
 
 BASE_URL="${BASE_URL:-http://127.0.0.1:8080}"
 ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
-ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin12345}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -27,6 +27,11 @@ need_cmd() {
 }
 need_cmd curl
 need_cmd python3
+
+if [[ -z "${ADMIN_PASSWORD}" ]]; then
+  echo "ADMIN_PASSWORD is required" >&2
+  exit 2
+fi
 
 ok() { PASS_COUNT=$((PASS_COUNT + 1)); echo "OK   $1"; }
 fail() {

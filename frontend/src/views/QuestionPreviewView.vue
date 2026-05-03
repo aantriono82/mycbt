@@ -43,7 +43,7 @@
        <div class="grid lg:grid-cols-[1fr_340px] gap-6 items-start">
           
           <!-- LEFT COLUMN: The Question Card -->
-          <div class="bg-white rounded-lg border border-slate-200 shadow-sm min-h-[75vh] max-h-[calc(100vh-180px)] flex flex-col">
+          <div class="bg-white rounded-lg border border-blue-400/60 dark:border-blue-800/80 shadow-sm min-h-[75vh] max-h-[calc(100vh-180px)] flex flex-col">
              <!-- Card Header -->
              <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-white">
                 <span class="text-[#0B7EA1] font-bold uppercase text-sm tracking-wide">SOAL NOMOR: {{ currentIndex + 1 }}</span>
@@ -315,7 +315,7 @@
           </div>
 
           <!-- RIGHT COLUMN: Sidebar (Navigator) -->
-          <aside class="hidden lg:block bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden sticky top-[74px]">
+          <aside class="hidden lg:block bg-white rounded-lg border border-purple-400/60 dark:border-purple-800/80 shadow-sm overflow-hidden sticky top-[74px]">
              <div class="px-6 py-4 border-b border-slate-200 bg-white">
                 <span class="text-slate-800 font-bold uppercase text-sm tracking-wide select-none">DAFTAR SOAL</span>
              </div>

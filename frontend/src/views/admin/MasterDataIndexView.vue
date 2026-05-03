@@ -24,7 +24,7 @@ import BaseButton from '@/components/BaseButton.vue'
       <SectionTitleLineWithButton :icon="mdiFolderOutline" title="Master Data" main />
 
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <CardBox is-hoverable>
+        <CardBox is-hoverable color="blue">
           <div class="flex items-start justify-between gap-4">
             <div>
               <div class="text-lg font-semibold dark:text-slate-100">Guru</div>
@@ -39,7 +39,7 @@ import BaseButton from '@/components/BaseButton.vue'
           </div>
         </CardBox>
 
-        <CardBox is-hoverable>
+        <CardBox is-hoverable color="emerald">
           <div class="flex items-start justify-between gap-4">
             <div>
               <div class="text-lg font-semibold dark:text-slate-100">Siswa</div>
@@ -54,7 +54,7 @@ import BaseButton from '@/components/BaseButton.vue'
           </div>
         </CardBox>
 
-        <CardBox is-hoverable>
+        <CardBox is-hoverable color="purple">
           <div class="flex items-start justify-between gap-4">
             <div>
               <div class="text-lg font-semibold dark:text-slate-100">Verifikasi Pendaftaran</div>
@@ -73,7 +73,7 @@ import BaseButton from '@/components/BaseButton.vue'
           </div>
         </CardBox>
 
-        <CardBox is-hoverable>
+        <CardBox is-hoverable color="blue">
           <div class="flex items-start justify-between gap-4">
             <div>
               <div class="text-lg font-semibold dark:text-slate-100">Pengumuman</div>
@@ -88,7 +88,7 @@ import BaseButton from '@/components/BaseButton.vue'
           </div>
         </CardBox>
 
-        <CardBox is-hoverable>
+        <CardBox is-hoverable color="emerald">
           <div class="flex items-start justify-between gap-4">
             <div>
               <div class="text-lg font-semibold dark:text-slate-100">Program</div>
@@ -103,7 +103,7 @@ import BaseButton from '@/components/BaseButton.vue'
           </div>
         </CardBox>
 
-        <CardBox is-hoverable>
+        <CardBox is-hoverable color="purple">
           <div class="flex items-start justify-between gap-4">
             <div>
               <div class="text-lg font-semibold dark:text-slate-100">Level</div>
@@ -118,7 +118,7 @@ import BaseButton from '@/components/BaseButton.vue'
           </div>
         </CardBox>
 
-        <CardBox is-hoverable>
+        <CardBox is-hoverable color="blue">
           <div class="flex items-start justify-between gap-4">
             <div>
               <div class="text-lg font-semibold dark:text-slate-100">Group</div>
@@ -133,7 +133,7 @@ import BaseButton from '@/components/BaseButton.vue'
           </div>
         </CardBox>
 
-        <CardBox is-hoverable>
+        <CardBox is-hoverable color="emerald">
           <div class="flex items-start justify-between gap-4">
             <div>
               <div class="text-lg font-semibold dark:text-slate-100">Mata Pelajaran</div>
@@ -148,7 +148,7 @@ import BaseButton from '@/components/BaseButton.vue'
           </div>
         </CardBox>
 
-        <CardBox is-hoverable>
+        <CardBox is-hoverable color="purple">
           <div class="flex items-start justify-between gap-4">
             <div>
               <div class="text-lg font-semibold dark:text-slate-100">Sesi</div>

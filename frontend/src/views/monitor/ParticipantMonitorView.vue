@@ -304,13 +304,13 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="mb-6 grid gap-6 md:grid-cols-3">
-        <CardBoxWidget :icon="mdiAccountSearchOutline" color="text-sky-500" label="Total Peserta" :number="stats.total" />
-        <CardBoxWidget :icon="mdiAccountCheck" color="text-emerald-500" label="Online" :number="stats.online" />
-        <CardBoxWidget :icon="mdiAccountAlert" color="text-amber-500" label="Perlu Tindakan" :number="stats.blocked" />
+        <CardBoxWidget :icon="mdiAccountSearchOutline" color="sky" label="Total Peserta" :number="stats.total" />
+        <CardBoxWidget :icon="mdiAccountCheck" color="emerald" label="Online" :number="stats.online" />
+        <CardBoxWidget :icon="mdiAccountAlert" color="amber" label="Perlu Tindakan" :number="stats.blocked" />
       </div>
 
       <div class="mb-6 grid gap-6 md:grid-cols-3 md:items-stretch">
-        <CardBox class="mb-0">
+        <CardBox class="mb-0" color="blue">
           <FormField label="Pilih Ujian" class="mb-0">
             <FormControl
               v-model="selectedExamId"
@@ -318,7 +318,7 @@ onBeforeUnmount(() => {
             />
           </FormField>
         </CardBox>
-        <CardBox class="mb-0">
+        <CardBox class="mb-0" color="purple">
           <FormField label="Filter Operasional" class="mb-0">
             <FormControl
               v-model="participantFilter"
@@ -334,14 +334,14 @@ onBeforeUnmount(() => {
             />
           </FormField>
         </CardBox>
-        <CardBox class="mb-0">
+        <CardBox class="mb-0" color="blue">
           <FormField label="Cari (nama/username/nis)" class="mb-0">
             <FormControl v-model="q" placeholder="Ketik lalu klik Terapkan" />
           </FormField>
         </CardBox>
       </div>
 
-      <CardBox class="mb-6">
+      <CardBox class="mb-6" color="emerald">
         <div class="flex flex-wrap items-center gap-3">
           <BaseButton color="success" label="Terapkan" :disabled="isLoadingParticipants" @click="applyFilter" />
           <BaseButton
@@ -368,7 +368,7 @@ onBeforeUnmount(() => {
       </CardBox>
 
       <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <CardBox>
+        <CardBox color="purple">
           <h3 class="mb-4 text-lg font-semibold dark:text-slate-100">Status Peserta</h3>
           <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
@@ -438,7 +438,7 @@ onBeforeUnmount(() => {
           </div>
         </CardBox>
 
-        <CardBox>
+        <CardBox color="blue">
           <h3 class="mb-4 text-lg font-semibold dark:text-slate-100">Ujian Aktif</h3>
           <div v-if="isLoading" class="text-sm text-slate-500 dark:text-slate-400 italic">Memuat daftar ujian...</div>
           <div v-else class="space-y-3">

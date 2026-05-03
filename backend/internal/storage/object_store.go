@@ -50,7 +50,7 @@ func (s *LocalObjectStore) PutObject(_ context.Context, objectKey, _ string, bod
 		return "", fmt.Errorf("write file: %w", err)
 	}
 
-	return "/" + filepath.ToSlash(filepath.Join(s.BaseDir, objectKey)), nil
+	return "/uploads/" + strings.TrimLeft(filepath.ToSlash(objectKey), "/"), nil
 }
 
 func (s *LocalObjectStore) GetObject(_ context.Context, objectKey string) (io.ReadCloser, string, error) {

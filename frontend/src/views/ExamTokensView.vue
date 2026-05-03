@@ -239,7 +239,7 @@ onMounted(async () => {
       </SectionTitleLineWithButton>
 
       <div class="mb-6 grid gap-6 xl:grid-cols-5">
-        <CardBox class="xl:col-span-2">
+        <CardBox class="xl:col-span-2" color="blue">
           <h3 class="mb-4 text-lg font-semibold dark:text-slate-100 uppercase tracking-tight">Generate Token Baru</h3>
           <div class="grid gap-4">
             <FormField label="Pilih Ujian">
@@ -300,7 +300,7 @@ onMounted(async () => {
           </div>
         </CardBox>
 
-        <CardBox class="xl:col-span-3">
+        <CardBox class="xl:col-span-3" color="purple">
           <h3 class="mb-4 text-lg font-semibold dark:text-slate-100">Daftar Token</h3>
 
           <div v-if="!authStore.isAuthenticated" class="rounded-lg bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-900/40">

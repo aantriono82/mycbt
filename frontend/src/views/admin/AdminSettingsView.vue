@@ -190,7 +190,7 @@ onMounted(loadSettings)
       </div>
 
       <div class="grid gap-6 xl:grid-cols-12">
-        <CardBox class="xl:col-span-6">
+        <CardBox class="xl:col-span-6" color="blue">
           <h3 class="mb-4 text-lg font-semibold dark:text-slate-100">Identitas Sekolah</h3>
           <FormField label="Nama Sekolah">
             <FormControl v-model="schoolIdentity.school_name" placeholder="Nama sekolah" />
@@ -246,7 +246,7 @@ onMounted(loadSettings)
           </div>
         </CardBox>
 
-        <CardBox class="xl:col-span-6">
+        <CardBox class="xl:col-span-6" color="indigo">
           <h3 class="mb-4 text-lg font-semibold dark:text-slate-100">Pengaturan Sistem</h3>
           <FormField label="Timezone">
             <FormControl
@@ -290,7 +290,7 @@ onMounted(loadSettings)
           </div>
         </CardBox>
 
-        <CardBox class="xl:col-span-12">
+        <CardBox class="xl:col-span-12" color="slate">
           <div class="mb-4 flex items-center gap-2">
             <BaseIcon :path="mdiEmailOutline" class="text-blue-500" />
             <h3 class="text-lg font-semibold dark:text-slate-100">Konfigurasi Email (SMTP)</h3>
