@@ -65,19 +65,19 @@ onMounted(async () => {
 <template>
   <LayoutGuest>
     <SectionFullScreen v-slot="{ cardClass }" class="bg-slate-50 dark:bg-slate-950">
-      <div class="absolute inset-0 bg-gradient-to-tr from-blue-50 via-transparent to-indigo-50 dark:from-blue-900/10 dark:to-transparent opacity-60"></div>
-      <div class="w-full max-w-md mx-auto relative z-10 animate-fade-in">
+      <div class="absolute inset-0 bg-gradient-to-tr from-blue-50 via-transparent to-indigo-50 opacity-60 dark:from-blue-900/10 dark:to-transparent"></div>
+      <div class="relative z-10 mx-auto w-full max-w-md animate-fade-in">
         <form 
-          class="bg-white/95 dark:bg-slate-900/90 backdrop-blur-3xl rounded-[3rem] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.3)] p-8 md:p-12 relative overflow-hidden border border-white/40 dark:border-white/5"
+          class="relative overflow-hidden rounded-[2rem] border border-white/40 bg-white/95 p-5 shadow-[0_24px_50px_-20px_rgba(0,0,0,0.28)] backdrop-blur-3xl sm:rounded-[2.5rem] sm:p-7 md:p-10 dark:border-white/5 dark:bg-slate-900/90"
           @submit.prevent="submit"
         >
           <!-- Logo Section -->
-          <div class="flex flex-col items-center mb-6">
-            <div class="mb-4">
+          <div class="mb-5 flex flex-col items-center sm:mb-6">
+            <div class="mb-3 sm:mb-4">
                <img src="/logo_a3_blue.png" alt="A3 Logo" class="h-16 w-16 object-contain rounded-2xl" />
             </div>
-            <h1 class="text-2xl font-extrabold text-slate-800 dark:text-white mb-1">Login Atiga CBT</h1>
-            <p class="text-slate-500 dark:text-slate-400 text-center max-w-[280px] leading-snug text-base">
+            <h1 class="mb-1 text-center text-[1.75rem] font-extrabold text-slate-800 sm:text-3xl dark:text-white">Login Atiga CBT</h1>
+            <p class="max-w-[280px] text-center text-[15px] leading-snug text-slate-500 sm:text-base dark:text-slate-400">
               Masuk ke sistem ujian berbasis komputer.
             </p>
           </div>
@@ -144,7 +144,7 @@ onMounted(async () => {
 
             <button 
               type="submit" 
-              class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-extrabold rounded-2xl shadow-lg shadow-blue-200 dark:shadow-none hover:-translate-y-0.5 active:translate-y-0 transition-all transform tracking-wide text-base"
+              class="w-full rounded-2xl bg-blue-600 py-3.5 text-base font-extrabold tracking-wide text-white shadow-lg shadow-blue-200 transition-all hover:-translate-y-0.5 hover:bg-blue-700 active:translate-y-0 disabled:bg-blue-400 dark:shadow-none"
               :disabled="authStore.isLoading"
             >
               {{ authStore.isLoading ? 'MEMPROSES...' : 'Masuk' }}
@@ -175,7 +175,7 @@ onMounted(async () => {
           </div>
 
           <!-- Footer -->
-          <div class="mt-6 text-center space-y-2">
+          <div class="mt-6 space-y-2 pb-[max(0px,env(safe-area-inset-bottom))] text-center">
             <p class="text-sm text-slate-500 dark:text-slate-400">
               Belum punya akun? <br class="sm:hidden" />
               <button 
