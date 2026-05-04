@@ -1,5 +1,6 @@
 # AtigaCBT
 
+Silakan dibaca.
 [![Backend Tests](https://github.com/aantriono82/mycbt/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/aantriono82/mycbt/actions/workflows/backend-tests.yml)
 
 Scaffold aplikasi CBT (Computer Based Test) dengan:
@@ -10,6 +11,7 @@ Scaffold aplikasi CBT (Computer Based Test) dengan:
 Dokumen implementasi lengkap: lihat [docs/BLUEPRINT.md](/home/aantriono/dev/atigacbt/docs/BLUEPRINT.md).
 Kontrak API awal (OpenAPI): [docs/openapi.yaml](/home/aantriono/dev/atigacbt/docs/openapi.yaml).
 Panduan deploy production: [docs/DEPLOYMENT.md](/home/aantriono/dev/atigacbt/docs/DEPLOYMENT.md).
+Panduan deploy Dokploy: [docs/DOKPLOY.md](/home/aantriono/dev/atigacbt/docs/DOKPLOY.md).
 Checklist predeploy: [docs/PREDEPLOY_CHECKLIST.md](/home/aantriono/dev/atigacbt/docs/PREDEPLOY_CHECKLIST.md).
 
 ## Status Implementasi (2026-04-23)
@@ -392,3 +394,4 @@ Pembersihan template frontend yang sudah dilakukan:
 - Mengganti identitas navbar/avatar agar mengikuti user login JWT aktif.
 - Menghapus bootstrap request sample data bawaan template.
 - Menghapus file demo/frontend sample yang tidak dipakai lagi (`UiView`, `UsersView`, `SettingsView`, sample cards/tables/charts, dan komponen branding template terkait).
+
