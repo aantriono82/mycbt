@@ -27,7 +27,7 @@ func TestLocalObjectStore_PutObject(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PutObject error: %v", err)
 	}
-	if url != "/"+filepath.ToSlash(filepath.Join(baseDir, "avatars/user-1.txt")) {
+	if url != "/uploads/avatars/user-1.txt" {
 		t.Fatalf("unexpected object url %q", url)
 	}
 
