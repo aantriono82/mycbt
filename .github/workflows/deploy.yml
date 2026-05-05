@@ -14,7 +14,7 @@ on:
         description: 'Build and push backend image'
         type: boolean
         required: true
-        default: true
+        default: false
       build_frontend:
         description: 'Build and push frontend image'
         type: boolean
@@ -22,11 +22,10 @@ on:
         default: true
 
 jobs:
-  build:
+  build-frontend:
     runs-on: ubuntu-latest
     env:
       IMAGE_TAG: ${{ inputs.image_tag || 'latest' }}
-      BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/atigacbt-backend
       FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/atigacbt-frontend
 
     permissions:
@@ -40,18 +39,34 @@ jobs:
       - name: Login GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Build Backend
-        if: ${{ github.event_name == 'push' || inputs.build_backend }}
-        run: docker build -t $BACKEND_IMAGE:$IMAGE_TAG -f docker/backend.Dockerfile .
-
       - name: Build Frontend
-        if: ${{ github.event_name == 'push' || inputs.build_frontend }}
+        if: ${{ github.event_name == 'push' || inputs.build_frontend == true }}
         run: docker build -t $FRONTEND_IMAGE:$IMAGE_TAG -f docker/frontend.Dockerfile .
 
-      - name: Push Backend
-        if: ${{ github.event_name == 'push' || inputs.build_backend }}
-        run: docker push $BACKEND_IMAGE:$IMAGE_TAG
-
       - name: Push Frontend
-        if: ${{ github.event_name == 'push' || inputs.build_frontend }}
+        if: ${{ github.event_name == 'push' || inputs.build_frontend == true }}
         run: docker push $FRONTEND_IMAGE:$IMAGE_TAG
+
+  build-backend:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_backend == true }}
+    env:
+      IMAGE_TAG: ${{ inputs.image_tag || 'latest' }}
+      BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/atigacbt-backend
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build Backend
+        run: docker build -t $BACKEND_IMAGE:$IMAGE_TAG -f docker/backend.Dockerfile .
+
+      - name: Push Backend
+        run: docker push $BACKEND_IMAGE:$IMAGE_TAG
