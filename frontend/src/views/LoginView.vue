@@ -39,8 +39,25 @@ const submit = async () => {
 }
 
 const loginGoogle = (role) => {
-  const baseUrl = api.defaults.baseURL
-  window.location.href = `${baseUrl}/api/v1/auth/google/redirect?role=${role}`
+  const safeRole = role === 'teacher' ? 'teacher' : 'student'
+  const endpoint = '/api/v1/auth/google/redirect'
+  const configuredBase = String(api.defaults.baseURL || '').trim()
+
+  if (configuredBase) {
+    try {
+      const url = new URL(configuredBase, window.location.origin)
+      const basePath = url.pathname.replace(/\/+$/, '')
+      const prefix = basePath.endsWith('/api') ? basePath.slice(0, -4) : basePath
+      url.pathname = `${prefix}${endpoint}`.replace(/\/{2,}/g, '/')
+      url.search = `role=${encodeURIComponent(safeRole)}`
+      window.location.href = url.toString()
+      return
+    } catch {
+      // fallback below
+    }
+  }
+
+  window.location.href = `${endpoint}?role=${encodeURIComponent(safeRole)}`
 }
 
 const startRegistration = (role) => {
