@@ -32,14 +32,26 @@ func NewGoogleAuthHandler(cfg config.Config, auth *authsvc.Service, users *userr
 
 func (h *GoogleAuthHandler) Redirect(c *gin.Context) {
 	role := c.Query("role")
-	if role == "" {
+	if role != "teacher" && role != "student" {
 		role = "student"
 	}
 
-	if strings.TrimSpace(h.cfg.GoogleClientID) == "" || strings.TrimSpace(h.cfg.GoogleRedirectURL) == "" {
-		h.redirectWithError(c, "Google OAuth belum dikonfigurasi di backend. Pastikan GOOGLE_CLIENT_ID dan GOOGLE_REDIRECT_URL sudah diset, lalu restart backend.")
+	if strings.TrimSpace(h.cfg.GoogleClientID) == "" || strings.TrimSpace(h.cfg.GoogleClientSecret) == "" || strings.TrimSpace(h.cfg.GoogleRedirectURL) == "" {
+		h.redirectWithError(c, "Google OAuth belum dikonfigurasi di backend. Pastikan GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, dan GOOGLE_REDIRECT_URL sudah diset, lalu restart backend.")
 		return
 	}
+
+	nonce := randHexString(16)
+	state := role + ":" + nonce
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "google_oauth_state",
+		Value:    state,
+		Path:     "/api/v1/auth/google",
+		MaxAge:   300,
+		HttpOnly: true,
+		Secure:   strings.HasPrefix(strings.ToLower(h.cfg.AppURL), "https://"),
+		SameSite: http.SameSiteLaxMode,
+	})
 
 	u := "https://accounts.google.com/o/oauth2/v2/auth"
 	q := url.Values{}
@@ -47,20 +59,33 @@ func (h *GoogleAuthHandler) Redirect(c *gin.Context) {
 	q.Set("redirect_uri", h.cfg.GoogleRedirectURL)
 	q.Set("response_type", "code")
 	q.Set("scope", "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email")
-	q.Set("state", role) // simple state to pass role
+	q.Set("state", state)
 	q.Set("access_type", "offline")
-	q.Set("prompt", "consent")
 
 	c.Redirect(http.StatusFound, u+"?"+q.Encode())
 }
 
 func (h *GoogleAuthHandler) Callback(c *gin.Context) {
 	code := c.Query("code")
+	state := c.Query("state")
 
 	if code == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "code is required"})
 		return
 	}
+	if !h.validOAuthState(c, state) {
+		h.redirectWithError(c, "Sesi login Google tidak valid atau sudah kedaluwarsa. Silakan coba login ulang.")
+		return
+	}
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "google_oauth_state",
+		Value:    "",
+		Path:     "/api/v1/auth/google",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   strings.HasPrefix(strings.ToLower(h.cfg.AppURL), "https://"),
+		SameSite: http.SameSiteLaxMode,
+	})
 
 	// Exchange code for token
 	tokenRes, err := h.exchangeCode(code)
@@ -234,42 +259,60 @@ func (h *GoogleAuthHandler) getUserInfo(accessToken string) (*googleUserInfo, er
 	return &res, nil
 }
 
+func (h *GoogleAuthHandler) validOAuthState(c *gin.Context, state string) bool {
+	state = strings.TrimSpace(state)
+	if state == "" {
+		return false
+	}
+	cookie, err := c.Request.Cookie("google_oauth_state")
+	if err != nil {
+		return false
+	}
+	return cookie.Value == state
+}
+
+func (h *GoogleAuthHandler) frontendRedirectBase() string {
+	base := strings.TrimSpace(h.cfg.FrontendURL)
+	if base == "" {
+		base = strings.TrimSpace(h.cfg.CORSOrigins)
+		if idx := strings.Index(base, ","); idx != -1 {
+			base = strings.TrimSpace(base[:idx])
+		}
+	}
+	if base == "" || base == "*" {
+		base = "http://localhost:5173"
+	}
+	return strings.TrimRight(base, "/")
+}
+
+func (h *GoogleAuthHandler) googleFrontendURL(kind string, q url.Values) string {
+	target := h.frontendRedirectBase() + "/#/auth/google/" + kind
+	if encoded := q.Encode(); encoded != "" {
+		target += "?" + encoded
+	}
+	return target
+}
+
 func (h *GoogleAuthHandler) redirectWithToken(c *gin.Context, token string, exp time.Time, u model.User) {
-	frontendURL := h.cfg.CORSOrigins
 	v := url.Values{}
 	v.Set("token", token)
 	v.Set("user_id", u.ID)
 	v.Set("user_name", u.Name)
 	v.Set("user_role", u.Role)
 
-	// Choose first origin if multiple
-	origin := frontendURL
-	if idx := strings.Index(origin, ","); idx != -1 {
-		origin = origin[:idx]
-	}
-	origin = strings.TrimRight(origin, "/")
-	// Frontend uses Vite base `/admin-one-vue-tailwind/` and Vue Router hash mode.
-	c.Redirect(http.StatusFound, origin+"/admin-one-vue-tailwind/#/auth/google/success?"+v.Encode())
+	c.Redirect(http.StatusFound, h.googleFrontendURL("success", v))
 }
 
 func (h *GoogleAuthHandler) redirectWithError(c *gin.Context, msg string) {
-	frontendURL := h.cfg.CORSOrigins
-	origin := frontendURL
-	if idx := strings.Index(origin, ","); idx != -1 {
-		origin = origin[:idx]
-	}
-	origin = strings.TrimRight(origin, "/")
-	c.Redirect(http.StatusFound, origin+"/admin-one-vue-tailwind/#/auth/google/error?message="+url.QueryEscape(msg))
+	v := url.Values{}
+	v.Set("message", msg)
+	c.Redirect(http.StatusFound, h.googleFrontendURL("error", v))
 }
 
 func (h *GoogleAuthHandler) redirectWithMessage(c *gin.Context, msg string) {
-	frontendURL := h.cfg.CORSOrigins
-	origin := frontendURL
-	if idx := strings.Index(origin, ","); idx != -1 {
-		origin = origin[:idx]
-	}
-	origin = strings.TrimRight(origin, "/")
-	c.Redirect(http.StatusFound, origin+"/admin-one-vue-tailwind/#/auth/google/info?message="+url.QueryEscape(msg))
+	v := url.Values{}
+	v.Set("message", msg)
+	c.Redirect(http.StatusFound, h.googleFrontendURL("info", v))
 }
 
 func (h *GoogleAuthHandler) SubmitRegistration(c *gin.Context) {

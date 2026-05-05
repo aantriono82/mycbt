@@ -35,6 +35,7 @@ services:
       PORT: 8080
       GIN_MODE: release
       APP_URL: ${APP_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
       CORS_ORIGINS: ${CORS_ORIGINS}
       DATABASE_URL: ${DATABASE_URL}
       REDIS_ADDR: redis:6379

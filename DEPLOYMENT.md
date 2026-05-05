@@ -233,6 +233,7 @@ UPLOAD_LOCAL_DIR=/home/atigacbt/uploads
 # SMTP_FROM=no-reply@sekolah.sch.id
 
 # ===== GOOGLE OAUTH (opsional) =====
+# FRONTEND_URL=https://<domain>
 # GOOGLE_CLIENT_ID=
 # GOOGLE_CLIENT_SECRET=
 # GOOGLE_REDIRECT_URL=https://<domain>/api/v1/auth/google/callback

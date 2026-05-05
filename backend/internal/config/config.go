@@ -12,6 +12,7 @@ type Config struct {
 	Env         string
 	Port        string
 	AppURL      string
+	FrontendURL string
 	CORSOrigins string
 
 	DatabaseURL string
@@ -59,6 +60,7 @@ func Load() Config {
 		Env:         getenv("GIN_MODE", "debug"),
 		Port:        getenv("PORT", "8080"),
 		AppURL:      getenv("APP_URL", "http://localhost:8080"),
+		FrontendURL: getenv("FRONTEND_URL", ""),
 		CORSOrigins: getenv("CORS_ORIGINS", "http://localhost:5173"),
 
 		DatabaseURL: getenv("DATABASE_URL", ""),
