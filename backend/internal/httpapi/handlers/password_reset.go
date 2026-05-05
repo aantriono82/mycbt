@@ -26,7 +26,7 @@ func (h *PasswordResetHandler) ForgotPassword(c *gin.Context) {
 	}
 
 	if err := h.svc.ForgotPassword(c.Request.Context(), req.Email); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal memproses permintaan: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal memproses permintaan."})
 		return
 	}
 

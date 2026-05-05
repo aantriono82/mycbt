@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"time"
 
 	"atigacbt/backend/internal/repo/userrepo"
@@ -55,7 +56,11 @@ func (s *PasswordResetService) ForgotPassword(ctx context.Context, email string)
 		<p>Jika Anda tidak merasa melakukan permintaan ini, silakan abaikan email ini.</p>
 	`, user.Name, resetURL, resetURL)
 
-	return s.notif.SendEmail(ctx, email, subject, body)
+	if err := s.notif.SendEmail(ctx, email, subject, body); err != nil {
+		// Keep the endpoint response stable for users even if SMTP is misconfigured/down.
+		log.Printf("forgot_password: failed to send reset email to %s: %v", email, err)
+	}
+	return nil
 }
 
 func (s *PasswordResetService) ResetPassword(ctx context.Context, token, newPassword string) error {
