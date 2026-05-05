@@ -91,6 +91,37 @@ func TestSendEmail_FallsBackToEnvConfig(t *testing.T) {
 	}
 }
 
+func TestSendEmail_UsesImplicitTLSWhenConfigured(t *testing.T) {
+	t.Parallel()
+
+	var gotHost string
+	var gotPort int
+	var gotFrom string
+	svc := &Service{
+		settings: stubSettingsProvider{
+			smtpCfg: masterrepo.SMTPConfig{
+				Host:   "smtp.example.com",
+				User:   "mailer",
+				From:   "noreply@example.com",
+				UseTLS: true,
+			},
+		},
+		sendTLSMail: func(host string, port int, a smtp.Auth, from string, to []string, msg []byte) error {
+			gotHost = host
+			gotPort = port
+			gotFrom = from
+			return nil
+		},
+	}
+
+	if err := svc.SendEmail(context.Background(), "user@example.com", "Hello", "Body"); err != nil {
+		t.Fatalf("SendEmail error: %v", err)
+	}
+	if gotHost != "smtp.example.com" || gotPort != 465 || gotFrom != "noreply@example.com" {
+		t.Fatalf("unexpected TLS send args: host=%q port=%d from=%q", gotHost, gotPort, gotFrom)
+	}
+}
+
 func TestSendEmail_PropagatesConfigAndTransportErrors(t *testing.T) {
 	t.Parallel()
 
@@ -113,6 +144,16 @@ func TestSendEmail_PropagatesConfigAndTransportErrors(t *testing.T) {
 	}
 	if err := svc2.SendEmail(context.Background(), "user@example.com", "Hello", "Body"); err == nil {
 		t.Fatal("expected missing host error")
+	}
+
+	svcMissingFrom := &Service{
+		settings: stubSettingsProvider{smtpCfg: masterrepo.SMTPConfig{Host: "smtp.example.com", Port: 25}},
+		sendMail: func(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
+			return nil
+		},
+	}
+	if err := svcMissingFrom.SendEmail(context.Background(), "user@example.com", "Hello", "Body"); err == nil {
+		t.Fatal("expected missing from error")
 	}
 
 	svc3 := &Service{

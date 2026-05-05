@@ -138,7 +138,7 @@ func NewHandler(deps Deps) http.Handler {
 		resetTokenRepo := userrepo.NewPasswordResetRepo(deps.Pool)
 		resetSvc := authsvc.NewPasswordResetService(deps.Users, resetTokenRepo, notifSvc, cfg.AppURL)
 		resetH := handlers.NewPasswordResetHandler(resetSvc)
-		v1.POST("/auth/forgot-password", resetH.ForgotPassword)
+		v1.POST("/auth/forgot-password", middleware.RateLimit("auth_forgot_password", 5, 15*time.Minute), resetH.ForgotPassword)
 		v1.POST("/auth/reset-password", resetH.ResetPassword)
 	}
 
