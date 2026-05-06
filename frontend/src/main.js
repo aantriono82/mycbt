@@ -16,7 +16,9 @@ pinia.use(createPersistedStatePlugin())
 // Create Vue app
 createApp(App).use(router).use(pinia).mount('#app')
 
-if (import.meta.env.PROD) {
+const pwaEnabled = String(import.meta.env.VITE_ENABLE_PWA || '').trim().toLowerCase() === 'true'
+
+if (import.meta.env.PROD && pwaEnabled) {
   const registerServiceWorker = () => {
     import('virtual:pwa-register').then(({ registerSW }) => {
       registerSW({ immediate: true })
