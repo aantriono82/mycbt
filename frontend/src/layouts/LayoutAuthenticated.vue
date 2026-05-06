@@ -1,5 +1,13 @@
 <script setup>
-import { mdiMenu, mdiAccountCircleOutline, mdiBellOutline, mdiClipboardTextClockOutline, mdiMagnify, mdiCloseCircle } from '@mdi/js'
+import {
+  mdiAccountCircleOutline,
+  mdiBackburger,
+  mdiBellOutline,
+  mdiClipboardTextClockOutline,
+  mdiCloseCircle,
+  mdiForwardburger,
+  mdiMagnify,
+} from '@mdi/js'
 import { computed, onMounted, ref, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getMenuAsideMain, menuAsideBottom } from '@/menuAside.js'
@@ -114,7 +122,7 @@ watch(() => router.currentRoute.value.fullPath, () => {
 })
 
 const layoutAsidePadding = computed(() => {
-  if (authStore.role === 'student' || isAsideDesktopHidden.value) {
+  if (isAsideDesktopHidden.value) {
     return ''
   }
   return 'xl:pl-60'
@@ -482,7 +490,6 @@ const menuClick = (event, item) => {
         </template>
       </NavBar>
       <AsideMenu
-        v-if="authStore.role !== 'student'"
         :is-aside-lg-active="isAsideLgActive"
         :is-aside-desktop-hidden="isAsideDesktopHidden"
         :menu="menuAsideMain"
