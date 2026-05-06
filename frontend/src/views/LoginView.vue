@@ -27,6 +27,7 @@ const showRegisterOptions = ref(false)
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const appVersion = __APP_VERSION__
 
 const submit = async () => {
   const ok = await authStore.login({
@@ -202,6 +203,9 @@ onMounted(async () => {
               >
                 Daftar Sekarang
               </button>
+            </p>
+            <p class="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500">
+              Versi aplikasi: v{{ appVersion }}
             </p>
             
             <div v-if="showRegisterOptions" class="grid grid-cols-2 gap-2 mt-2 animate-fade-in-up">
