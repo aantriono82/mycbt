@@ -328,9 +328,7 @@ const menuClick = (event, item) => {
         :class="[layoutAsidePadding]"
         @menu-click="menuClick"
       >
-        <NavBarItemPlain display="hidden lg:flex xl:hidden" @click.prevent="isAsideLgActive = true">
-          <BaseIcon :path="mdiMenu" size="24" />
-        </NavBarItemPlain>
+
         <button
           type="button"
           class="hidden lg:flex h-14 items-center px-3 text-slate-600 hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-400 transition"
