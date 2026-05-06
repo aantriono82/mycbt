@@ -1,6 +1,14 @@
 const getApiBaseUrl = () => String(import.meta.env.VITE_API_BASE_URL || '').trim()
 const DEFAULT_API_ORIGIN = 'http://localhost:8080'
 
+const inferApiOriginFromWindow = () => {
+  if (typeof window === 'undefined' || !window.location?.hostname) return ''
+  const { protocol, hostname } = window.location
+  if (hostname === 'localhost' || hostname === '127.0.0.1') return ''
+  if (hostname.startsWith('api.')) return `${protocol}//${hostname}`
+  return `${protocol}//api.${hostname}`
+}
+
 export const getApiOrigin = () => {
   const baseUrl = getApiBaseUrl()
   if (baseUrl) {
@@ -9,6 +17,10 @@ export const getApiOrigin = () => {
     } catch {
       // ignore malformed env and fall back below
     }
+  }
+  const inferred = inferApiOriginFromWindow()
+  if (inferred) {
+    return inferred
   }
   if (typeof window !== 'undefined' && window.location?.origin) {
     return window.location.origin
