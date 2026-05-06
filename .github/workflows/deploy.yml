@@ -7,14 +7,14 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: 'Docker image tag'
-        required: true
-        default: latest
+        description: 'Docker image tag override (contoh: v1.2.3). Kosongkan untuk auto git-<shortsha>'
+        required: false
+        default: ''
       build_backend:
         description: 'Build and push backend image'
         type: boolean
         required: true
-        default: false
+        default: true
       build_frontend:
         description: 'Build and push frontend image'
         type: boolean
@@ -24,8 +24,8 @@ on:
 jobs:
   build-frontend:
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.build_frontend == true) }}
     env:
-      IMAGE_TAG: ${{ inputs.image_tag || 'latest' }}
       FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/mycbt-frontend
 
     permissions:
@@ -39,19 +39,26 @@ jobs:
       - name: Login GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Build Frontend
-        if: ${{ github.event_name == 'push' || inputs.build_frontend == true }}
-        run: docker build -t $FRONTEND_IMAGE:$IMAGE_TAG -f docker/frontend.Dockerfile .
+      - name: Resolve image tags
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.image_tag }}" ]; then
+            PRIMARY_TAG="${{ inputs.image_tag }}"
+          else
+            PRIMARY_TAG="git-${SHORT_SHA}"
+          fi
+          echo "PRIMARY_TAG=${PRIMARY_TAG}" >> "$GITHUB_ENV"
 
-      - name: Push Frontend
-        if: ${{ github.event_name == 'push' || inputs.build_frontend == true }}
-        run: docker push $FRONTEND_IMAGE:$IMAGE_TAG
+      - name: Build and Push Frontend
+        run: |
+          docker build -t $FRONTEND_IMAGE:$PRIMARY_TAG -t $FRONTEND_IMAGE:latest -f docker/frontend.Dockerfile .
+          docker push $FRONTEND_IMAGE:$PRIMARY_TAG
+          docker push $FRONTEND_IMAGE:latest
 
   build-backend:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_backend == true }}
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.build_backend == true) }}
     env:
-      IMAGE_TAG: ${{ inputs.image_tag || 'latest' }}
       BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/mycbt-backend
 
     permissions:
@@ -65,8 +72,42 @@ jobs:
       - name: Login GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Build Backend
-        run: docker build -t $BACKEND_IMAGE:$IMAGE_TAG -f docker/backend.Dockerfile .
+      - name: Resolve image tags
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.image_tag }}" ]; then
+            PRIMARY_TAG="${{ inputs.image_tag }}"
+          else
+            PRIMARY_TAG="git-${SHORT_SHA}"
+          fi
+          echo "PRIMARY_TAG=${PRIMARY_TAG}" >> "$GITHUB_ENV"
 
-      - name: Push Backend
-        run: docker push $BACKEND_IMAGE:$IMAGE_TAG
+      - name: Build and Push Backend
+        run: |
+          docker build -t $BACKEND_IMAGE:$PRIMARY_TAG -t $BACKEND_IMAGE:latest -f docker/backend.Dockerfile .
+          docker push $BACKEND_IMAGE:$PRIMARY_TAG
+          docker push $BACKEND_IMAGE:latest
+
+  trigger-deploy:
+    needs: [build-frontend, build-backend]
+    runs-on: ubuntu-latest
+    if: ${{ always() && (needs.build-frontend.result == 'success' || needs.build-frontend.result == 'skipped') && (needs.build-backend.result == 'success' || needs.build-backend.result == 'skipped') }}
+    steps:
+      - name: Trigger Dokploy deployment
+        if: ${{ secrets.DOKPLOY_URL != '' && secrets.DOKPLOY_API_KEY != '' && secrets.DOKPLOY_APPLICATION_ID != '' }}
+        run: |
+          curl -fsS -X POST "${{ secrets.DOKPLOY_URL }}/api/application.deploy" \
+            -H "accept: application/json" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
+            -d "{\"applicationId\":\"${{ secrets.DOKPLOY_APPLICATION_ID }}\"}"
+
+      - name: Deployment Summary
+        run: |
+          echo "### Deployment Status"
+          if [ -n "${{ secrets.DOKPLOY_URL }}" ]; then
+            echo "✅ Dokploy deploy trigger sent."
+          else
+            echo "⚠️ Dokploy trigger skipped: Secrets not configured."
+          fi
+
