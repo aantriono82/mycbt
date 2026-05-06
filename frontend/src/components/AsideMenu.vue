@@ -9,7 +9,6 @@ const props = defineProps({
     required: true,
   },
   menuBottom: Array,
-  isAsideMobileExpanded: Boolean,
   isAsideLgActive: Boolean,
   isAsideDesktopHidden: Boolean,
 })
@@ -24,25 +23,15 @@ const asideLgCloseClick = (event) => {
   emit('aside-lg-close-click', event)
 }
 
+// Sidebar hanya tampil di xl (desktop lebar). Mobile pakai BottomNavigation.
 const asidePositionClass = computed(() => {
-  if (props.isAsideMobileExpanded || props.isAsideLgActive) {
-    return 'left-0'
-  }
-
   if (props.isAsideDesktopHidden) {
-    return '-left-60 lg:-left-60 xl:-left-60'
+    return '-left-60 xl:-left-60'
   }
-
-  return '-left-60 lg:-left-60 xl:left-0'
+  return '-left-60 xl:left-0'
 })
 
-const asideVisibilityClass = computed(() => {
-  if (props.isAsideLgActive) {
-    return 'lg:flex xl:flex'
-  }
-
-  return 'lg:hidden xl:flex'
-})
+const asideVisibilityClass = computed(() => 'xl:flex')
 </script>
 
 <template>
@@ -53,5 +42,4 @@ const asideVisibilityClass = computed(() => {
     @menu-click="menuClick"
     @aside-lg-close-click="asideLgCloseClick"
   />
-  <OverlayLayer v-if="isAsideLgActive" z-index="z-30" @overlay-click="asideLgCloseClick" />
 </template>

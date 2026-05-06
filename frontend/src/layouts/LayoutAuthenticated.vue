@@ -1,5 +1,5 @@
 <script setup>
-import { mdiForwardburger, mdiBackburger, mdiMenu, mdiAccountCircleOutline, mdiBellOutline, mdiClipboardTextClockOutline, mdiMagnify, mdiCloseCircle } from '@mdi/js'
+import { mdiMenu, mdiAccountCircleOutline, mdiBellOutline, mdiClipboardTextClockOutline, mdiMagnify, mdiCloseCircle } from '@mdi/js'
 import { computed, onMounted, ref, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getMenuAsideMain, menuAsideBottom } from '@/menuAside.js'
@@ -20,7 +20,6 @@ const authStore = useAuthStore()
 
 const router = useRouter()
 
-const isAsideMobileExpanded = ref(false)
 const isAsideLgActive = ref(false)
 const isAsideDesktopHidden = ref(false)
 const searchQuery = ref('')
@@ -110,7 +109,6 @@ const toggleDesktopAside = () => {
 }
 
 watch(() => router.currentRoute.value.fullPath, () => {
-  isAsideMobileExpanded.value = false
   isAsideLgActive.value = false
   isSearchFocused.value = false
 })
@@ -320,26 +318,16 @@ const menuClick = (event, item) => {
 </script>
 
 <template>
-  <div
-    :class="{
-      'overflow-hidden lg:overflow-visible': isAsideMobileExpanded,
-    }"
-  >
+  <div>
       <div
-        :class="[layoutAsidePadding, { 'ml-60 lg:ml-0': isAsideMobileExpanded }]"
+        :class="[layoutAsidePadding]"
         class="min-h-screen w-screen bg-white pt-14 transition-(--transition-position) lg:w-auto dark:bg-slate-950 dark:text-slate-100 pb-24 lg:pb-0"
       >
       <NavBar
         :menu="menuNavBar"
-        :class="[layoutAsidePadding, { 'ml-60 lg:ml-0': isAsideMobileExpanded }]"
+        :class="[layoutAsidePadding]"
         @menu-click="menuClick"
       >
-        <NavBarItemPlain
-          display="flex lg:hidden"
-          @click.prevent="isAsideMobileExpanded = !isAsideMobileExpanded"
-        >
-          <BaseIcon :path="isAsideMobileExpanded ? mdiBackburger : mdiForwardburger" size="24" />
-        </NavBarItemPlain>
         <NavBarItemPlain display="hidden lg:flex xl:hidden" @click.prevent="isAsideLgActive = true">
           <BaseIcon :path="mdiMenu" size="24" />
         </NavBarItemPlain>
@@ -491,7 +479,6 @@ const menuClick = (event, item) => {
         </template>
       </NavBar>
       <AsideMenu
-        :is-aside-mobile-expanded="isAsideMobileExpanded"
         :is-aside-lg-active="isAsideLgActive"
         :is-aside-desktop-hidden="isAsideDesktopHidden"
         :menu="menuAsideMain"
