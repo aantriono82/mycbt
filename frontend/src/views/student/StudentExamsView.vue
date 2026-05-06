@@ -160,7 +160,7 @@ onBeforeUnmount(() => {
       </SectionTitleLineWithButton>
 
       <!-- Stats bar -->
-      <div class="mb-6 grid gap-4 sm:grid-cols-3">
+      <div class="mb-6 grid gap-4 grid-cols-2 sm:grid-cols-3">
         <div
           class="flex items-center gap-4 rounded-2xl border border-sky-400/60 bg-white px-5 py-4 shadow-sm dark:border-sky-800/80 dark:bg-slate-900/50"
         >
@@ -223,7 +223,7 @@ onBeforeUnmount(() => {
             class="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-700 placeholder-slate-400 shadow-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-sky-500"
           />
         </div>
-        <div class="flex gap-2">
+        <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           <button
             v-for="tab in [
               { value: 'all', label: 'Semua' },
@@ -233,7 +233,7 @@ onBeforeUnmount(() => {
             ]"
             :key="tab.value"
             type="button"
-            class="rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all"
+            class="whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all"
             :class="
               filter === tab.value
                 ? 'bg-sky-600 text-white shadow-sm shadow-sky-500/30'

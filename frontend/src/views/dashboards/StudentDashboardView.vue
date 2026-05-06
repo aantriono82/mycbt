@@ -106,13 +106,13 @@ onMounted(() => {
     <SectionMain>
       <SectionTitleLineWithButton :icon="mdiHomeOutline" title="Dashboard Siswa" main />
 
-      <div class="mb-6 rounded-2xl bg-white dark:bg-slate-900/50 border border-blue-400/60 dark:border-blue-800/80 px-6 py-8 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
+      <div class="mb-6 rounded-2xl bg-white dark:bg-slate-900/50 border border-blue-400/60 dark:border-blue-800/80 px-4 py-6 sm:px-6 sm:py-8 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
         <!-- Decoration -->
         <div class="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-blue-500/5 blur-3xl"></div>
         
         <div class="relative z-10 max-w-3xl">
           <div class="mb-2 text-[10px] font-black uppercase tracking-[0.4em] text-blue-600 dark:text-sky-400">Portal Peserta AtigaCBT</div>
-          <h2 class="mb-2 text-2xl font-bold text-slate-800 dark:text-white">
+          <h2 class="mb-2 text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">
             {{ authStore.user?.name || 'Peserta' }}, cek jadwal ujian terbaru kamu.
           </h2>
           <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
@@ -125,7 +125,7 @@ onMounted(() => {
         {{ errorMessage }}
       </div>
 
-      <div class="mb-6 grid gap-6 md:grid-cols-3">
+      <div class="mb-6 grid gap-4 sm:gap-6 grid-cols-2 md:grid-cols-3">
         <template v-if="isLoading">
           <CardBox v-for="i in 3" :key="i" class="h-32 flex flex-col justify-center">
             <div class="flex items-center gap-4">

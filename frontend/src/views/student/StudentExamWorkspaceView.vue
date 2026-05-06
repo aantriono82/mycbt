@@ -821,16 +821,16 @@ const isMatchingRightUsed = (rightId) => {
 <template>
   <div class="tka-theme min-h-screen bg-slate-100">
     <!-- TOP NAVBAR -->
-    <header class="bg-blue-600 dark:bg-slate-900 border-b border-blue-700 dark:border-slate-800 text-white px-6 py-4 flex items-center justify-between shadow-lg sticky top-0 z-50">
-      <div class="flex items-center gap-3">
-         <div class="p-2 bg-white/10 rounded-lg hidden sm:block">
+    <header class="bg-blue-600 dark:bg-slate-900 border-b border-blue-700 dark:border-slate-800 text-white px-4 sm:px-6 py-4 flex items-center justify-between shadow-lg sticky top-0 z-50">
+      <div class="flex items-center gap-2 sm:gap-3">
+         <div class="p-2 bg-white/10 rounded-lg hidden lg:block">
             <BaseIcon :path="mdiInformationOutline" size="20" />
          </div>
-         <div class="font-black tracking-tighter text-sm md:text-lg uppercase select-none">
+         <div class="font-black tracking-tighter text-xs sm:text-sm md:text-lg uppercase select-none truncate max-w-[120px] sm:max-w-none">
            {{ examTitle }}
          </div>
       </div>
-      <div class="flex items-center gap-3 md:gap-5">
+      <div class="flex items-center gap-2 sm:gap-3 md:gap-5">
         <!-- Connection & Save Status Indicator -->
         <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10">
           <div class="flex items-center gap-1.5">
@@ -972,8 +972,8 @@ const isMatchingRightUsed = (rightId) => {
           <!-- LEFT COLUMN: Main Card -->
 	          <div :class="['bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl flex-1 flex flex-col transition-all duration-500', sidebarHidden ? 'w-full' : 'lg:w-3/4']">
 	             <!-- Card Header -->
-	             <div class="relative z-10 px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-white">
-	                <span class="text-[#0B7EA1] font-bold uppercase text-sm tracking-wide">SOAL NOMOR: {{ currentIndex + 1 }}</span>
+	             <div class="relative z-10 px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-200 flex items-center justify-between bg-white dark:bg-slate-900">
+	                <span class="text-[#0B7EA1] font-bold uppercase text-xs sm:text-sm tracking-wide">NO: {{ currentIndex + 1 }}</span>
 	                <div class="relative z-20 isolate flex items-center gap-3 text-[11px] font-bold text-slate-500">
 	                   <span class="uppercase opacity-60">Ukuran Font:</span>
                      <div class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1 shadow-sm">
@@ -1023,7 +1023,7 @@ const isMatchingRightUsed = (rightId) => {
 	                </QuestionStimulusViewer>
 
 	                <!-- INTERACTION / ANSWERS -->
-		                <div :key="currentQuestion.id + ':' + currentQuestion.type" class="px-6 pb-10 pt-6 border-t border-slate-200 bg-white">
+		                <div :key="currentQuestion.id + ':' + currentQuestion.type" class="px-4 pb-10 pt-6 sm:px-6 border-t border-slate-200 bg-white dark:bg-slate-900">
 	                <div class="mb-8 flex items-center justify-between">
 	                   <div class="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">
 	                      {{ currentQuestion.type === 'true_false' ? 'DAFTAR PERNYATAAN & JAWABAN' : 'OPSI JAWABAN' }}
@@ -1085,7 +1085,7 @@ const isMatchingRightUsed = (rightId) => {
 
                 <!-- True/False (ANBK-style) + Legacy Fallback -->
                 <div v-else-if="currentQuestion.type === 'true_false'" class="space-y-4">
-                   <div v-if="currentQuestion.statements?.length" class="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 overflow-hidden shadow-xl">
+                   <div v-if="currentQuestion.statements?.length" class="bg-white dark:bg-slate-900 rounded-[1rem] sm:rounded-[2rem] border border-slate-100 dark:border-slate-800 overflow-x-auto shadow-xl">
                       <table class="w-full table-fixed border-collapse text-sm">
                          <colgroup>
                            <col class="w-[70%]" />
@@ -1281,21 +1281,21 @@ const isMatchingRightUsed = (rightId) => {
       </button>
     </div>
 
-    <!-- NAVIGATION FOOTER -->
-    <footer v-if="sessionId && !submitDone" class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-5 px-6 fixed bottom-0 left-0 right-0 z-[100] shadow-[0_-12px_40px_-15px_rgba(0,0,0,0.1)]">
-       <div class="max-w-[1600px] mx-auto w-full flex items-center justify-between">
+    <!-- NAVIGATION FOOTER --    <footer v-if="sessionId && !submitDone" class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-3 sm:p-5 px-4 sm:px-6 fixed bottom-0 left-0 right-0 z-[100] shadow-[0_-12px_40px_-15px_rgba(0,0,0,0.1)]">
+       <div class="max-w-[1600px] mx-auto w-full flex items-center justify-between gap-2">
           <button 
-             class="group flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-8 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-sm hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+             class="group flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-4 sm:px-8 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-sm hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-1 sm:flex-none"
              :disabled="currentIndex === 0"
              @click="goPrev()"
           >
              <span class="group-hover:-translate-x-1 transition-transform">←</span>
-             Soal Sebelumnya
+             <span class="hidden sm:inline">Soal Sebelumnya</span>
+             <span class="sm:hidden">Kembali</span>
           </button>
-
+ 
           <button
             type="button"
-            class="hidden sm:flex items-center gap-3 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 px-10 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest border border-amber-200 dark:border-amber-700/50 hover:bg-amber-100 transition-all active:scale-95"
+            class="hidden md:flex items-center gap-3 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 px-10 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest border border-amber-200 dark:border-amber-700/50 hover:bg-amber-100 transition-all active:scale-95"
             @click="toggleFlagged"
           >
             <div class="h-5 w-5 rounded-lg border-2 flex items-center justify-center transition-all"
@@ -1305,12 +1305,13 @@ const isMatchingRightUsed = (rightId) => {
             </div>
             Ragu-Ragu
           </button>
-
+ 
           <button 
-             class="group flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition-all"
+             class="group flex items-center justify-center gap-2 bg-blue-600 text-white px-4 sm:px-8 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition-all flex-1 sm:flex-none"
              @click="currentIndex === questions.length - 1 ? (showSubmitModal = true) : goNext()"
           >
-             {{ currentIndex === questions.length - 1 ? 'Selesai' : 'Soal Berikutnya' }}
+             <span class="hidden sm:inline">{{ currentIndex === questions.length - 1 ? 'Selesai Ujian' : 'Soal Berikutnya' }}</span>
+             <span class="sm:hidden">{{ currentIndex === questions.length - 1 ? 'Selesai' : 'Lanjut' }}</span>
              <span v-if="currentIndex !== questions.length - 1" class="group-hover:translate-x-1 transition-transform">→</span>
           </button>
        </div>
@@ -1334,7 +1335,7 @@ const isMatchingRightUsed = (rightId) => {
           </button>
         </div>
         <div class="p-5 overflow-auto">
-          <div class="grid grid-cols-6 gap-2">
+          <div class="grid grid-cols-5 sm:grid-cols-6 gap-2">
             <button
               v-for="(q, idx) in questions"
               :key="q.id"
