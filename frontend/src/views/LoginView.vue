@@ -49,16 +49,20 @@ const loginGoogle = (role) => {
       const url = new URL(configuredBase, window.location.origin)
       const basePath = url.pathname.replace(/\/+$/, '')
       const prefix = basePath.endsWith('/api') ? basePath.slice(0, -4) : basePath
-      url.pathname = `${prefix}${endpoint}`.replace(/\/{2,}/g, '/')
-      url.search = `role=${encodeURIComponent(safeRole)}`
-      window.location.href = url.toString()
+      const cleanPrefix = `${prefix}${endpoint}`.replace(/\/{2,}/g, '/')
+      const finalUrl = url.origin + cleanPrefix + `?role=${encodeURIComponent(safeRole)}`
+      console.log('Redirecting to Google OAuth:', finalUrl)
+      window.location.replace(finalUrl)
       return
-    } catch {
+    } catch (e) {
+      console.error('Error constructing Google Login URL:', e)
       // fallback below
     }
   }
 
-  window.location.href = `${endpoint}?role=${encodeURIComponent(safeRole)}`
+  const fallbackUrl = window.location.origin + endpoint + `?role=${encodeURIComponent(safeRole)}`
+  console.log('Fallback Redirect to Google OAuth:', fallbackUrl)
+  window.location.replace(fallbackUrl)
 }
 
 const startRegistration = (role) => {
