@@ -113,7 +113,12 @@ watch(() => router.currentRoute.value.fullPath, () => {
   isSearchFocused.value = false
 })
 
-const layoutAsidePadding = computed(() => (isAsideDesktopHidden.value ? '' : 'xl:pl-60'))
+const layoutAsidePadding = computed(() => {
+  if (authStore.role === 'student' || isAsideDesktopHidden.value) {
+    return ''
+  }
+  return 'xl:pl-60'
+})
 
 const menuAsideMain = computed(() => getMenuAsideMain(authStore.role))
 const menuNavBar = computed(() => getMenuNavBar(authStore.role, authStore.userDisplayName))
@@ -477,6 +482,7 @@ const menuClick = (event, item) => {
         </template>
       </NavBar>
       <AsideMenu
+        v-if="authStore.role !== 'student'"
         :is-aside-lg-active="isAsideLgActive"
         :is-aside-desktop-hidden="isAsideDesktopHidden"
         :menu="menuAsideMain"
