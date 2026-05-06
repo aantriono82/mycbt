@@ -23,15 +23,15 @@ const asideLgCloseClick = (event) => {
   emit('aside-lg-close-click', event)
 }
 
-// Sidebar hanya tampil di xl (desktop lebar). Mobile pakai BottomNavigation.
+// Sidebar desktop aktif mulai md; mobile tetap pakai BottomNavigation.
 const asidePositionClass = computed(() => {
   if (props.isAsideDesktopHidden) {
-    return '-left-60 xl:-left-60'
+    return '-left-60 md:-left-60'
   }
-  return '-left-60 xl:left-0'
+  return '-left-60 md:left-0'
 })
 
-const asideVisibilityClass = computed(() => 'hidden xl:flex')
+const asideVisibilityClass = computed(() => 'hidden md:flex')
 </script>
 
 <template>

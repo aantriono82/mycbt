@@ -1,12 +1,12 @@
 <script setup>
 import {
   mdiAccountCircleOutline,
-  mdiBackburger,
   mdiBellOutline,
   mdiClipboardTextClockOutline,
   mdiCloseCircle,
-  mdiForwardburger,
   mdiMagnify,
+  mdiMenu,
+  mdiMenuOpen,
 } from '@mdi/js'
 import { computed, onMounted, ref, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -125,7 +125,7 @@ const layoutAsidePadding = computed(() => {
   if (isAsideDesktopHidden.value) {
     return ''
   }
-  return 'xl:pl-60'
+  return 'lg:pl-60'
 })
 
 const menuAsideMain = computed(() => getMenuAsideMain(authStore.role))
@@ -344,12 +344,12 @@ const menuClick = (event, item) => {
 
         <button
           type="button"
-          class="hidden lg:flex h-14 items-center px-3 text-slate-600 hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-400 transition"
+          class="hidden md:flex h-14 flex-none items-center px-3 text-slate-600 hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-400 transition"
           @click="toggleDesktopAside"
           aria-label="Toggle sidebar"
           title="Toggle Sidebar"
         >
-          <BaseIcon :path="isAsideDesktopHidden ? mdiForwardburger : mdiBackburger" size="22" />
+          <BaseIcon :path="isAsideDesktopHidden ? mdiMenu : mdiMenuOpen" size="22" />
         </button>
         <div class="hidden md:flex flex-1 items-center justify-center px-4">
           <div class="relative w-full max-w-xl">
