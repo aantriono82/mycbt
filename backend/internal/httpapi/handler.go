@@ -110,6 +110,15 @@ func NewHandler(deps Deps) http.Handler {
 	v1.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
+	v1.GET("/version", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"name":        "AtigaCBT API",
+			"version":     cfg.AppVersion,
+			"git_commit":  cfg.GitCommit,
+			"build_time":  cfg.BuildTime,
+			"server_time": time.Now().UTC().Format(time.RFC3339),
+		})
+	})
 
 	// Public LTI endpoints
 	if deps.Pool != nil && deps.Auth != nil && deps.Users != nil {

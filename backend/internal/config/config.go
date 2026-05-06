@@ -14,6 +14,9 @@ type Config struct {
 	AppURL      string
 	FrontendURL string
 	CORSOrigins string
+	AppVersion  string
+	BuildTime   string
+	GitCommit   string
 
 	DatabaseURL string
 
@@ -62,6 +65,9 @@ func Load() Config {
 		AppURL:      getenv("APP_URL", "http://localhost:8080"),
 		FrontendURL: getenv("FRONTEND_URL", ""),
 		CORSOrigins: getenv("CORS_ORIGINS", "http://localhost:5173"),
+		AppVersion:  getenv("APP_VERSION", "dev"),
+		BuildTime:   getenv("BUILD_TIME", ""),
+		GitCommit:   getenv("GIT_COMMIT", ""),
 
 		DatabaseURL: getenv("DATABASE_URL", ""),
 
