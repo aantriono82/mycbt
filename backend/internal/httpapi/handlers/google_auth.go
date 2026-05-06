@@ -1,12 +1,16 @@
 package handlers
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -42,16 +46,7 @@ func (h *GoogleAuthHandler) Redirect(c *gin.Context) {
 	}
 
 	nonce := randHexString(16)
-	state := role + ":" + nonce
-	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     "google_oauth_state",
-		Value:    state,
-		Path:     "/api/v1/auth/google",
-		MaxAge:   300,
-		HttpOnly: true,
-		Secure:   strings.HasPrefix(strings.ToLower(h.cfg.AppURL), "https://"),
-		SameSite: http.SameSiteLaxMode,
-	})
+	state := h.makeOAuthState(role, nonce, time.Now().Add(5*time.Minute))
 
 	u := "https://accounts.google.com/o/oauth2/v2/auth"
 	q := url.Values{}
@@ -73,19 +68,10 @@ func (h *GoogleAuthHandler) Callback(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "code is required"})
 		return
 	}
-	if !h.validOAuthState(c, state) {
+	if !h.validOAuthState(state) {
 		h.redirectWithError(c, "Sesi login Google tidak valid atau sudah kedaluwarsa. Silakan coba login ulang.")
 		return
 	}
-	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     "google_oauth_state",
-		Value:    "",
-		Path:     "/api/v1/auth/google",
-		MaxAge:   -1,
-		HttpOnly: true,
-		Secure:   strings.HasPrefix(strings.ToLower(h.cfg.AppURL), "https://"),
-		SameSite: http.SameSiteLaxMode,
-	})
 
 	// Exchange code for token
 	tokenRes, err := h.exchangeCode(code)
@@ -259,16 +245,79 @@ func (h *GoogleAuthHandler) getUserInfo(accessToken string) (*googleUserInfo, er
 	return &res, nil
 }
 
-func (h *GoogleAuthHandler) validOAuthState(c *gin.Context, state string) bool {
+func (h *GoogleAuthHandler) validOAuthState(state string) bool {
 	state = strings.TrimSpace(state)
 	if state == "" {
 		return false
 	}
-	cookie, err := c.Request.Cookie("google_oauth_state")
+	parts := strings.Split(state, ".")
+	if len(parts) != 2 {
+		return false
+	}
+
+	payloadB, err := base64.RawURLEncoding.DecodeString(parts[0])
 	if err != nil {
 		return false
 	}
-	return cookie.Value == state
+	signatureB, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return false
+	}
+
+	mac := hmac.New(sha256.New, h.oauthStateSecret())
+	mac.Write(payloadB)
+	expectedSig := mac.Sum(nil)
+	if !hmac.Equal(signatureB, expectedSig) {
+		return false
+	}
+
+	payload := string(payloadB)
+	payloadParts := strings.Split(payload, "|")
+	if len(payloadParts) != 3 {
+		return false
+	}
+	expUnix, err := strconv.ParseInt(payloadParts[2], 10, 64)
+	if err != nil {
+		return false
+	}
+	if time.Now().Unix() > expUnix {
+		return false
+	}
+	role := payloadParts[0]
+	nonce := payloadParts[1]
+	if role != "teacher" && role != "student" {
+		return false
+	}
+	if len(strings.TrimSpace(nonce)) < 8 {
+		return false
+	}
+	return true
+}
+
+func (h *GoogleAuthHandler) makeOAuthState(role, nonce string, expiresAt time.Time) string {
+	if role != "teacher" && role != "student" {
+		role = "student"
+	}
+	payload := role + "|" + nonce + "|" + strconv.FormatInt(expiresAt.Unix(), 10)
+	payloadB := []byte(payload)
+	payloadEncoded := base64.RawURLEncoding.EncodeToString(payloadB)
+
+	mac := hmac.New(sha256.New, h.oauthStateSecret())
+	mac.Write(payloadB)
+	sig := mac.Sum(nil)
+	sigEncoded := base64.RawURLEncoding.EncodeToString(sig)
+
+	return payloadEncoded + "." + sigEncoded
+}
+
+func (h *GoogleAuthHandler) oauthStateSecret() []byte {
+	if s := strings.TrimSpace(h.cfg.JWTSecret); s != "" {
+		return []byte(s)
+	}
+	if s := strings.TrimSpace(h.cfg.GoogleClientSecret); s != "" {
+		return []byte(s)
+	}
+	return []byte("atigacbt-google-oauth-state-fallback-secret")
 }
 
 func (h *GoogleAuthHandler) frontendRedirectBase() string {
