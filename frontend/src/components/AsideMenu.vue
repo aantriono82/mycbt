@@ -31,7 +31,7 @@ const asidePositionClass = computed(() => {
   return '-left-60 xl:left-0'
 })
 
-const asideVisibilityClass = computed(() => 'xl:flex')
+const asideVisibilityClass = computed(() => 'hidden xl:flex')
 </script>
 
 <template>
