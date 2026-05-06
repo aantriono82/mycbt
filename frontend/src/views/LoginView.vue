@@ -83,29 +83,29 @@ onMounted(async () => {
   <LayoutGuest>
     <SectionFullScreen v-slot="{ cardClass }" class="bg-slate-50 dark:bg-slate-950">
       <div class="absolute inset-0 bg-gradient-to-tr from-blue-50 via-transparent to-indigo-50 opacity-60 dark:from-blue-900/10 dark:to-transparent"></div>
-      <div class="relative z-10 mx-auto w-full max-w-md animate-fade-in">
+      <div class="relative z-10 mx-auto w-full max-w-[440px] animate-fade-in px-4 sm:px-0">
         <form 
-          class="relative overflow-hidden rounded-[2rem] border border-white/40 bg-white/95 p-5 shadow-[0_24px_50px_-20px_rgba(0,0,0,0.28)] backdrop-blur-3xl sm:rounded-[2.5rem] sm:p-7 md:p-10 dark:border-white/5 dark:bg-slate-900/90"
+          class="relative overflow-hidden rounded-[2rem] border border-white/40 bg-white/95 p-6 shadow-[0_24px_50px_-20px_rgba(0,0,0,0.28)] backdrop-blur-3xl sm:rounded-[2.5rem] sm:p-10 dark:border-white/5 dark:bg-slate-900/90"
           @submit.prevent="submit"
         >
           <!-- Logo Section -->
-          <div class="mb-5 flex flex-col items-center sm:mb-6">
-            <div class="mb-3 sm:mb-4">
-               <img src="/logo_a3_blue.png" alt="A3 Logo" class="h-16 w-16 object-contain rounded-2xl" />
+          <div class="mb-5 flex flex-col items-center sm:mb-8">
+            <div class="mb-2 sm:mb-4">
+               <img src="/logo_a3_blue.png" alt="A3 Logo" class="h-14 w-14 sm:h-16 sm:w-16 object-contain rounded-2xl" />
             </div>
-            <h1 class="mb-1 text-center text-[1.75rem] font-extrabold text-slate-800 sm:text-3xl dark:text-white">Login Atiga CBT</h1>
-            <p class="max-w-[280px] text-center text-[15px] leading-snug text-slate-500 sm:text-base dark:text-slate-400">
+            <h1 class="mb-1 text-center text-2xl font-extrabold text-slate-800 sm:text-3xl dark:text-white">Login Atiga CBT</h1>
+            <p class="max-w-[260px] text-center text-sm leading-snug text-slate-500 sm:max-w-[280px] sm:text-base dark:text-slate-400">
               Masuk ke sistem ujian berbasis komputer.
             </p>
           </div>
 
           <!-- Notification -->
-          <div v-if="authStore.errorMessage" class="mb-5 rounded-xl bg-red-50 dark:bg-red-900/20 px-4 py-2 text-sm text-red-700 dark:text-red-400 border border-red-100 dark:border-red-900/40 text-center font-medium">
+          <div v-if="authStore.errorMessage" class="mb-4 rounded-xl bg-red-50 dark:bg-red-900/20 px-4 py-2 text-xs sm:text-sm text-red-700 dark:text-red-400 border border-red-100 dark:border-red-900/40 text-center font-medium">
             {{ authStore.errorMessage }}
           </div>
 
           <!-- Login Form -->
-          <div class="space-y-4">
+          <div class="space-y-3 sm:space-y-4">
             <div>
               <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5 px-1">Email atau Username</label>
               <div class="relative group">
@@ -116,7 +116,7 @@ onMounted(async () => {
                   v-model="form.login"
                   type="text" 
                   placeholder="Masukkan email atau username"
-                  class="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all placeholder:text-slate-300 text-base"
+                  class="w-full pl-11 pr-4 py-2.5 sm:py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all placeholder:text-slate-300 text-sm sm:text-base"
                   autocomplete="username"
                   required
                 />
@@ -129,14 +129,14 @@ onMounted(async () => {
                 <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400 group-focus-within:text-blue-600 transition-colors">
                   <base-icon :path="mdiLockOutline" size="18" />
                 </span>
-                <input 
-                  v-model="form.pass"
-                  :type="form.showPassword ? 'text' : 'password'" 
-                  placeholder="Masukkan password"
-                  class="w-full pl-11 pr-11 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all placeholder:text-slate-300 text-base"
-                  autocomplete="current-password"
-                  required
-                />
+                  <input 
+                    v-model="form.pass"
+                    :type="form.showPassword ? 'text' : 'password'" 
+                    placeholder="Masukkan password"
+                    class="w-full pl-11 pr-11 py-2.5 sm:py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all placeholder:text-slate-300 text-sm sm:text-base"
+                    autocomplete="current-password"
+                    required
+                  />
                 <button 
                   type="button"
                   class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-blue-600 transition-colors"
@@ -161,7 +161,7 @@ onMounted(async () => {
 
             <button 
               type="submit" 
-              class="w-full rounded-2xl bg-blue-600 py-3.5 text-base font-extrabold tracking-wide text-white shadow-lg shadow-blue-200 transition-all hover:-translate-y-0.5 hover:bg-blue-700 active:translate-y-0 disabled:bg-blue-400 dark:shadow-none"
+              class="w-full rounded-2xl bg-blue-600 py-3 sm:py-3.5 text-sm sm:text-base font-extrabold tracking-wide text-white shadow-lg shadow-blue-200 transition-all hover:-translate-y-0.5 hover:bg-blue-700 active:translate-y-0 disabled:bg-blue-400 dark:shadow-none"
               :disabled="authStore.isLoading"
             >
               {{ authStore.isLoading ? 'MEMPROSES...' : 'Masuk' }}
@@ -169,11 +169,11 @@ onMounted(async () => {
           </div>
 
           <!-- Divider -->
-          <div class="relative my-6">
+          <div class="relative my-4 sm:my-6">
             <div class="absolute inset-0 flex items-center" aria-hidden="true">
               <div class="w-full border-t border-slate-100 dark:border-slate-800"></div>
             </div>
-            <div class="relative flex justify-center text-xs uppercase">
+            <div class="relative flex justify-center text-[10px] sm:text-xs uppercase">
               <span class="bg-white dark:bg-slate-900 px-4 text-slate-400 font-bold tracking-widest">Atau</span>
             </div>
           </div>
@@ -183,7 +183,7 @@ onMounted(async () => {
               <button
                 type="button"
                 id="btn-login-google"
-                class="w-full flex items-center justify-center py-3 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all font-bold text-slate-700 dark:text-slate-200 text-base"
+                class="w-full flex items-center justify-center py-2.5 sm:py-3 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all font-bold text-slate-700 dark:text-slate-200 text-sm sm:text-base"
                 @click="loginGoogle('student')"
               >
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-4 h-4 mr-3" />
@@ -192,8 +192,8 @@ onMounted(async () => {
           </div>
 
           <!-- Footer -->
-          <div class="mt-6 space-y-2 pb-[max(0px,env(safe-area-inset-bottom))] text-center">
-            <p class="text-sm text-slate-500 dark:text-slate-400">
+          <div class="mt-4 sm:mt-6 space-y-2 pb-[max(0px,env(safe-area-inset-bottom))] text-center">
+            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
               Belum punya akun? <br class="sm:hidden" />
               <button 
                 type="button"

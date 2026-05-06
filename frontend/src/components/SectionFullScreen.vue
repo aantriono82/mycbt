@@ -32,7 +32,7 @@ const colorClass = computed(() => {
 </script>
 
 <template>
-  <div class="flex min-h-[100dvh] w-full items-start justify-center overflow-y-auto overflow-x-hidden bg-slate-50 pt-4 pb-6 sm:items-center sm:py-6 dark:bg-[#0b1120]">
+  <div class="flex min-h-[100dvh] w-full items-start justify-center overflow-y-auto overflow-x-hidden bg-slate-50 pt-8 pb-12 sm:items-center sm:py-6 dark:bg-[#0b1120]">
     <!-- Mesh Gradient elements -->
     <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-400/20 dark:bg-blue-600/10 blur-[120px] animate-pulse"></div>
     <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-400/20 dark:bg-indigo-600/10 blur-[120px] animate-pulse" style="animation-delay: 2s;"></div>
