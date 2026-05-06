@@ -106,13 +106,13 @@ onMounted(() => {
     <SectionMain>
       <SectionTitleLineWithButton :icon="mdiHomeOutline" title="Dashboard Guru" main />
 
-      <div class="mb-6 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 px-6 py-8 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
+      <div class="mb-6 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 px-4 py-6 sm:px-6 sm:py-8 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
         <!-- Decoration -->
         <div class="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-blue-500/5 blur-3xl"></div>
         
         <div class="relative z-10 max-w-3xl">
           <div class="mb-2 text-[10px] font-black uppercase tracking-[0.4em] text-blue-600 dark:text-sky-400">Panel Guru / Pengajar</div>
-          <h2 class="mb-3 text-3xl font-bold text-slate-800 dark:text-white">
+          <h2 class="mb-3 text-2xl sm:text-3xl font-bold text-slate-800 dark:text-white">
             Selamat datang, {{ authStore.user?.name || 'Rekan Guru' }}!
           </h2>
           <p class="text-sm font-medium leading-relaxed text-slate-500 dark:text-slate-400">
@@ -120,17 +120,17 @@ onMounted(() => {
           </p>
 
           <!-- Assigned Info -->
-          <div v-if="assignments.levels.length || assignments.groups.length" class="mt-4 flex flex-wrap gap-2 animate-fade-in">
+          <div v-if="assignments.levels.length || assignments.groups.length" class="mt-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 animate-fade-in">
             <div v-if="assignments.levels.length" class="flex items-center">
-              <span class="text-[10px] text-slate-400 font-bold uppercase mr-2">Jenjang:</span>
+              <span class="text-[10px] text-slate-400 font-bold uppercase mr-2 shrink-0">Jenjang:</span>
               <div class="flex flex-wrap gap-1">
                 <span v-for="l in assignments.levels" :key="l.id" class="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold rounded-md border border-blue-100 dark:border-blue-900/50">
                   {{ l.name }}
                 </span>
               </div>
             </div>
-            <div v-if="assignments.groups.length" class="flex items-center ml-2 border-l pl-3 dark:border-slate-800">
-              <span class="text-[10px] text-slate-400 font-bold uppercase mr-2">Kelas/Group:</span>
+            <div v-if="assignments.groups.length" class="flex items-center sm:border-l sm:pl-3 dark:border-slate-800">
+              <span class="text-[10px] text-slate-400 font-bold uppercase mr-2 shrink-0">Kelas/Group:</span>
               <div class="flex flex-wrap gap-1">
                 <span v-for="g in assignments.groups" :key="g.id" class="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold rounded-md border border-emerald-100 dark:border-emerald-900/50">
                   {{ g.name }}
@@ -149,7 +149,7 @@ onMounted(() => {
         </div>
       </div>
 
-      <div class="mb-6 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+      <div class="mb-6 grid gap-4 sm:gap-6 grid-cols-2 xl:grid-cols-4">
         <DashboardCard
           color="emerald"
           :icon="mdiBookOpenVariant"

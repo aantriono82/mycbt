@@ -101,7 +101,7 @@ const colorClasses = computed(() => {
       <div v-if="loading">
         <BaseSkeleton :width="small ? 'w-16' : 'w-24'" :height="small ? 'h-8' : 'h-12'" />
       </div>
-      <div v-else :class="[small ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-5xl', 'font-black leading-none tracking-tight', colorClasses.text]">
+      <div v-else :class="[small ? 'text-2xl sm:text-3xl' : 'text-2xl sm:text-5xl', 'font-black leading-none tracking-tight', colorClasses.text]">
         {{ number }}
       </div>
       <div :class="['rounded-xl sm:rounded-2xl shadow-sm transition-transform group-hover:scale-110 shrink-0', small ? 'p-2' : 'p-2.5 sm:p-3', colorClasses.bg]">

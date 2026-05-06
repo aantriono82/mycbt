@@ -284,7 +284,7 @@ onMounted(async () => {
                     {{ item.status }}
                   </td>
                   <td class="px-3 py-4" @click.stop>
-                    <div class="flex items-center justify-end gap-4">
+                    <div class="flex items-center justify-end gap-2 sm:gap-4">
                       <BaseIcon v-if="isAdmin" :path="mdiAccountArrowRightOutline" size="18" class="text-emerald-500 hover:scale-125 transition-transform cursor-pointer" title="Salin ke Guru" @click="openCloneModal(item.id)" />
                       <BaseIcon :path="mdiFileDocumentOutline" size="18" class="text-purple-500 hover:scale-125 transition-transform cursor-pointer" title="Impor soal ke bank soal ini" @click="goToImport(item.id)" />
                       <BaseIcon :path="mdiEye" size="18" class="text-indigo-500 hover:scale-125 transition-transform cursor-pointer" title="Pratinjau Soal" @click="goToPreview(item.id)" />
