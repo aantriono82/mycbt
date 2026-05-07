@@ -32,6 +32,7 @@ const isAsideLgActive = ref(false)
 const isAsideDesktopHidden = ref(false)
 const searchQuery = ref('')
 const isSearchFocused = ref(false)
+const isSearchMobileActive = ref(false)
 const activeSearchIndex = ref(0)
 
 const flattenSearchItems = (items = [], parents = []) => {
@@ -342,6 +343,17 @@ const menuClick = (event, item) => {
         @menu-click="menuClick"
       >
 
+        <NavBarItemPlain 
+          class="flex h-14 flex-none items-center px-4"
+          @click="router.push(homeRouteForRole(authStore.role))"
+        >
+          <img src="/logo_atiga.png" alt="AtigaCBT Logo" class="w-8 h-8 md:w-9 md:h-9 object-contain" />
+          <div class="ml-2 flex flex-col justify-center leading-none">
+            <span class="text-base md:text-lg font-black tracking-tighter text-slate-900 dark:text-white uppercase">AtigaCBT</span>
+            <span class="text-[8px] md:text-[10px] font-bold text-blue-600 dark:text-blue-400 tracking-[0.2em] uppercase opacity-80">Assessment</span>
+          </div>
+        </NavBarItemPlain>
+
         <button
           type="button"
           class="hidden md:flex h-14 flex-none items-center px-3 text-slate-600 hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-400 transition"
@@ -351,8 +363,24 @@ const menuClick = (event, item) => {
         >
           <BaseIcon :path="isAsideDesktopHidden ? mdiMenu : mdiMenuOpen" size="22" />
         </button>
-        <div class="hidden md:flex flex-1 items-center justify-center px-4">
-          <div class="relative w-full max-w-xl">
+        <!-- Desktop/Mobile Search Wrapper -->
+        <div 
+          class="flex flex-1 items-center px-4 transition-all duration-300"
+          :class="[
+            isSearchMobileActive ? 'absolute inset-0 z-50 bg-white dark:bg-slate-950 flex' : 'hidden md:flex'
+          ]"
+        >
+          <!-- Mobile Close Search -->
+          <button 
+            v-if="isSearchMobileActive"
+            type="button"
+            class="mr-2 text-slate-500 md:hidden"
+            @click="isSearchMobileActive = false"
+          >
+            <BaseIcon :path="mdiCloseCircle" size="24" />
+          </button>
+
+          <div class="relative w-full max-w-xl mx-auto">
             <label class="sr-only" for="global-search-input">Pencarian data</label>
             <BaseIcon
               :path="mdiMagnify"
@@ -361,6 +389,7 @@ const menuClick = (event, item) => {
             />
             <input
               id="global-search-input"
+              ref="searchInput"
               v-model="searchQuery"
               type="text"
               autocomplete="off"
@@ -392,7 +421,7 @@ const menuClick = (event, item) => {
                   class="flex w-full flex-col px-3 py-2 text-left transition"
                   :class="idx === activeSearchIndex ? 'bg-blue-50 dark:bg-blue-900/30' : 'hover:bg-slate-50 dark:hover:bg-slate-800/70'"
                   @mouseenter="activeSearchIndex = idx"
-                  @click="selectSearchItem(item)"
+                  @click="selectSearchItem(item); isSearchMobileActive = false"
                 >
                   <span class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ item.label }}</span>
                   <span class="text-[11px] text-slate-500 dark:text-slate-400">{{ item.breadcrumbs }}</span>
@@ -404,6 +433,25 @@ const menuClick = (event, item) => {
             </div>
           </div>
         </div>
+
+        <template #right-actions>
+          <!-- Mobile Search Toggle -->
+          <NavBarItemPlain 
+            class="md:hidden flex items-center"
+            @click="isSearchMobileActive = true"
+          >
+            <BaseIcon :path="mdiMagnify" size="22" />
+          </NavBarItemPlain>
+
+          <!-- Digital Clock (Mobile) -->
+          <div class="md:hidden flex items-center px-2">
+            <div class="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+              <span class="text-[10px] font-mono font-black text-slate-700 dark:text-slate-200 tracking-wider">
+                {{ digitalClock }}
+              </span>
+            </div>
+          </div>
+        </template>
 
         <template #right>
           <div v-if="authStore.role === 'student'" class="relative flex items-center h-14 mr-4">
@@ -499,25 +547,35 @@ const menuClick = (event, item) => {
       />
       <div
         v-if="authStore.isAuthenticated"
-        class="border-b border-slate-200 bg-white/60 px-6 py-2 text-xs text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 flex items-center backdrop-blur-md"
+        class="border-b border-slate-200 bg-white/60 px-4 md:px-6 py-2 text-[10px] md:text-xs text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 flex items-center backdrop-blur-md overflow-x-auto no-scrollbar"
       >
-        <BaseIcon :path="mdiAccountCircleOutline" size="14" class="mr-2 text-blue-600 dark:text-blue-400" />
-        <span>
-          Role: <span class="font-bold text-slate-900 dark:text-white">{{ authStore.roleLabel }}</span>
-          <span v-if="authStore.user?.username" class="opacity-60"> (@{{ authStore.user.username }})</span>
-        </span>
-        <span class="mx-3 text-slate-300 dark:text-slate-700">|</span>
-        <button class="font-extrabold text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline transition-all uppercase" @click="router.push(homeRouteForRole(authStore.role))">
-          Dashboard Utama
+        <div class="flex items-center shrink-0">
+          <BaseIcon :path="mdiAccountCircleOutline" size="14" class="mr-1.5 md:mr-2 text-blue-600 dark:text-blue-400" />
+          <span class="whitespace-nowrap">
+            <span class="md:inline hidden">Role: </span>
+            <span class="font-bold text-slate-900 dark:text-white uppercase tracking-tighter">{{ authStore.roleLabel }}</span>
+            <span v-if="authStore.user?.username" class="opacity-60 hidden sm:inline"> (@{{ authStore.user.username }})</span>
+          </span>
+        </div>
+        
+        <span class="mx-2 md:mx-3 text-slate-300 dark:text-slate-700 shrink-0">|</span>
+        
+        <button class="font-extrabold text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline transition-all uppercase whitespace-nowrap tracking-tighter" @click="router.push(homeRouteForRole(authStore.role))">
+          Dashboard
         </button>
-        <span class="mx-3 text-slate-300 dark:text-slate-700">|</span>
-        <BackendHealthBanner />
-        <span class="ml-auto mr-3 lg:mr-12 flex items-center">
+
+        <span class="mx-2 md:mx-3 text-slate-300 dark:text-slate-700 shrink-0">|</span>
+        
+        <div class="flex items-center shrink-0">
+          <BackendHealthBanner />
+        </div>
+
+        <div class="ml-auto hidden md:flex items-center shrink-0">
           <span class="mx-3 text-slate-300 dark:text-slate-700">|</span>
           <span class="font-mono font-black tracking-widest text-slate-700 dark:text-slate-100">
             {{ digitalClock }}
           </span>
-        </span>
+        </div>
       </div>
       <slot />
       <FooterBar>
