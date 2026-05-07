@@ -443,6 +443,21 @@ const menuClick = (event, item) => {
             <BaseIcon :path="mdiMagnify" size="22" />
           </NavBarItemPlain>
 
+          <!-- Student Notifications (Mobile/Tablet) -->
+          <div v-if="authStore.role === 'student'" class="flex items-center md:hidden">
+            <NavBarItemPlain 
+              @click.prevent="isNotificationsExpanded = !isNotificationsExpanded; markNotificationsAsRead()"
+              class="relative"
+            >
+              <div :class="{ 'animate-pulse drop-shadow-[0_0_10px_rgba(59,130,246,0.6)]': showBadge && notificationsCount > 0 }">
+                <BaseIcon :path="mdiBellOutline" size="22" :class="showBadge && notificationsCount > 0 ? 'text-blue-600 dark:text-blue-400' : ''" />
+              </div>
+              <div v-if="showBadge && notificationsCount > 0" class="absolute top-3 right-3 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white shadow-sm ring-1 ring-white dark:ring-slate-950">
+                {{ notificationsCount > 9 ? '9+' : notificationsCount }}
+              </div>
+            </NavBarItemPlain>
+          </div>
+
           <!-- Digital Clock (Mobile) -->
           <div class="md:hidden flex items-center px-2">
             <div class="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
@@ -454,7 +469,7 @@ const menuClick = (event, item) => {
         </template>
 
         <template #right>
-          <div v-if="authStore.role === 'student'" class="relative flex items-center h-14 mr-4">
+          <div v-if="authStore.role === 'student'" class="relative hidden md:flex items-center h-14 mr-4">
             <NavBarItemPlain 
               @click.prevent="isNotificationsExpanded = !isNotificationsExpanded; markNotificationsAsRead()"
               class="relative"
@@ -533,6 +548,35 @@ const menuClick = (event, item) => {
                   Buka Pusat Informasi
                 </button>
               </div>
+            </div>
+          </div>
+
+          <!-- Notifications Dropdown (Mobile Action Bar version) -->
+          <div 
+            v-if="isNotificationsExpanded && authStore.role === 'student'"
+            class="md:hidden fixed top-14 right-4 w-[calc(100vw-32px)] max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 z-50 overflow-hidden"
+          >
+            <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+              <h3 class="text-xs font-black uppercase tracking-widest text-slate-500">Notifikasi</h3>
+              <button @click="isNotificationsExpanded = false" class="text-slate-400"><BaseIcon :path="mdiCloseCircle" size="20" /></button>
+            </div>
+            <div class="max-h-[60vh] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+              <!-- Re-use the notification list content here or similar -->
+              <div v-if="unreadAnnouncements.length">
+                <div v-for="a in unreadAnnouncements" :key="a.id" class="p-4" @click="openAnnouncementItem(a)">
+                  <div class="text-[10px] font-bold text-blue-600 mb-1">{{ a.title }}</div>
+                  <div class="text-[10px] text-slate-500 line-clamp-1">{{ a.body }}</div>
+                </div>
+              </div>
+              <div v-if="exams.length">
+                <div v-for="e in exams" :key="e.id" class="p-4" @click="router.push('/student/ujian'); isNotificationsExpanded = false">
+                  <div class="text-[10px] font-bold text-emerald-600 mb-1">{{ e.title }}</div>
+                </div>
+              </div>
+              <div v-if="!unreadAnnouncements.length && !exams.length" class="p-6 text-center text-[10px] text-slate-400 italic">Tidak ada notifikasi baru</div>
+            </div>
+            <div class="p-3 border-t border-slate-100 dark:border-slate-800 text-center">
+              <button @click="openAnnouncementCenter" class="text-[10px] font-black uppercase text-blue-600">Buka Semua</button>
             </div>
           </div>
         </template>
