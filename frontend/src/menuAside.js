@@ -75,7 +75,6 @@ export const getMenuAsideMain = (role) => {
           { to: '/teacher/evaluasi', label: 'Analitik & Tren', icon: mdiChartLine },
         ],
       },
-      { to: '/teacher/profil', icon: mdiAccountTie, label: 'Profil' },
     ]
   }
 

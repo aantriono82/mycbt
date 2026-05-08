@@ -46,11 +46,38 @@ Frontend yang sudah berjalan:
 - Integrasi backend untuk seluruh modul utama.
 ## Prereqs
 
-- Node.js (already in this environment)
+- Docker Engine + Docker Compose Plugin
+- Node.js `^20.19.0` atau `>=22.12.0` (cek: `node -v`)
+- npm (ikut dari Node.js)
 - Go: install lokal (tanpa sudo) via:
 
 ```bash
 ./scripts/install-go.sh
+```
+
+### Setup cepat (Linux Mint/Ubuntu fresh install)
+
+Install dependency sistem:
+
+```bash
+sudo apt update
+sudo apt install -y docker.io docker-compose-v2 curl git
+```
+
+Aktifkan Docker:
+
+```bash
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+```
+
+Lalu logout/login sekali agar group `docker` aktif.
+
+Jika `node -v` masih 18.x, upgrade ke Node 22:
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
 ```
 
 ## Run (dev)
@@ -113,7 +140,7 @@ Jika ingin menjalankan secara terpisah:
 docker compose up -d
 ```
 
-#### 2. Backend (migrate + seed)
+#### 2. Terminal 1: Backend (migrate + seed + run API)
 ```bash
 cd backend
 export DATABASE_URL="postgres://atigacbt:atigacbt@localhost:5433/atigacbt?sslmode=disable"
@@ -127,11 +154,18 @@ export ADMIN_PASSWORD=admin12345
 ../.tooling/go/bin/go run ./cmd/api
 ```
 
-#### 3. Frontend
+#### 3. Terminal 2: Frontend
 ```bash
 cd frontend
-# optional: cp .env.example .env lalu set VITE_API_BASE_URL
-npm run dev
+# optional: cp .env.example .env lalu set VITE_AP --portI_BASE_URL
+npm run dev -- --port 5173
+```
+
+Catatan:
+- Jika muncul 2 URL frontend (`5173` dan `5174`), artinya ada lebih dari satu proses Vite yang berjalan.
+- Matikan proses lama sebelum start ulang frontend:
+```bash
+pkill -f vite
 ```
 
 ## Audit Panel Admin (Backend)

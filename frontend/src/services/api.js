@@ -1,21 +1,10 @@
 import axios from 'axios'
 
 const TOKEN_KEY = 'atigacbt_token'
-const FALLBACK_API_ORIGIN = 'http://localhost:8080'
-
-const inferApiBaseUrlFromWindow = () => {
-  if (typeof window === 'undefined' || !window.location?.hostname) return ''
-  const { protocol, hostname } = window.location
-  if (hostname === 'localhost' || hostname === '127.0.0.1') return ''
-  if (hostname.startsWith('api.')) return `${protocol}//${hostname}`
-  return `${protocol}//api.${hostname}`
-}
 
 export const getApiBaseUrl = () => {
   const configured = String(import.meta.env.VITE_API_BASE_URL || '').trim()
   if (configured) return configured
-  const inferred = inferApiBaseUrlFromWindow()
-  if (inferred) return inferred
   return ''
 }
 

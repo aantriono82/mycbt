@@ -50,6 +50,36 @@ const smtpConfig = ref({
   use_tls: true,
 })
 
+const extractLogoUrl = (payload = {}) => {
+  const candidates = [
+    payload.logo_url,
+    payload.logoUrl,
+    payload.url,
+    payload.file_url,
+    payload.path,
+    payload.location,
+  ]
+  const found = candidates.find((item) => String(item || '').trim())
+  return found ? String(found).trim() : ''
+}
+
+const pickIdentityPayload = (raw = {}) => {
+  if (!raw || typeof raw !== 'object') return {}
+  if (raw.data && typeof raw.data === 'object') return raw.data
+  if (raw.school_identity && typeof raw.school_identity === 'object') return raw.school_identity
+  if (raw.schoolIdentity && typeof raw.schoolIdentity === 'object') return raw.schoolIdentity
+  return raw
+}
+
+const normalizeSchoolIdentity = (raw = {}) => {
+  const identity = pickIdentityPayload(raw)
+  return {
+    ...identity,
+    school_name: String(identity.school_name || identity.name || '').trim(),
+    logo_url: extractLogoUrl(identity),
+  }
+}
+
 const loadSettings = async () => {
   if (!authStore.isAuthenticated) return
   isLoading.value = true
@@ -61,7 +91,12 @@ const loadSettings = async () => {
       api.get('/api/v1/settings/system'),
       api.get('/api/v1/settings/smtp'),
     ])
-    schoolIdentity.value = { ...schoolIdentity.value, ...(identityRes?.data?.data || {}) }
+    const identityData = normalizeSchoolIdentity(identityRes?.data || {})
+    schoolIdentity.value = {
+      ...schoolIdentity.value,
+      ...identityData,
+      logo_url: extractLogoUrl(identityData) || schoolIdentity.value.logo_url,
+    }
     systemSettings.value = { ...systemSettings.value, ...(systemRes?.data?.data || {}) }
     const smtpData = smtpRes?.data?.data || {}
     smtpConfig.value = {
@@ -116,7 +151,15 @@ const saveSchoolIdentity = async () => {
       logo_url: schoolIdentity.value.logo_url?.trim(),
     }
     const { data } = await api.put('/api/v1/settings/school-identity', payload)
-    schoolIdentity.value = { ...schoolIdentity.value, ...(data?.data || {}) }
+    const identityData = normalizeSchoolIdentity(data || {})
+    schoolIdentity.value = {
+      ...schoolIdentity.value,
+      ...identityData,
+      logo_url: extractLogoUrl(identityData) || schoolIdentity.value.logo_url,
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('school-identity-updated', { detail: { ...schoolIdentity.value } }))
+    }
     successMessage.value = 'Identitas sekolah berhasil disimpan.'
   } catch (error) {
     errorMessage.value = error?.response?.data?.error?.message || 'Gagal menyimpan identitas sekolah'
@@ -136,7 +179,32 @@ const uploadSchoolLogo = async () => {
     const { data } = await api.post('/api/v1/settings/school-identity/logo', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-    schoolIdentity.value.logo_url = data?.data?.logo_url || schoolIdentity.value.logo_url
+    const uploadData = normalizeSchoolIdentity(data || {})
+    const uploadedLogoUrl = extractLogoUrl(uploadData)
+    if (uploadedLogoUrl) {
+      schoolIdentity.value.logo_url = uploadedLogoUrl
+      const identityPayload = {
+        school_name: schoolIdentity.value.school_name?.trim(),
+        address: schoolIdentity.value.address?.trim(),
+        phone: schoolIdentity.value.phone?.trim(),
+        email: schoolIdentity.value.email?.trim(),
+        website: schoolIdentity.value.website?.trim(),
+        principal_name: schoolIdentity.value.principal_name?.trim(),
+        logo_url: uploadedLogoUrl,
+      }
+      await api.put('/api/v1/settings/school-identity', identityPayload)
+    }
+    const { data: identityRefetch } = await api.get('/api/v1/settings/school-identity')
+    const identityData = normalizeSchoolIdentity(identityRefetch || {})
+    schoolIdentity.value = {
+      ...schoolIdentity.value,
+      ...identityData,
+      school_name: identityData.school_name || schoolIdentity.value.school_name,
+      logo_url: extractLogoUrl(identityData) || schoolIdentity.value.logo_url,
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('school-identity-updated', { detail: { ...schoolIdentity.value } }))
+    }
     logoFile.value = null
     successMessage.value = 'Logo sekolah berhasil diunggah.'
   } catch (error) {
