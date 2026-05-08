@@ -2,12 +2,25 @@
 import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { api } from '@/services/api.js'
 
+const props = defineProps({
+  subtle: {
+    type: Boolean,
+    default: false,
+  },
+  tapTooltip: {
+    type: Boolean,
+    default: false,
+  },
+})
+
 const health = ref({
   state: 'idle', // idle | loading | ok | error
   time: null,
   error: null,
 })
 let healthTimer = null
+const isTooltipOpen = ref(false)
+let tooltipTimer = null
 
 const formattedTime = computed(() => {
   if (!health.value.time) return 'N/A'
@@ -48,17 +61,36 @@ onUnmounted(() => {
     clearInterval(healthTimer)
     healthTimer = null
   }
+  if (tooltipTimer) {
+    clearTimeout(tooltipTimer)
+    tooltipTimer = null
+  }
 })
+
+const toggleTooltipOnTap = () => {
+  if (!props.tapTooltip) return
+  isTooltipOpen.value = !isTooltipOpen.value
+  if (tooltipTimer) {
+    clearTimeout(tooltipTimer)
+    tooltipTimer = null
+  }
+  if (isTooltipOpen.value) {
+    tooltipTimer = setTimeout(() => {
+      isTooltipOpen.value = false
+      tooltipTimer = null
+    }, 2000)
+  }
+}
 </script>
 
 <template>
-  <div class="group relative flex items-center">
+  <div class="group relative flex items-center" @click.stop="toggleTooltipOnTap">
     <!-- The glowing radio button -->
     <div 
       class="radio-indicator" 
       :class="{ 
-        'status-ok': health.state === 'ok', 
-        'status-error': health.state === 'error',
+        [props.subtle ? 'status-ok-subtle' : 'status-ok']: health.state === 'ok',
+        [props.subtle ? 'status-error-subtle' : 'status-error']: health.state === 'error',
         'status-loading': health.state === 'loading' || health.state === 'idle'
       }"
     >
@@ -79,7 +111,10 @@ onUnmounted(() => {
     </div>
 
     <!-- Tooltip on hover -->
-    <div class="pointer-events-none absolute left-full ml-2 hidden w-max group-hover:block">
+    <div
+      class="pointer-events-none absolute left-full ml-2 w-max"
+      :class="props.tapTooltip ? (isTooltipOpen ? 'block' : 'hidden') : 'hidden group-hover:block'"
+    >
       <div class="rounded bg-slate-800 px-2 py-1 text-[10px] text-white shadow-lg dark:bg-slate-700">
         <div class="font-bold flex items-center">
           <div class="h-1.5 w-1.5 rounded-full mr-1.5" :class="health.state === 'ok' ? 'bg-emerald-400' : 'bg-red-400'"></div>
@@ -144,6 +179,23 @@ onUnmounted(() => {
   animation: radio-pulse 1.4s infinite ease-in-out;
 }
 
+.status-ok-subtle {
+  color: #10b981;
+  filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.4));
+}
+
+:global(.dark) .status-ok-subtle {
+  color: #34d399;
+}
+
+.status-ok-subtle .radio-outer {
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.35);
+}
+
+.status-ok-subtle .radio-inner {
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+}
+
 /* Error Status (Red Glow) */
 .status-error {
   color: #dc2626;
@@ -161,6 +213,22 @@ onUnmounted(() => {
 .status-error .radio-inner {
   box-shadow: 0 0 10px #ef4444;
   animation: radio-pulse-red 0.5s infinite ease-in-out;
+}
+
+.status-error-subtle {
+  color: #dc2626;
+}
+
+:global(.dark) .status-error-subtle {
+  color: #f87171;
+}
+
+.status-error-subtle .radio-outer {
+  box-shadow: 0 0 5px rgba(239, 68, 68, 0.25);
+}
+
+.status-error-subtle .radio-inner {
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
 }
 
 /* Loading Status */

@@ -162,6 +162,9 @@ const unreadAnnouncements = computed(() =>
   announcements.value.filter((item) => !item?.is_read),
 )
 const notificationsCount = computed(() => announcementsTotal.value + examsTotal.value)
+const hideRoleAndClockOnMobile = computed(() =>
+  ['teacher', 'student'].includes(String(authStore.role || '').toLowerCase()),
+)
 const notificationsReadStorageKey = computed(() => {
   return `${NOTIF_READ_KEY_PREFIX}${currentUserId.value}`
 })
@@ -444,6 +447,11 @@ const menuClick = (event, item) => {
             <BaseIcon :path="mdiMagnify" size="22" />
           </NavBarItemPlain>
 
+          <!-- Backend Health (Mobile: Teacher/Student) -->
+          <div v-if="hideRoleAndClockOnMobile" class="md:hidden flex items-center">
+            <BackendHealthBanner subtle tap-tooltip />
+          </div>
+
           <!-- Student Notifications (Mobile/Tablet) -->
           <div v-if="authStore.role === 'student'" class="flex items-center md:hidden">
             <NavBarItemPlain 
@@ -460,7 +468,7 @@ const menuClick = (event, item) => {
           </div>
 
           <!-- Digital Clock (Mobile) -->
-          <div class="md:hidden flex items-center px-2">
+          <div v-if="!hideRoleAndClockOnMobile" class="md:hidden flex items-center px-2">
             <div class="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
               <span class="text-[10px] font-mono font-black text-slate-700 dark:text-slate-200 tracking-wider">
                 {{ digitalClock }}
@@ -594,7 +602,10 @@ const menuClick = (event, item) => {
         v-if="authStore.isAuthenticated"
         class="border-b border-slate-200 bg-white/60 px-4 md:px-6 py-2 text-[10px] md:text-xs text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 flex items-center backdrop-blur-md overflow-x-auto no-scrollbar"
       >
-        <div class="flex items-center shrink-0">
+        <div
+          class="flex items-center shrink-0"
+          :class="hideRoleAndClockOnMobile ? 'hidden md:flex' : 'flex'"
+        >
           <BaseIcon :path="mdiAccountCircleOutline" size="14" class="mr-1.5 md:mr-2 text-blue-600 dark:text-blue-400" />
           <span class="whitespace-nowrap">
             <span class="md:inline hidden">Role: </span>
@@ -603,15 +614,28 @@ const menuClick = (event, item) => {
           </span>
         </div>
         
-        <span class="mx-2 md:mx-3 text-slate-300 dark:text-slate-700 shrink-0">|</span>
+        <span
+          class="mx-2 md:mx-3 text-slate-300 dark:text-slate-700 shrink-0"
+          :class="hideRoleAndClockOnMobile ? 'hidden md:inline' : 'inline'"
+        >|</span>
         
-        <button class="font-extrabold text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline transition-all uppercase whitespace-nowrap tracking-tighter" @click="router.push(homeRouteForRole(authStore.role))">
+        <button
+          class="font-extrabold text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline transition-all uppercase whitespace-nowrap tracking-tighter"
+          :class="hideRoleAndClockOnMobile ? 'hidden md:inline-flex' : 'inline-flex'"
+          @click="router.push(homeRouteForRole(authStore.role))"
+        >
           Dashboard
         </button>
 
-        <span class="mx-2 md:mx-3 text-slate-300 dark:text-slate-700 shrink-0">|</span>
+        <span
+          class="mx-2 md:mx-3 text-slate-300 dark:text-slate-700 shrink-0"
+          :class="hideRoleAndClockOnMobile ? 'hidden md:inline' : 'inline'"
+        >|</span>
         
-        <div class="flex items-center shrink-0">
+        <div
+          class="flex items-center shrink-0"
+          :class="hideRoleAndClockOnMobile ? 'hidden md:flex' : 'flex'"
+        >
           <BackendHealthBanner />
         </div>
 
