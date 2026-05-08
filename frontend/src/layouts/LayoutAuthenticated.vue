@@ -347,10 +347,10 @@ const menuClick = (event, item) => {
           class="flex h-14 flex-none items-center px-4"
           @click="router.push(homeRouteForRole(authStore.role))"
         >
-          <img src="/logo_atiga.png" alt="AtigaCBT Logo" class="w-8 h-8 md:w-9 md:h-9 object-contain" />
+          <img src="/logo_atiga.png" alt="AtigaCBT Logo" class="w-8 h-8 md:w-9 md:h-9 object-contain rounded-full" />
           <div class="ml-2 flex flex-col justify-center leading-none">
             <span class="text-base md:text-lg font-black tracking-tighter text-slate-900 dark:text-white uppercase">AtigaCBT</span>
-            <span class="text-[8px] md:text-[10px] font-bold text-blue-600 dark:text-blue-400 tracking-[0.2em] uppercase opacity-80">Assessment</span>
+            <span class="text-[7px] md:text-[8px] font-bold text-blue-600 dark:text-blue-400 tracking-[0.08em] uppercase opacity-80">Professional CBT</span>
           </div>
         </NavBarItemPlain>
 

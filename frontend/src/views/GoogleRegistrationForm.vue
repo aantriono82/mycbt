@@ -188,8 +188,8 @@ const groupOptions = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
       <div class="w-full max-w-lg mx-auto py-10 px-4 flex flex-col items-center">
         <!-- Logo Header -->
         <div class="flex items-center self-start mb-8 ml-2 cursor-pointer" @click="router.push('/')">
-          <div class="bg-white w-14 h-14 rounded-xl flex items-center justify-center p-2 shadow-lg shadow-blue-500/20">
-             <img src="/logo_a3_blue.png" alt="A3" class="w-full h-full" />
+          <div class="flex h-16 w-16 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <img src="/logo_atiga.png" alt="Atiga CBT Logo" class="h-11 w-11 object-contain rounded-full" />
           </div>
           <div class="ml-4">
             <h1 class="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">Atiga CBT</h1>

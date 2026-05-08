@@ -36,7 +36,7 @@ const asideLgCloseClick = (event) => {
     <div class="aside flex flex-1 flex-col overflow-hidden lg:rounded-[2rem] bg-white/70 dark:bg-[#13082a]/70 backdrop-blur-xl border-r lg:border border-slate-200 dark:border-blue-900/30 shadow-2xl shadow-blue-300/40 dark:shadow-blue-900/30 mb-2">
       <div class="aside-brand flex h-20 flex-row items-center justify-between px-6">
         <div class="flex items-center cursor-pointer" @click="router.push('/dashboard')">
-          <img src="/logo_a3_blue.png" class="mr-3 h-10 w-10 rounded-xl shadow-lg hover:scale-110 transition-transform duration-300 brightness-110" alt="Logo" />
+          <img src="/logo_atiga.png" class="mr-3 h-10 w-10 rounded-full shadow-lg hover:scale-110 transition-transform duration-300 brightness-110" alt="Atiga CBT Logo" />
           <div class="flex flex-col leading-tight">
             <b class="font-black uppercase tracking-tighter text-xl bg-clip-text text-transparent bg-gradient-to-br from-blue-600 via-indigo-500 to-violet-600 dark:from-blue-400 dark:via-indigo-400 dark:to-violet-400">AtigaCBT</b>
             <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 tracking-widest uppercase">Professional CBT</span>

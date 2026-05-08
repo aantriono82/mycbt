@@ -96,7 +96,9 @@ onMounted(async () => {
           <!-- Logo Section -->
           <div class="mb-5 flex flex-col items-center sm:mb-8">
             <div class="mb-2 sm:mb-4">
-               <img src="/logo_a3_blue.png" alt="A3 Logo" class="h-14 w-14 sm:h-16 sm:w-16 object-contain rounded-2xl" />
+              <div class="flex h-24 w-24 items-center justify-center rounded-full border border-blue-200 bg-blue-50 shadow-sm sm:h-28 sm:w-28 dark:border-slate-700 dark:bg-slate-900">
+                <img src="/logo_atiga.png" alt="Atiga CBT Logo" class="h-16 w-16 sm:h-20 sm:w-20 object-contain rounded-full" />
+              </div>
             </div>
             <h1 class="mb-1 text-center text-2xl font-extrabold text-slate-800 sm:text-3xl dark:text-white">Login Atiga CBT</h1>
             <p class="max-w-[260px] text-center text-sm leading-snug text-slate-500 sm:max-w-[280px] sm:text-base dark:text-slate-400">

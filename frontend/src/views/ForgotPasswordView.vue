@@ -43,7 +43,9 @@ const submit = async () => {
           <!-- Logo Section -->
           <div class="flex flex-col items-center mb-6 sm:mb-8">
             <div class="mb-3 sm:mb-4">
-               <img src="/logo_a3_blue.png" alt="A3 Logo" class="h-14 w-14 sm:h-16 sm:w-16 object-contain rounded-2xl" />
+              <div class="flex h-24 w-24 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm sm:h-28 sm:w-28 dark:border-slate-700 dark:bg-slate-900">
+                <img src="/logo_atiga.png" alt="Atiga CBT Logo" class="h-16 w-16 sm:h-20 sm:w-20 object-contain rounded-full" />
+              </div>
             </div>
             <h1 class="text-2xl sm:text-3xl font-extrabold text-blue-600 dark:text-blue-500 mb-2 sm:mb-3">Lupa Kata Sandi</h1>
             <p class="text-slate-500 dark:text-slate-400 text-center max-w-[280px] sm:max-w-[320px] leading-relaxed text-sm sm:text-base">
