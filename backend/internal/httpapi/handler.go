@@ -167,6 +167,13 @@ func NewHandler(deps Deps) http.Handler {
 		v1.GET("/registrations/:id", pub.Status)
 	}
 
+	// Public settings (read-only school identity for branding in all panels)
+	if deps.Pool != nil {
+		settings := masterrepo.NewSettings(deps.Pool)
+		h := handlers.NewSettingsHandler(settings, deps.ObjectStore)
+		v1.GET("/public/school-identity", h.GetPublicSchoolIdentity)
+	}
+
 	// Question bank (admin/teacher)
 	if deps.Auth != nil && deps.Pool != nil {
 		qb := questionbankrepo.New(deps.Pool)

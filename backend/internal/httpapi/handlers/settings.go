@@ -34,6 +34,15 @@ func (h *SettingsHandler) GetSchoolIdentity(c *gin.Context) {
 	c.JSON(200, gin.H{"data": data})
 }
 
+func (h *SettingsHandler) GetPublicSchoolIdentity(c *gin.Context) {
+	data, err := h.settings.GetSchoolIdentity(c.Request.Context())
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	c.JSON(200, gin.H{"data": data})
+}
+
 type putSchoolIdentityReq struct {
 	SchoolName    string `json:"school_name"`
 	Address       string `json:"address"`

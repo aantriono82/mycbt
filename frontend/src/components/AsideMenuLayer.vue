@@ -85,9 +85,8 @@ const schoolBrandLogo = computed(() => {
 const schoolBrandTagline = computed(() => (schoolIdentity.value.school_name?.trim() ? 'School CBT' : 'Professional CBT'))
 
 const loadSchoolIdentity = async () => {
-  if (!authStore.isAuthenticated) return
   try {
-    const { data } = await api.get('/api/v1/settings/school-identity')
+    const { data } = await api.get('/api/v1/public/school-identity')
     const normalized = normalizeSchoolIdentity(data || {})
     schoolIdentity.value = {
       ...schoolIdentity.value,
@@ -95,7 +94,18 @@ const loadSchoolIdentity = async () => {
     }
     logoVersion.value = Date.now()
   } catch {
-    // Fallback ke brand default jika identity tidak tersedia.
+    try {
+      if (!authStore.isAuthenticated) return
+      const { data } = await api.get('/api/v1/settings/school-identity')
+      const normalized = normalizeSchoolIdentity(data || {})
+      schoolIdentity.value = {
+        ...schoolIdentity.value,
+        ...normalized,
+      }
+      logoVersion.value = Date.now()
+    } catch {
+      // Fallback ke brand default jika identity tidak tersedia.
+    }
   }
 }
 

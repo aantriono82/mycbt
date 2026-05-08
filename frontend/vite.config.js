@@ -20,6 +20,21 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'logo_atiga.png'],
+      workbox: {
+        navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//],
+        runtimeCaching: [
+          {
+            urlPattern: /^\/api\/.*$/i,
+            handler: 'NetworkOnly',
+            method: 'GET',
+          },
+          {
+            urlPattern: /^\/uploads\/.*$/i,
+            handler: 'NetworkOnly',
+            method: 'GET',
+          },
+        ],
+      },
       manifest: {
         name: 'AtigaCBT Evaluation System',
         short_name: 'AtigaCBT',
