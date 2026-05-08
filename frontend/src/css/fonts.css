@@ -3,7 +3,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 400;
-  src: url('../../node_modules/@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-400-normal.woff2') format('woff2');
+  src: url('/fonts/plus-jakarta-sans/plus-jakarta-sans-latin-400-normal.woff2') format('woff2');
 }
 
 @font-face {
@@ -11,7 +11,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 500;
-  src: url('../../node_modules/@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-500-normal.woff2') format('woff2');
+  src: url('/fonts/plus-jakarta-sans/plus-jakarta-sans-latin-500-normal.woff2') format('woff2');
 }
 
 @font-face {
@@ -19,7 +19,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 600;
-  src: url('../../node_modules/@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-600-normal.woff2') format('woff2');
+  src: url('/fonts/plus-jakarta-sans/plus-jakarta-sans-latin-600-normal.woff2') format('woff2');
 }
 
 @font-face {
@@ -27,7 +27,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 700;
-  src: url('../../node_modules/@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-700-normal.woff2') format('woff2');
+  src: url('/fonts/plus-jakarta-sans/plus-jakarta-sans-latin-700-normal.woff2') format('woff2');
 }
 
 @font-face {
@@ -35,7 +35,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 800;
-  src: url('../../node_modules/@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-800-normal.woff2') format('woff2');
+  src: url('/fonts/plus-jakarta-sans/plus-jakarta-sans-latin-800-normal.woff2') format('woff2');
 }
 
 @font-face {
@@ -43,7 +43,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 400;
-  src: url('../../node_modules/@fontsource/amiri/files/amiri-arabic-400-normal.woff2') format('woff2');
+  src: url('/fonts/amiri/amiri-arabic-400-normal.woff2') format('woff2');
 }
 
 @font-face {
@@ -51,5 +51,5 @@
   font-style: normal;
   font-display: swap;
   font-weight: 700;
-  src: url('../../node_modules/@fontsource/amiri/files/amiri-arabic-700-normal.woff2') format('woff2');
+  src: url('/fonts/amiri/amiri-arabic-700-normal.woff2') format('woff2');
 }
