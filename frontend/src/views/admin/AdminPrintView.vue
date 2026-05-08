@@ -344,6 +344,7 @@ const printAttendance = async () => {
           <td>${index + 1}</td>
           <td>${escapeHtml(row.name)}</td>
           <td>${escapeHtml(row.username)}</td>
+          <td>${escapeHtml(row.participant_no || row.nis || '-')}</td>
           <td>${escapeHtml(row.nis)}</td>
           <td>${escapeHtml(row.level_name || '-')}</td>
           <td>${escapeHtml(row.group_name || '-')}</td>
@@ -365,6 +366,7 @@ const printAttendance = async () => {
             <th style="width:40px;">No</th>
             <th>Nama</th>
             <th>Username</th>
+            <th>No Peserta</th>
             <th>NIS</th>
             <th>Level</th>
             <th>Group</th>
@@ -373,7 +375,7 @@ const printAttendance = async () => {
             <th style="width:140px;">Tanda Tangan</th>
           </tr>
         </thead>
-        <tbody>${tableRows || '<tr><td colspan="9">Belum ada data.</td></tr>'}</tbody>
+        <tbody>${tableRows || '<tr><td colspan="10">Belum ada data.</td></tr>'}</tbody>
       </table>
     `,
     )
@@ -397,6 +399,7 @@ const printResults = async () => {
           <td>${index + 1}</td>
           <td>${escapeHtml(row.student_name)}</td>
           <td>${escapeHtml(row.student_username)}</td>
+          <td>${escapeHtml(row.participant_no || row.student_nis || '-')}</td>
           <td>${escapeHtml(row.student_nis)}</td>
           <td>${escapeHtml(row.status)}</td>
           <td>${escapeHtml(row.correct_count)}/${escapeHtml(row.auto_scorable_questions)}</td>
@@ -415,13 +418,14 @@ const printResults = async () => {
             <th style="width:40px;">No</th>
             <th>Nama</th>
             <th>Username</th>
+            <th>No Peserta</th>
             <th>NIS</th>
             <th>Status</th>
             <th>Benar</th>
             <th>Nilai</th>
           </tr>
         </thead>
-        <tbody>${tableRows || '<tr><td colspan="7">Belum ada data.</td></tr>'}</tbody>
+        <tbody>${tableRows || '<tr><td colspan="8">Belum ada data.</td></tr>'}</tbody>
       </table>
     `,
     )

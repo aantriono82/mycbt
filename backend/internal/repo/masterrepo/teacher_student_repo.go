@@ -35,6 +35,7 @@ type Student struct {
 	Email         string `json:"email"`
 	Phone         string `json:"phone"`
 	NIS           string `json:"nis"`
+	ParticipantNo string `json:"participant_no"`
 	Jenjang       string `json:"jenjang"`
 	ProgramID     string `json:"program_id"`
 	LevelID       string `json:"level_id"`
@@ -147,12 +148,12 @@ LIMIT 1`
 
 func (r *StudentsRepo) List(ctx context.Context, query string, limit, offset int) ([]Student, int, error) {
 	const q = `
-SELECT s.id, u.id, u.username, COALESCE(u.password_plain,''), u.name, COALESCE(u.email,''), COALESCE(u.phone,''), s.nis,
+SELECT s.id, u.id, u.username, COALESCE(u.password_plain,''), u.name, COALESCE(u.email,''), COALESCE(u.phone,''), s.nis, COALESCE(s.participant_no,''),
        COALESCE(s.jenjang,''), COALESCE(s.program_id::text,''), COALESCE(s.level_id::text,''), COALESCE(s.group_id::text,''),
        COALESCE(u.photo_url,''), u.is_active
 FROM students s
 JOIN users u ON u.id = s.user_id
-WHERE ($1 = '' OR u.username ILIKE '%'||$1||'%' OR u.name ILIKE '%'||$1||'%' OR COALESCE(u.email,'') ILIKE '%'||$1||'%' OR s.nis ILIKE '%'||$1||'%')
+WHERE ($1 = '' OR u.username ILIKE '%'||$1||'%' OR u.name ILIKE '%'||$1||'%' OR COALESCE(u.email,'') ILIKE '%'||$1||'%' OR s.nis ILIKE '%'||$1||'%' OR COALESCE(s.participant_no,'') ILIKE '%'||$1||'%')
   AND u.role = 'student'
 ORDER BY u.name ASC
 LIMIT $2 OFFSET $3`
@@ -164,7 +165,7 @@ LIMIT $2 OFFSET $3`
 	out := []Student{}
 	for rows.Next() {
 		var it Student
-		if err := rows.Scan(&it.ID, &it.UserID, &it.Username, &it.PasswordPlain, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.PhotoURL, &it.IsActive); err != nil {
+		if err := rows.Scan(&it.ID, &it.UserID, &it.Username, &it.PasswordPlain, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.ParticipantNo, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.PhotoURL, &it.IsActive); err != nil {
 			return nil, 0, fmt.Errorf("scan: %w", err)
 		}
 		out = append(out, it)
@@ -178,7 +179,7 @@ LIMIT $2 OFFSET $3`
 SELECT COUNT(*)
 FROM students s
 JOIN users u ON u.id = s.user_id
-WHERE ($1 = '' OR u.username ILIKE '%'||$1||'%' OR u.name ILIKE '%'||$1||'%' OR COALESCE(u.email,'') ILIKE '%'||$1||'%' OR s.nis ILIKE '%'||$1||'%')
+WHERE ($1 = '' OR u.username ILIKE '%'||$1||'%' OR u.name ILIKE '%'||$1||'%' OR COALESCE(u.email,'') ILIKE '%'||$1||'%' OR s.nis ILIKE '%'||$1||'%' OR COALESCE(s.participant_no,'') ILIKE '%'||$1||'%')
   AND u.role = 'student'`
 	if err := r.pool.QueryRow(ctx, qc, query).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count students: %w", err)
@@ -191,14 +192,14 @@ func (r *StudentsRepo) ListForTeacherUserID(ctx context.Context, userID string, 
 	const base = `
 FROM students s
 JOIN users u ON u.id = s.user_id
-WHERE ($1 = '' OR u.username ILIKE '%'||$1||'%' OR u.name ILIKE '%'||$1||'%' OR COALESCE(u.email,'') ILIKE '%'||$1||'%' OR s.nis ILIKE '%'||$1||'%')
+WHERE ($1 = '' OR u.username ILIKE '%'||$1||'%' OR u.name ILIKE '%'||$1||'%' OR COALESCE(u.email,'') ILIKE '%'||$1||'%' OR s.nis ILIKE '%'||$1||'%' OR COALESCE(s.participant_no,'') ILIKE '%'||$1||'%')
   AND (
       s.group_id IN (SELECT group_id FROM teacher_groups tg JOIN teachers t ON t.id = tg.teacher_id WHERE t.user_id = $2)
       OR s.level_id IN (SELECT level_id FROM teacher_levels tl JOIN teachers t ON t.id = tl.teacher_id WHERE t.user_id = $2)
   )`
 
 	const q = `
-SELECT s.id, u.id, u.username, COALESCE(u.password_plain,''), u.name, COALESCE(u.email,''), COALESCE(u.phone,''), s.nis,
+SELECT s.id, u.id, u.username, COALESCE(u.password_plain,''), u.name, COALESCE(u.email,''), COALESCE(u.phone,''), s.nis, COALESCE(s.participant_no,''),
        COALESCE(s.jenjang,''), COALESCE(s.program_id::text,''), COALESCE(s.level_id::text,''), COALESCE(s.group_id::text,''),
        COALESCE(u.photo_url,''), u.is_active ` + base + `
 ORDER BY u.name ASC
@@ -213,7 +214,7 @@ LIMIT $3 OFFSET $4`
 	out := []Student{}
 	for rows.Next() {
 		var it Student
-		if err := rows.Scan(&it.ID, &it.UserID, &it.Username, &it.PasswordPlain, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.PhotoURL, &it.IsActive); err != nil {
+		if err := rows.Scan(&it.ID, &it.UserID, &it.Username, &it.PasswordPlain, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.ParticipantNo, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.PhotoURL, &it.IsActive); err != nil {
 			return nil, 0, fmt.Errorf("scan: %w", err)
 		}
 		out = append(out, it)
@@ -232,7 +233,7 @@ LIMIT $3 OFFSET $4`
 
 func (r *StudentsRepo) Get(ctx context.Context, id string) (Student, bool, error) {
 	const q = `
-SELECT s.id, u.id, u.username, COALESCE(u.password_plain,''), u.name, COALESCE(u.email,''), COALESCE(u.phone,''), s.nis,
+SELECT s.id, u.id, u.username, COALESCE(u.password_plain,''), u.name, COALESCE(u.email,''), COALESCE(u.phone,''), s.nis, COALESCE(s.participant_no,''),
        COALESCE(s.jenjang,''), COALESCE(s.program_id::text,''), COALESCE(s.level_id::text,''), COALESCE(s.group_id::text,''),
        COALESCE(u.photo_url,''), u.is_active
 FROM students s
@@ -240,7 +241,7 @@ JOIN users u ON u.id = s.user_id
 WHERE s.id = $1
 LIMIT 1`
 	var it Student
-	err := r.pool.QueryRow(ctx, q, id).Scan(&it.ID, &it.UserID, &it.Username, &it.PasswordPlain, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.PhotoURL, &it.IsActive)
+	err := r.pool.QueryRow(ctx, q, id).Scan(&it.ID, &it.UserID, &it.Username, &it.PasswordPlain, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.ParticipantNo, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.PhotoURL, &it.IsActive)
 	if err != nil {
 		if isNoRows(err) {
 			return Student{}, false, nil
@@ -294,7 +295,7 @@ func (r *TeachersRepo) UpdateTeacher(ctx context.Context, teacherID, username, n
 	return it, ok, err
 }
 
-func (r *StudentsRepo) UpdateStudent(ctx context.Context, studentID, username, name, email, phone, nis, jenjang, programID, levelID, groupID string, isActive bool, passwordHash, passwordPlain string) (Student, bool, error) {
+func (r *StudentsRepo) UpdateStudent(ctx context.Context, studentID, username, name, email, phone, nis, participantNo, jenjang, programID, levelID, groupID string, isActive bool, passwordHash, passwordPlain string) (Student, bool, error) {
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return Student{}, false, fmt.Errorf("begin tx: %w", err)
@@ -328,13 +329,14 @@ func (r *StudentsRepo) UpdateStudent(ctx context.Context, studentID, username, n
 	const qStudent = `
 UPDATE students
 SET nis=$2,
-    jenjang=NULLIF($3,''),
-    program_id=NULLIF($4,'')::uuid,
-    level_id=NULLIF($5,'')::uuid,
-    group_id=NULLIF($6,'')::uuid,
+    participant_no=NULLIF($3,''),
+    jenjang=NULLIF($4,''),
+    program_id=NULLIF($5,'')::uuid,
+    level_id=NULLIF($6,'')::uuid,
+    group_id=NULLIF($7,'')::uuid,
     updated_at=now()
 WHERE id=$1`
-	if _, err := tx.Exec(ctx, qStudent, studentID, nis, jenjang, programID, levelID, groupID); err != nil {
+	if _, err := tx.Exec(ctx, qStudent, studentID, nis, participantNo, jenjang, programID, levelID, groupID); err != nil {
 		return Student{}, false, fmt.Errorf("update student: %w", err)
 	}
 
@@ -403,17 +405,17 @@ func (r *TeachersRepo) CreateTeacherTx(ctx context.Context, tx pgx.Tx, username,
 	return teacherID, userID, nil
 }
 
-func (r *StudentsRepo) CreateStudentTx(ctx context.Context, tx pgx.Tx, username, passwordHash, passwordPlain, name, email, phone, nis, jenjang, programID, levelID, groupID, googleID string) (studentID, userID string, err error) {
+func (r *StudentsRepo) CreateStudentTx(ctx context.Context, tx pgx.Tx, username, passwordHash, passwordPlain, name, email, phone, nis, participantNo, jenjang, programID, levelID, groupID, googleID string) (studentID, userID string, err error) {
 	const insUser = `INSERT INTO users (username, password_hash, password_plain, role, name, email, phone, google_id, is_active) VALUES ($1,$2,NULLIF($3,''),'student',$4,NULLIF($5,''),NULLIF($6,''),NULLIF($7,''),true) RETURNING id`
 	if err := tx.QueryRow(ctx, insUser, username, passwordHash, passwordPlain, name, email, phone, googleID).Scan(&userID); err != nil {
 		return "", "", fmt.Errorf("insert user: %w", err)
 	}
 
 	const insStudent = `
-INSERT INTO students (user_id, nis, jenjang, program_id, level_id, group_id)
-VALUES ($1, $2, NULLIF($3,''), NULLIF($4,'')::uuid, NULLIF($5,'')::uuid, NULLIF($6,'')::uuid)
+INSERT INTO students (user_id, nis, participant_no, jenjang, program_id, level_id, group_id)
+VALUES ($1, $2, NULLIF($3,''), NULLIF($4,''), NULLIF($5,'')::uuid, NULLIF($6,'')::uuid, NULLIF($7,'')::uuid)
 RETURNING id`
-	if err := tx.QueryRow(ctx, insStudent, userID, nis, jenjang, programID, levelID, groupID).Scan(&studentID); err != nil {
+	if err := tx.QueryRow(ctx, insStudent, userID, nis, participantNo, jenjang, programID, levelID, groupID).Scan(&studentID); err != nil {
 		return "", "", fmt.Errorf("insert student: %w", err)
 	}
 
@@ -444,7 +446,7 @@ func (r *TeachersRepo) CreateTeacher(ctx context.Context, username, passwordHash
 }
 
 // CreateStudent creates user(role=student) + student in one transaction.
-func (r *StudentsRepo) CreateStudent(ctx context.Context, username, passwordHash, passwordPlain, name, email, phone, nis, jenjang, programID, levelID, groupID, googleID string) (studentID, userID string, err error) {
+func (r *StudentsRepo) CreateStudent(ctx context.Context, username, passwordHash, passwordPlain, name, email, phone, nis, participantNo, jenjang, programID, levelID, groupID, googleID string) (studentID, userID string, err error) {
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return "", "", fmt.Errorf("begin tx: %w", err)
@@ -455,7 +457,7 @@ func (r *StudentsRepo) CreateStudent(ctx context.Context, username, passwordHash
 		}
 	}()
 
-	studentID, userID, err = r.CreateStudentTx(ctx, tx, username, passwordHash, passwordPlain, name, email, phone, nis, jenjang, programID, levelID, groupID, googleID)
+	studentID, userID, err = r.CreateStudentTx(ctx, tx, username, passwordHash, passwordPlain, name, email, phone, nis, participantNo, jenjang, programID, levelID, groupID, googleID)
 	if err != nil {
 		return "", "", err
 	}
@@ -468,7 +470,7 @@ func (r *StudentsRepo) CreateStudent(ctx context.Context, username, passwordHash
 
 func (r *StudentsRepo) FindByNISOrUsername(ctx context.Context, key string) (Student, bool, error) {
 	const q = `
-SELECT s.id, u.id, u.username, COALESCE(u.password_plain,''), u.name, COALESCE(u.email,''), COALESCE(u.phone,''), s.nis,
+SELECT s.id, u.id, u.username, COALESCE(u.password_plain,''), u.name, COALESCE(u.email,''), COALESCE(u.phone,''), s.nis, COALESCE(s.participant_no,''),
        COALESCE(s.jenjang,''), COALESCE(s.program_id::text,''), COALESCE(s.level_id::text,''), COALESCE(s.group_id::text,''),
        COALESCE(u.photo_url,''), u.is_active
 FROM students s
@@ -476,7 +478,7 @@ JOIN users u ON u.id = s.user_id
 WHERE s.nis = $1 OR u.username = $1
 LIMIT 1`
 	var it Student
-	err := r.pool.QueryRow(ctx, q, key).Scan(&it.ID, &it.UserID, &it.Username, &it.PasswordPlain, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.PhotoURL, &it.IsActive)
+	err := r.pool.QueryRow(ctx, q, key).Scan(&it.ID, &it.UserID, &it.Username, &it.PasswordPlain, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.ParticipantNo, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.PhotoURL, &it.IsActive)
 	if err != nil {
 		if isNoRows(err) {
 			return Student{}, false, nil
@@ -507,6 +509,7 @@ SELECT s.id::text,
        COALESCE(u.email,''),
        COALESCE(u.phone,''),
        s.nis,
+       COALESCE(s.participant_no,''),
        COALESCE(s.jenjang,''),
        COALESCE(s.program_id::text,''),
        COALESCE(s.level_id::text,''),
@@ -531,6 +534,7 @@ SELECT s.id::text,
 			&it.Email,
 			&it.Phone,
 			&it.NIS,
+			&it.ParticipantNo,
 			&it.Jenjang,
 			&it.ProgramID,
 			&it.LevelID,

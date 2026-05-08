@@ -50,6 +50,7 @@ const form = reactive({
   name: '',
   email: '',
   nis: '',
+  participant_no: '',
   jenjang: '',
   program_id: '',
   level_id: '',
@@ -94,6 +95,7 @@ const resetForm = () => {
   form.name = ''
   form.email = ''
   form.nis = ''
+  form.participant_no = ''
   form.jenjang = ''
   form.program_id = ''
   form.level_id = ''
@@ -151,6 +153,7 @@ const startEditStudent = (student) => {
   form.name = student.name || ''
   form.email = student.email || ''
   form.nis = student.nis || ''
+  form.participant_no = student.participant_no || ''
   form.jenjang = student.jenjang || ''
   form.program_id = student.program_id || ''
   form.level_id = student.level_id || ''
@@ -175,6 +178,7 @@ const saveStudent = async () => {
         name: form.name,
         email: form.email,
         nis: form.nis,
+        participant_no: form.participant_no,
         jenjang: form.jenjang,
         program_id: form.jenjang === 'SMA' ? form.program_id : '',
         level_id: form.level_id,
@@ -190,6 +194,7 @@ const saveStudent = async () => {
         name: form.name,
         email: form.email,
         nis: form.nis,
+        participant_no: form.participant_no,
         jenjang: form.jenjang,
         program_id: form.jenjang === 'SMA' ? form.program_id : '',
         level_id: form.level_id,
@@ -227,6 +232,7 @@ const copyStudent = (student) => {
   form.name = `${student.name} (Copy)`
   form.email = student.email
   form.nis = student.nis
+  form.participant_no = student.participant_no
   form.jenjang = student.jenjang
   form.program_id = student.program_id
   form.level_id = student.level_id
@@ -455,6 +461,9 @@ onMounted(async () => {
             <FormField label="NIS">
               <FormControl v-model="form.nis" placeholder="Nomor induk siswa" />
             </FormField>
+            <FormField label="Nomor Peserta Ujian">
+              <FormControl v-model="form.participant_no" placeholder="Contoh: ASAT-2026-001" />
+            </FormField>
             <FormField label="No. WhatsApp">
               <FormControl v-model="form.phone" placeholder="62812xxxx" />
             </FormField>
@@ -558,6 +567,7 @@ onMounted(async () => {
                   <th class="px-3 py-3">Username</th>
                   <th class="px-3 py-3">Password</th>
                   <th class="px-3 py-3">NIS</th>
+                  <th class="px-3 py-3">No Peserta</th>
                   <th class="px-3 py-3">Jenjang</th>
                   <th class="px-3 py-3">Email</th>
                   <th class="px-3 py-3">SISWA_ID</th>
@@ -576,6 +586,7 @@ onMounted(async () => {
                   <td class="px-3 py-3 text-slate-500 dark:text-slate-400">{{ student.username }}</td>
                   <td class="px-3 py-3 text-slate-500 dark:text-slate-400 font-mono">{{ student.password_plain || '-' }}</td>
                   <td class="px-3 py-3 text-slate-500 dark:text-slate-400">{{ student.nis }}</td>
+                  <td class="px-3 py-3 text-slate-500 dark:text-slate-400 font-mono">{{ student.participant_no || '-' }}</td>
                   <td class="px-3 py-3">
                     <span
                       v-if="student.jenjang"
@@ -644,7 +655,7 @@ onMounted(async () => {
                   </td>
                 </tr>
                 <tr v-if="!students.length && !isLoading">
-                  <td colspan="7" class="px-3 py-8 text-center text-slate-400 dark:text-slate-500 italic">Belum ada data siswa.</td>
+                  <td colspan="11" class="px-3 py-8 text-center text-slate-400 dark:text-slate-500 italic">Belum ada data siswa.</td>
                 </tr>
               </tbody>
             </table>

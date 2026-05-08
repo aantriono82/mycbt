@@ -20,6 +20,7 @@ type ExamSessionRow struct {
 	StudentName     string `json:"student_name"`
 	StudentUsername string `json:"student_username"`
 	StudentNIS      string `json:"student_nis"`
+	ParticipantNo   string `json:"participant_no"`
 	StudentEmail    string `json:"student_email"`
 	StudentPhone    string `json:"student_phone"`
 
@@ -64,6 +65,7 @@ SELECT s.id::text,
        u.name,
        u.username,
        st.nis,
+       COALESCE(st.participant_no,''),
        COALESCE(u.email,''),
        COALESCE(u.phone,'')
 FROM exam_sessions s
@@ -93,6 +95,7 @@ ORDER BY s.finished_at DESC NULLS LAST, s.started_at DESC`, examID, strings.Trim
 			&it.StudentName,
 			&it.StudentUsername,
 			&it.StudentNIS,
+			&it.ParticipantNo,
 			&it.StudentEmail,
 			&it.StudentPhone,
 		); err != nil {

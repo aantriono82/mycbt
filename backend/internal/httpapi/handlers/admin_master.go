@@ -1246,6 +1246,7 @@ type updateStudentReq struct {
 	Email     string `json:"email"`
 	Phone     string `json:"phone"`
 	NIS       string `json:"nis"`
+	ParticipantNo string `json:"participant_no"`
 	Jenjang   string `json:"jenjang"`
 	ProgramID string `json:"program_id"`
 	LevelID   string `json:"level_id"`
@@ -1260,6 +1261,7 @@ type createStudentReq struct {
 	Email     string `json:"email"`
 	Phone     string `json:"phone"`
 	NIS       string `json:"nis"`
+	ParticipantNo string `json:"participant_no"`
 	Jenjang   string `json:"jenjang"`
 	ProgramID string `json:"program_id"`
 	LevelID   string `json:"level_id"`
@@ -1292,6 +1294,7 @@ func (h *AdminMasterHandler) CreateStudent(c *gin.Context) {
 		strings.TrimSpace(req.Email),
 		strings.TrimSpace(req.Phone),
 		strings.TrimSpace(req.NIS),
+		strings.TrimSpace(req.ParticipantNo),
 		strings.TrimSpace(req.Jenjang),
 		strings.TrimSpace(req.ProgramID),
 		strings.TrimSpace(req.LevelID),
@@ -1342,6 +1345,7 @@ func (h *AdminMasterHandler) UpdateStudent(c *gin.Context) {
 		strings.TrimSpace(req.Email),
 		strings.TrimSpace(req.Phone),
 		strings.TrimSpace(req.NIS),
+		strings.TrimSpace(req.ParticipantNo),
 		strings.TrimSpace(req.Jenjang),
 		strings.TrimSpace(req.ProgramID),
 		strings.TrimSpace(req.LevelID),
@@ -1737,7 +1741,7 @@ WHERE id = $2 AND (google_id IS NULL OR google_id = '')`, googleID, existingUser
 		if _, spErr := tx.Exec(ctx, `SAVEPOINT sp_create_user`); spErr != nil {
 			return fmt.Errorf("create savepoint student approval: %w", spErr)
 		}
-		if studentID, userID, err := h.students.CreateStudentTx(ctx, tx, username, passwordHash, passwordPlain, name, email, phone, nis, "", programID, levelID, groupID, googleID); err != nil {
+		if studentID, userID, err := h.students.CreateStudentTx(ctx, tx, username, passwordHash, passwordPlain, name, email, phone, nis, "", "", programID, levelID, groupID, googleID); err != nil {
 			if pgerr.Code(err) == pgerr.CodeUniqueViolation {
 				_, _ = tx.Exec(ctx, `ROLLBACK TO SAVEPOINT sp_create_user`)
 
@@ -1947,8 +1951,8 @@ func (h *AdminMasterHandler) StudentsTemplate(c *gin.Context) {
 	defer func() { _ = f.Close() }()
 
 	f.SetSheetName("Sheet1", "DATA")
-	_ = f.SetSheetRow("DATA", "A1", &[]string{"username", "password", "nama", "email", "nis", "jenjang", "program_code", "level", "group"})
-	_ = f.SetSheetRow("DATA", "A2", &[]string{"siswa01", "password123", "Siti Aminah", "siti@example.com", "1234567890", "SMA", "IPA", "Kelas 10", "X IPA-1"})
+	_ = f.SetSheetRow("DATA", "A1", &[]string{"username", "password", "nama", "email", "nis", "participant_no", "jenjang", "program_code", "level", "group", "phone"})
+	_ = f.SetSheetRow("DATA", "A2", &[]string{"siswa01", "password123", "Siti Aminah", "siti@example.com", "1234567890", "ASAT-2026-001", "SMA", "IPA", "Kelas 10", "X IPA-1", "6281234567890"})
 
 	var buf bytes.Buffer
 	if err := f.Write(&buf); err != nil {
@@ -2078,7 +2082,7 @@ func (h *AdminMasterHandler) ImportStudents(c *gin.Context) {
 	res := importResult{Inserted: 0, Errors: []importError{}}
 
 	// Expect fixed headers (row 1).
-	// username, password, nama, email, nis, jenjang, program_code, level, group
+	// username, password, nama, email, nis, participant_no, jenjang, program_code, level, group, phone
 	for i := 1; i < len(rows); i++ {
 		rowNum := i + 1
 		r := rows[i]
@@ -2094,11 +2098,12 @@ func (h *AdminMasterHandler) ImportStudents(c *gin.Context) {
 		name := get(2)
 		email := get(3)
 		nis := get(4)
-		jenjang := get(5)
-		programCode := get(6)
-		levelName := get(7)
-		groupName := get(8)
-		phone := get(9)
+		participantNo := get(5)
+		jenjang := get(6)
+		programCode := get(7)
+		levelName := get(8)
+		groupName := get(9)
+		phone := get(10)
 
 		if username == "" || password == "" || name == "" || nis == "" {
 			res.Errors = append(res.Errors, importError{Row: rowNum, Message: "username/password/nama/nis required"})
@@ -2128,7 +2133,7 @@ func (h *AdminMasterHandler) ImportStudents(c *gin.Context) {
 			}
 		}
 
-		_, _, err = h.students.CreateStudent(c.Request.Context(), username, hash, password, name, email, phone, nis, jenjang, programID, levelID, groupID, "")
+		_, _, err = h.students.CreateStudent(c.Request.Context(), username, hash, password, name, email, phone, nis, participantNo, jenjang, programID, levelID, groupID, "")
 		if err != nil {
 			res.Errors = append(res.Errors, importError{Row: rowNum, Message: "insert failed (duplicate?)"})
 			continue
