@@ -339,6 +339,7 @@ const menuClick = (event, item) => {
       >
       <NavBar
         :menu="menuNavBar"
+        :show-mobile-menu-toggle="authStore.role === 'admin'"
         :class="[layoutAsidePadding]"
         @menu-click="menuClick"
       >

@@ -29,11 +29,15 @@ import {
   mdiFileDocument,
   mdiChartLine,
   mdiBullhornOutline,
+  mdiWeatherSunny,
+  mdiMoonWaningCrescent,
 } from '@mdi/js'
 import BaseIcon from '@/components/BaseIcon.vue'
 import { useAuthStore } from '@/stores/auth.js'
+import { useDarkModeStore } from '@/stores/darkMode.js'
 
 const authStore = useAuthStore()
+const darkModeStore = useDarkModeStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -47,7 +51,6 @@ const mainItems = computed(() => {
       { to: '/student/ujian', icon: mdiClipboardText, label: 'Ujian' },
       { to: '/student/hasil', icon: mdiChartBox, label: 'Hasil' },
       { to: '/student/pengumuman', icon: mdiBullhorn, label: 'Info' },
-      { to: '/student/profil', icon: mdiAccountCircle, label: 'Profil' },
     ]
   }
   if (authStore.role === 'teacher') {
@@ -56,7 +59,6 @@ const mainItems = computed(() => {
       { to: '/teacher/bank-soal', icon: mdiBookOpenVariant, label: 'Soal' },
       { to: '/teacher/ujian/jadwal', icon: mdiClipboardText, label: 'Jadwal' },
       { to: '/teacher/evaluasi', icon: mdiChartBox, label: 'Hasil' },
-      { to: '/teacher/profil', icon: mdiAccountCircle, label: 'Profil' },
     ]
   }
   // Admin
@@ -70,9 +72,12 @@ const mainItems = computed(() => {
 
 // --- Extra items shown in "More" drawer ---
 const moreItems = computed(() => {
-  if (authStore.role === 'student') return []
+  if (authStore.role === 'student') {
+    return [{ label: 'Profil', icon: mdiAccountCircle, to: '/student/profil' }]
+  }
   if (authStore.role === 'teacher') {
     return [
+      { label: 'Profil', icon: mdiAccountCircle, to: '/teacher/profil' },
       {
         label: 'Monitor Ujian',
         icon: mdiMonitorEye,
@@ -133,6 +138,10 @@ const handleLogout = () => {
   isMoreOpen.value = false
   authStore.logout()
   router.push('/login')
+}
+
+const toggleDarkMode = () => {
+  darkModeStore.set(null, true)
 }
 </script>
 
@@ -236,6 +245,35 @@ const handleLogout = () => {
 
         <!-- Divider + Logout -->
         <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <button
+            type="button"
+            class="mb-2 w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-colors active:scale-[0.98]"
+            :class="darkModeStore.isEnabled
+              ? 'text-indigo-300 hover:bg-indigo-900/20'
+              : 'text-purple-700 hover:bg-purple-50'"
+            @click="toggleDarkMode"
+          >
+            <div
+              class="flex items-center justify-center w-10 h-10 rounded-xl border transition-colors"
+              :class="darkModeStore.isEnabled
+                ? 'bg-indigo-900/40 border-indigo-700/60'
+                : 'bg-purple-100 border-purple-200'"
+            >
+              <BaseIcon
+                :path="darkModeStore.isEnabled ? mdiWeatherSunny : mdiMoonWaningCrescent"
+                size="20"
+                :class="darkModeStore.isEnabled ? 'text-indigo-300' : 'text-purple-600'"
+              />
+            </div>
+            <div class="flex flex-col items-start">
+              <span class="text-sm font-black uppercase tracking-tight">Mode Tampilan</span>
+              <span
+                class="text-[10px]"
+                :class="darkModeStore.isEnabled ? 'text-indigo-300/80' : 'text-purple-700/70'"
+              >{{ darkModeStore.isEnabled ? 'Dark Mode Aktif' : 'Light Mode Aktif' }}</span>
+            </div>
+          </button>
+
           <button
             type="button"
             class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors active:scale-[0.98]"

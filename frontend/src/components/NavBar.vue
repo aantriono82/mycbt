@@ -11,6 +11,10 @@ defineProps({
     type: Array,
     required: true,
   },
+  showMobileMenuToggle: {
+    type: Boolean,
+    default: true,
+  },
 })
 
 const emit = defineEmits(['menu-click'])
@@ -32,7 +36,7 @@ const isMenuNavBarActive = ref(false)
       </div>
       <div class="flex h-14 flex-none items-stretch">
         <slot name="right-actions" />
-        <div class="lg:hidden flex items-stretch">
+        <div v-if="showMobileMenuToggle" class="lg:hidden flex items-stretch">
           <NavBarItemPlain @click.prevent="isMenuNavBarActive = !isMenuNavBarActive">
             <BaseIcon :path="isMenuNavBarActive ? mdiClose : mdiDotsVertical" size="24" />
           </NavBarItemPlain>
@@ -40,7 +44,10 @@ const isMenuNavBarActive = ref(false)
       </div>
       <div
         class="absolute top-14 left-0 max-h-[calc(100dvh-(--spacing(14)))] w-screen overflow-y-auto bg-gray-50 shadow-lg lg:static lg:flex lg:w-auto lg:overflow-visible lg:shadow-none dark:bg-slate-800"
-        :class="[isMenuNavBarActive ? 'block' : 'hidden']"
+        :class="[
+          showMobileMenuToggle ? (isMenuNavBarActive ? 'block' : 'hidden') : 'hidden',
+          'lg:flex',
+        ]"
       >
         <slot name="right" />
         <div class="lg:mr-12 lg:flex lg:items-stretch">
