@@ -95,7 +95,7 @@ const loadSchoolIdentity = async () => {
     logoVersion.value = Date.now()
   } catch {
     try {
-      if (!authStore.isAuthenticated) return
+      if (!authStore.isAuthenticated || authStore.role !== 'admin') return
       const { data } = await api.get('/api/v1/settings/school-identity')
       const normalized = normalizeSchoolIdentity(data || {})
       schoolIdentity.value = {
