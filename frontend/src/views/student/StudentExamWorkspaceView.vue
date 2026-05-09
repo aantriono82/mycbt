@@ -18,6 +18,7 @@ import BaseButton from '@/components/BaseButton.vue'
 import QuillEditor from '@/components/QuillEditor.vue'
 import QuestionStimulusViewer from '@/components/QuestionStimulusViewer.vue'
 import PreviewMatchingBoard from '@/components/student/PreviewMatchingBoard.vue'
+import BottomSheet from '@/components/BottomSheet.vue'
 import { api } from '@/services/api.js'
 import { resolveBackendAssetUrl } from '@/utils/assetUrl.js'
 import { useAuthStore } from '@/stores/auth.js'
@@ -287,7 +288,15 @@ const formatTime = (seconds) => {
   return [h, m, s].map(v => v < 10 ? '0' + v : v).join(':')
 }
 
+
+const vibrate = (pattern = 10) => {
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    navigator.vibrate(pattern)
+  }
+}
+
 const submitExam = async () => {
+  vibrate([20, 50, 20])
   try {
     await examStore.submitExam()
     showSubmitModal.value = false
@@ -410,6 +419,7 @@ const onNavClickAndClose = (idx, ev) => {
 const saveAnswer = (q) => {
   const qid = String(q?.id ?? '')
   if (!qid) return
+  vibrate(5)
   ensureAnswerShapeForQuestion(q)
   examStore.saveAnswer(qid)
 }
@@ -821,7 +831,7 @@ const isMatchingRightUsed = (rightId) => {
 <template>
   <div class="tka-theme min-h-screen bg-slate-100">
     <!-- TOP NAVBAR -->
-    <header class="bg-blue-600 dark:bg-slate-900 border-b border-blue-700 dark:border-slate-800 text-white px-4 sm:px-6 py-4 flex items-center justify-between shadow-lg sticky top-0 z-50">
+    <header class="bg-blue-600/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-blue-700/50 dark:border-slate-800 text-white px-4 sm:px-6 py-4 flex items-center justify-between shadow-lg sticky top-0 z-[60]">
       <div class="flex items-center gap-2 sm:gap-3">
          <div class="p-2 bg-white/10 rounded-lg hidden lg:block">
             <BaseIcon :path="mdiInformationOutline" size="20" />
@@ -832,29 +842,29 @@ const isMatchingRightUsed = (rightId) => {
       </div>
       <div class="flex items-center gap-2 sm:gap-3 md:gap-5">
         <!-- Connection & Save Status Indicator -->
-        <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10">
-          <div class="flex items-center gap-1.5">
+        <div class="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 rounded-xl bg-white/10 border border-white/10">
+          <div class="flex items-center gap-1.5" :title="isOnline ? 'Terhubung' : 'Terputus'">
              <BaseIcon 
                :path="isOnline ? mdiWifi : mdiWifiOff" 
-               :size="16" 
+               :size="14" 
                :class="isOnline ? 'text-emerald-400' : 'text-rose-400'" 
              />
-             <span class="text-[10px] font-black uppercase tracking-tighter">
+             <span class="hidden md:inline text-[10px] font-black uppercase tracking-tighter">
                {{ isOnline ? 'Terhubung' : 'Terputus' }}
              </span>
           </div>
-          <div class="w-px h-3 bg-white/20 mx-1"></div>
-          <div class="flex items-center gap-1.5 min-w-[100px]">
+          <div class="w-px h-3 bg-white/20"></div>
+          <div class="flex items-center gap-1.5 min-w-max">
              <BaseIcon 
                :path="isSaving ? mdiCloudSyncOutline : mdiCloudCheckOutline" 
-               :size="16" 
+               :size="14" 
                :class="isSaving ? 'text-amber-400 animate-spin' : 'text-emerald-400'" 
              />
              <div class="flex flex-col">
-               <span class="text-[10px] font-black uppercase tracking-tighter leading-none">
-                 {{ isSaving ? 'Menyimpan...' : 'Tersimpan' }}
+               <span class="text-[9px] md:text-[10px] font-black uppercase tracking-tighter leading-none">
+                 {{ isSaving ? 'Save...' : 'Safe' }}
                </span>
-               <span v-if="!isSaving && lastSavedAt" class="text-[8px] opacity-60 font-medium">
+               <span v-if="!isSaving && lastSavedAt" class="hidden md:inline text-[8px] opacity-60 font-medium">
                  {{ formatLastSaved(lastSavedAt) }}
                </span>
              </div>
@@ -867,7 +877,7 @@ const isMatchingRightUsed = (rightId) => {
         </div>
         <div :class="[
           'px-4 py-2 rounded-2xl font-black flex items-center gap-2 transition-all duration-500 shadow-inner',
-          timeLeft < 300 ? 'bg-red-500 text-white animate-pulse' : 'bg-blue-700/50 text-white border border-blue-400/20'
+          timeLeft < 600 ? 'bg-red-500 text-white animate-urgent-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'bg-blue-700/50 text-white border border-blue-400/20'
         ]">
           <span class="text-[10px] hidden sm:inline tracking-widest">SISA WAKTU:</span>
           <span class="font-mono text-sm md:text-base">{{ formatTime(timeLeft) }}</span>
@@ -1085,48 +1095,82 @@ const isMatchingRightUsed = (rightId) => {
 
                 <!-- True/False (ANBK-style) + Legacy Fallback -->
                 <div v-else-if="currentQuestion.type === 'true_false'" class="space-y-4">
-                   <div v-if="currentQuestion.statements?.length" class="bg-white dark:bg-slate-900 rounded-[1rem] sm:rounded-[2rem] border border-slate-100 dark:border-slate-800 overflow-x-auto shadow-xl">
-                      <table class="w-full table-fixed border-collapse text-sm">
-                         <colgroup>
-                           <col class="w-[70%]" />
-                           <col class="w-[15%]" />
-                           <col class="w-[15%]" />
-                         </colgroup>
-                         <thead class="bg-slate-50/80 dark:bg-slate-800/80 font-black text-[10px] text-slate-500 uppercase tracking-widest">
-                            <tr>
-                               <th class="py-5 px-6 text-left border-b border-slate-100 dark:border-slate-800">Pernyataan / Pertanyaan</th>
-                               <th class="py-5 px-3 text-center border-b border-slate-100 dark:border-slate-800">Benar</th>
-                               <th class="py-5 px-3 text-center border-b border-slate-100 dark:border-slate-800">Salah</th>
-                            </tr>
-                         </thead>
-                          <tbody class="divide-y divide-slate-50 dark:divide-slate-800">
-                             <tr v-for="st in currentQuestion.statements" :key="st.id" class="group hover:bg-blue-50/30 transition-colors">
-                                <td class="py-6 px-6 text-slate-700 dark:text-slate-300 font-medium align-middle leading-relaxed" v-html="renderHtml(st.content)"></td>
-                                <td class="py-6 px-3 text-center align-middle">
-                                   <div class="flex justify-center">
-                                     <input
-                                       type="radio"
-                                       :name="'st-'+st.id"
-                                       :checked="answers[currentQuestion.id]?.values?.[st.id] === true"
-                                       @change="() => setTrueFalseStatement(st.id, true)"
-                                       class="h-6 w-6 cursor-pointer accent-blue-600"
-                                     />
-                                   </div>
-                                </td>
-                                <td class="py-6 px-3 text-center align-middle">
-                                   <div class="flex justify-center">
-                                     <input
-                                       type="radio"
-                                       :name="'st-'+st.id"
-                                       :checked="answers[currentQuestion.id]?.values?.[st.id] === false"
-                                       @change="() => setTrueFalseStatement(st.id, false)"
-                                       class="h-6 w-6 cursor-pointer accent-red-500"
-                                     />
-                                   </div>
-                                </td>
-                             </tr>
-                          </tbody>
-                      </table>
+                   <div v-if="currentQuestion.statements?.length">
+                      <!-- Desktop Table -->
+                      <div class="hidden sm:block bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 overflow-x-auto shadow-xl">
+                        <table class="w-full table-fixed border-collapse text-sm">
+                           <colgroup>
+                             <col class="w-[70%]" />
+                             <col class="w-[15%]" />
+                             <col class="w-[15%]" />
+                           </colgroup>
+                           <thead class="bg-slate-50/80 dark:bg-slate-800/80 font-black text-[10px] text-slate-500 uppercase tracking-widest">
+                              <tr>
+                                 <th class="py-5 px-6 text-left border-b border-slate-100 dark:border-slate-800">Pernyataan / Pertanyaan</th>
+                                 <th class="py-5 px-3 text-center border-b border-slate-100 dark:border-slate-800">Benar</th>
+                                 <th class="py-5 px-3 text-center border-b border-slate-100 dark:border-slate-800">Salah</th>
+                              </tr>
+                           </thead>
+                            <tbody class="divide-y divide-slate-50 dark:divide-slate-800">
+                               <tr v-for="st in currentQuestion.statements" :key="st.id" class="group hover:bg-blue-50/30 transition-colors">
+                                  <td class="py-6 px-6 text-slate-700 dark:text-slate-300 font-medium align-middle leading-relaxed" v-html="renderHtml(st.content)"></td>
+                                  <td class="py-6 px-3 text-center align-middle">
+                                     <div class="flex justify-center">
+                                       <input
+                                         type="radio"
+                                         :name="'st-desktop-'+st.id"
+                                         :checked="answers[currentQuestion.id]?.values?.[st.id] === true"
+                                         @change="() => setTrueFalseStatement(st.id, true)"
+                                         class="h-6 w-6 cursor-pointer accent-blue-600"
+                                       />
+                                     </div>
+                                  </td>
+                                  <td class="py-6 px-3 text-center align-middle">
+                                     <div class="flex justify-center">
+                                       <input
+                                         type="radio"
+                                         :name="'st-desktop-'+st.id"
+                                         :checked="answers[currentQuestion.id]?.values?.[st.id] === false"
+                                         @change="() => setTrueFalseStatement(st.id, false)"
+                                         class="h-6 w-6 cursor-pointer accent-red-500"
+                                       />
+                                     </div>
+                                  </td>
+                               </tr>
+                            </tbody>
+                        </table>
+                      </div>
+
+                      <!-- Mobile Cards -->
+                      <div class="sm:hidden space-y-3">
+                        <div v-for="st in currentQuestion.statements" :key="st.id" class="p-5 rounded-[1.5rem] bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 shadow-sm transition-all">
+                          <div class="mb-4 text-sm font-bold text-slate-700 dark:text-slate-200 leading-relaxed" v-html="renderHtml(st.content)"></div>
+                          <div class="grid grid-cols-2 gap-3">
+                            <button
+                              type="button"
+                              class="flex items-center justify-center gap-2 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 border-2"
+                              :class="answers[currentQuestion.id]?.values?.[st.id] === true 
+                                ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20' 
+                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-400'"
+                              @click="setTrueFalseStatement(st.id, true)"
+                            >
+                              <span v-if="answers[currentQuestion.id]?.values?.[st.id] === true">✓</span>
+                              Benar
+                            </button>
+                            <button
+                              type="button"
+                              class="flex items-center justify-center gap-2 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 border-2"
+                              :class="answers[currentQuestion.id]?.values?.[st.id] === false 
+                                ? 'bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/20' 
+                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-400'"
+                              @click="setTrueFalseStatement(st.id, false)"
+                            >
+                              <span v-if="answers[currentQuestion.id]?.values?.[st.id] === false">✓</span>
+                              Salah
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                    </div>
 
                    <!-- Legacy Single Statement -->
@@ -1281,7 +1325,8 @@ const isMatchingRightUsed = (rightId) => {
       </button>
     </div>
 
-    <!-- NAVIGATION FOOTER --    <footer v-if="sessionId && !submitDone" class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-3 sm:p-5 px-4 sm:px-6 fixed bottom-0 left-0 right-0 z-[100] shadow-[0_-12px_40px_-15px_rgba(0,0,0,0.1)]">
+    <!-- NAVIGATION FOOTER -->
+    <footer v-if="sessionId && !submitDone" class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 p-4 sm:p-5 px-4 sm:px-6 fixed bottom-0 left-0 right-0 z-[100] shadow-[0_-12px_40px_-15px_rgba(0,0,0,0.1)]">
        <div class="max-w-[1600px] mx-auto w-full flex items-center justify-between gap-2">
           <button 
              class="group flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-4 sm:px-8 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-sm hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-1 sm:flex-none"
@@ -1317,56 +1362,49 @@ const isMatchingRightUsed = (rightId) => {
        </div>
     </footer>
 
-    <!-- QUESTION LIST MODAL (Mobile) -->
-    <div
-      v-if="showQuestionListModal"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[180] flex items-center justify-center p-4 animate-fade-in"
-      @click.self="showQuestionListModal = false"
+    <!-- QUESTION LIST BOTTOM SHEET (Mobile) -->
+    <BottomSheet
+      v-model="showQuestionListModal"
+      title="Navigasi Soal"
     >
-      <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl border border-slate-100 overflow-hidden max-h-[82vh] flex flex-col">
-        <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
-          <div class="font-black uppercase tracking-widest text-xs text-slate-800">Daftar Soal</div>
-          <button
-            type="button"
-            class="px-3 py-2 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-black uppercase text-[11px] tracking-widest"
-            @click="showQuestionListModal = false"
-          >
-            Tutup
-          </button>
+      <div class="grid grid-cols-5 sm:grid-cols-6 gap-3">
+        <button
+          v-for="(q, idx) in questions"
+          :key="q.id"
+          type="button"
+          class="h-11 flex items-center justify-center rounded-xl border-2 font-bold text-xs transition-all active:scale-90"
+          :class="navButtonClass(q, idx)"
+          @click="(e) => onNavClickAndClose(idx, e)"
+        >
+          {{ idx + 1 }}
+        </button>
+      </div>
+
+      <div class="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-4">
+        <div class="flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+           <span class="h-3 w-3 bg-emerald-500 rounded-full"></span> Terjawab
         </div>
-        <div class="p-5 overflow-auto">
-          <div class="grid grid-cols-5 sm:grid-cols-6 gap-2">
-            <button
-              v-for="(q, idx) in questions"
-              :key="q.id"
-              type="button"
-              class="h-10 flex items-center justify-center rounded border font-semibold text-sm transition-colors"
-              :class="navButtonClass(q, idx)"
-              @click="(e) => onNavClickAndClose(idx, e)"
-            >
-              {{ idx + 1 }}
-            </button>
-          </div>
-
-          <div class="mt-5 pt-4 border-t border-slate-200 grid grid-cols-2 gap-3 text-xs text-slate-600">
-            <div class="flex items-center gap-2"><span class="h-3 w-3 bg-emerald-500 rounded-sm"></span>Sudah</div>
-            <div class="flex items-center gap-2"><span class="h-3 w-3 bg-[#F4C20D] rounded-sm"></span>Ragu</div>
-            <div class="flex items-center gap-2"><span class="h-3 w-3 border-2 border-[#0B7EA1] rounded-sm"></span>Dibuka</div>
-            <div class="flex items-center gap-2"><span class="h-3 w-3 border border-slate-300 rounded-sm bg-white"></span>Belum</div>
-          </div>
-
-          <div class="mt-5 pt-5 border-t border-slate-200">
-            <button
-              type="button"
-              class="w-full bg-[#0D47A1] text-white py-3 rounded font-black uppercase tracking-widest text-xs shadow-sm hover:brightness-95 active:scale-[0.99] transition-all"
-              @click="() => { showQuestionListModal = false; showSubmitModal = true }"
-            >
-              Selesai Ujian
-            </button>
-          </div>
+        <div class="flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+           <span class="h-3 w-3 bg-amber-400 rounded-full"></span> Ragu-Ragu
+        </div>
+        <div class="flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+           <span class="h-3 w-3 border-2 border-blue-600 rounded-full"></span> Aktif
+        </div>
+         <div class="flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+           <span class="h-3 w-3 border-2 border-slate-200 dark:border-slate-700 rounded-full"></span> Belum
         </div>
       </div>
-    </div>
+
+      <div class="mt-8">
+        <button
+          type="button"
+          class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all"
+          @click="() => { showQuestionListModal = false; showSubmitModal = true }"
+        >
+          Selesai Ujian
+        </button>
+      </div>
+    </BottomSheet>
 
     <!-- SUBMIT MODAL -->
     <div v-if="showSubmitModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[200] flex items-center justify-center p-6 animate-fade-in shadow-2xl">
@@ -1444,17 +1482,26 @@ const isMatchingRightUsed = (rightId) => {
 }
 
 /* Question swap transition */
+@keyframes urgentPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.9; }
+}
+.animate-urgent-pulse {
+  animation: urgentPulse 1s ease-in-out infinite;
+}
+
+/* Question swap transition: Slide-Up */
 .qswap-enter-active,
 .qswap-leave-active {
-  transition: opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 250ms cubic-bezier(0.16, 1, 0.3, 1), transform 350ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .qswap-enter-from {
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(30px);
 }
 .qswap-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-30px);
 }
 @media (prefers-reduced-motion: reduce) {
   .qswap-enter-active,

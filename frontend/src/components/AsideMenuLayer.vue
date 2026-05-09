@@ -147,10 +147,10 @@ watch(
 <template>
   <aside
     id="aside"
-    class="fixed top-0 z-40 flex h-screen w-60 overflow-hidden transition-(--transition-position) lg:py-2 lg:pl-2"
+    class="fixed top-0 z-40 flex h-screen w-60 overflow-hidden transition-(--transition-position) lg:pl-2"
   >
-    <div class="aside flex flex-1 flex-col overflow-hidden lg:rounded-[2rem] bg-white/70 dark:bg-[#13082a]/70 backdrop-blur-xl border-r lg:border border-slate-200 dark:border-blue-900/30 shadow-2xl shadow-blue-300/40 dark:shadow-blue-900/30 mb-2">
-      <div class="aside-brand flex h-20 flex-row items-center justify-between px-6">
+    <div class="aside flex flex-1 flex-col overflow-hidden lg:rounded-[2rem] bg-white/70 dark:bg-[#13082a]/70 backdrop-blur-xl border-r lg:border border-slate-200 dark:border-blue-900/30 shadow-2xl shadow-blue-300/40 dark:shadow-blue-900/30">
+      <div class="aside-brand flex h-[102.5px] flex-row items-center justify-between px-6 pt-6 border-b border-slate-200/80 dark:border-slate-800/80">
         <div class="flex items-center cursor-pointer" @click="router.push('/dashboard')">
           <img :src="schoolBrandLogo" class="mr-3 h-10 w-10 rounded-full shadow-lg hover:scale-110 transition-transform duration-300 brightness-110 object-contain bg-white" alt="School Logo" />
           <div class="flex flex-col leading-tight">

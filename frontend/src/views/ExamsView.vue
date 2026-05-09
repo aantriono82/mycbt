@@ -47,6 +47,10 @@ const students = ref([])
 const attachedQuestionSets = ref([])
 const targets = ref([])
 const sessions = ref([])
+const filteredQuestionSets = computed(() => {
+  if (!form.subject_id) return []
+  return questionSets.value.filter(qs => qs.subject_id === form.subject_id)
+})
 
 const errorMessage = ref('')
 const successMessage = ref('')
@@ -333,14 +337,24 @@ const loadTeachers = async () => {
 const loadTargetLookups = async () => {
   if (!authStore.isAuthenticated) return
   try {
-    const [levelsRes, groupsRes, studentsRes] = await Promise.all([
-      api.get('/api/v1/lookups/levels'),
-      api.get('/api/v1/lookups/groups'),
-      api.get('/api/v1/lookups/students', { params: { limit: 100, offset: 0 } }),
-    ])
-    levels.value = levelsRes?.data?.data || []
-    groups.value = groupsRes?.data?.data || []
-    students.value = studentsRes?.data?.data || []
+    if (isTeacherArea.value) {
+      const [assignRes, studentsRes] = await Promise.all([
+        api.get('/api/v1/lookups/my-assignments'),
+        api.get('/api/v1/lookups/students', { params: { limit: 100, offset: 0 } }),
+      ])
+      levels.value = assignRes?.data?.data?.levels || []
+      groups.value = assignRes?.data?.data?.groups || []
+      students.value = studentsRes?.data?.data || []
+    } else {
+      const [levelsRes, groupsRes, studentsRes] = await Promise.all([
+        api.get('/api/v1/lookups/levels'),
+        api.get('/api/v1/lookups/groups'),
+        api.get('/api/v1/lookups/students', { params: { limit: 100, offset: 0 } }),
+      ])
+      levels.value = levelsRes?.data?.data || []
+      groups.value = groupsRes?.data?.data || []
+      students.value = studentsRes?.data?.data || []
+    }
   } catch {
     levels.value = []
     groups.value = []
@@ -363,8 +377,13 @@ const loadQuestionSets = async () => {
 const loadSubjects = async () => {
   if (!authStore.isAuthenticated) return
   try {
-    const { data } = await api.get('/api/v1/lookups/subjects')
-    subjects.value = data?.data || []
+    if (isTeacherArea.value) {
+      const { data } = await api.get('/api/v1/lookups/my-assignments')
+      subjects.value = data?.data?.subjects || []
+    } else {
+      const { data } = await api.get('/api/v1/lookups/subjects')
+      subjects.value = data?.data || []
+    }
   } catch {
     subjects.value = []
   }
@@ -1189,7 +1208,7 @@ onMounted(async () => {
                 <FormField label="Question Set" :error="formErrors.question_set_id">
                   <FormControl
                     v-model="attachForm.question_set_id"
-                    :options="questionSets.map((item) => ({ id: item.id, label: item.title }))"
+                    :options="[{id: '', label: 'Pilih Bank Soal'}, ...filteredQuestionSets.map((item) => ({ id: item.id, label: item.title }))]"
                   />
                 </FormField>
                 <FormField label="Jumlah Soal" :error="formErrors.num_questions">

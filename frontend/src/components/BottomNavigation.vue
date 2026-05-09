@@ -127,7 +127,14 @@ const hasMore = computed(() => moreItems.value.length > 0)
 
 const isActive = (to) => route.path.startsWith(to)
 
+const vibrate = (pattern = 10) => {
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    navigator.vibrate(pattern)
+  }
+}
+
 const goTo = (to) => {
+  vibrate(5)
   isMoreOpen.value = false
   if (router.currentRoute.value.path !== to) {
     router.push(to)
@@ -135,12 +142,14 @@ const goTo = (to) => {
 }
 
 const handleLogout = () => {
+  vibrate([10, 50, 10])
   isMoreOpen.value = false
   authStore.logout()
   router.push('/login')
 }
 
 const toggleDarkMode = () => {
+  vibrate(5)
   darkModeStore.set(null, true)
 }
 </script>
@@ -153,16 +162,22 @@ const toggleDarkMode = () => {
         v-for="item in mainItems"
         :key="item.to"
         :to="item.to"
-        class="flex flex-col items-center justify-center flex-1 gap-0.5 transition-all duration-200 py-1 rounded-xl mx-0.5"
+        class="group flex flex-col items-center justify-center flex-1 gap-0.5 transition-all duration-300 py-1 rounded-xl mx-0.5 active:scale-90"
         :class="isActive(item.to)
           ? 'text-indigo-600 dark:text-indigo-400'
           : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'"
+        @click="vibrate(5)"
       >
         <div
-          class="flex items-center justify-center w-9 h-6 rounded-full transition-all duration-200"
+          class="relative flex items-center justify-center w-9 h-6 rounded-full transition-all duration-200"
           :class="isActive(item.to) ? 'bg-indigo-100 dark:bg-indigo-900/40' : ''"
         >
           <BaseIcon :path="item.icon" size="20" />
+          <!-- Active Glow Dot -->
+          <div 
+            v-if="isActive(item.to)"
+            class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-indigo-600 dark:bg-indigo-400 shadow-[0_0_8px_rgba(79,70,229,0.8)]"
+          ></div>
         </div>
         <span class="text-[9px] font-bold uppercase tracking-tighter leading-none">{{ item.label }}</span>
       </router-link>
@@ -171,15 +186,20 @@ const toggleDarkMode = () => {
       <button
         v-if="hasMore"
         type="button"
-        class="flex flex-col items-center justify-center flex-1 gap-0.5 transition-all duration-200 py-1 rounded-xl mx-0.5"
+        class="flex flex-col items-center justify-center flex-1 gap-0.5 transition-all duration-200 py-1 rounded-xl mx-0.5 active:scale-90"
         :class="isMoreOpen ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'"
-        @click="isMoreOpen = !isMoreOpen"
+        @click="() => { vibrate(5); isMoreOpen = !isMoreOpen }"
       >
         <div
-          class="flex items-center justify-center w-9 h-6 rounded-full transition-all duration-200"
+          class="relative flex items-center justify-center w-9 h-6 rounded-full transition-all duration-200"
           :class="isMoreOpen ? 'bg-indigo-100 dark:bg-indigo-900/40' : ''"
         >
           <BaseIcon :path="isMoreOpen ? mdiClose : mdiDotsGrid" size="20" />
+          <!-- Active Glow Dot for More -->
+          <div 
+            v-if="isMoreOpen"
+            class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-indigo-600 dark:bg-indigo-400 shadow-[0_0_8px_rgba(79,70,229,0.8)]"
+          ></div>
         </div>
         <span class="text-[9px] font-bold uppercase tracking-tighter leading-none">{{ isMoreOpen ? 'Tutup' : 'Lainnya' }}</span>
       </button>

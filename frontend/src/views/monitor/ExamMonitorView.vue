@@ -16,6 +16,12 @@ import { useAuthStore } from '@/stores/auth.js'
 const route = useRoute()
 const authStore = useAuthStore()
 
+const vibrate = (pattern = 10) => {
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    navigator.vibrate(pattern)
+  }
+}
+
 const exams = ref([])
 const tokens = ref([])
 const selectedExamId = ref('')
@@ -146,6 +152,7 @@ const toggleToken = async (token) => {
     await api.patch(`/api/v1/tokens/${token.id}`, {
       is_active: !token.is_active,
     })
+    vibrate(10)
     successMessage.value = `Token ${!token.is_active ? 'diaktifkan' : 'dinonaktifkan'}`
     await loadTokens()
   } catch (error) {
@@ -161,6 +168,7 @@ const copyToken = async (token) => {
   successMessage.value = ''
   try {
     await navigator.clipboard.writeText(token.token)
+    vibrate(5)
     successMessage.value = `Token ${token.token} disalin`
   } catch {
     errorMessage.value = 'Gagal menyalin token ke clipboard'
@@ -280,49 +288,88 @@ onBeforeUnmount(() => {
       <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <CardBox color="purple">
           <h3 class="mb-4 text-lg font-semibold dark:text-slate-100">Aktivitas Peserta</h3>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
+          <div class="overflow-x-auto -mx-6 sm:mx-0">
+            <!-- Desktop Table -->
+            <table class="hidden sm:table w-full text-left text-sm">
               <thead class="border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 uppercase text-xs tracking-wider font-bold">
 	                <tr>
-	                  <th class="px-3 py-3">Peserta</th>
-	                  <th class="px-3 py-3 text-center">Koneksi</th>
-	                  <th class="px-3 py-3 text-center">Status</th>
-	                  <th class="px-3 py-3 text-center">Progress</th>
-	                  <th class="px-3 py-3">Last Seen</th>
+	                  <th class="px-6 py-4">Peserta</th>
+	                  <th class="px-3 py-4 text-center">Koneksi</th>
+	                  <th class="px-3 py-4 text-center">Status</th>
+	                  <th class="px-3 py-4 text-center">Progress</th>
+	                  <th class="px-6 py-4">Last Seen</th>
 	                </tr>
               </thead>
               <tbody>
                 <tr v-for="item in filteredSessions" :key="item.session_id" class="border-b dark:border-slate-800 last:border-b-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-	                  <td class="px-3 py-3">
-	                    <div class="font-medium dark:text-slate-100">{{ item.student_name }}</div>
+	                  <td class="px-6 py-4">
+	                    <div class="font-bold dark:text-slate-100">{{ item.student_name }}</div>
 	                    <div class="text-slate-500 dark:text-slate-400 text-xs">{{ item.student_username }}</div>
 	                  </td>
-	                  <td class="px-3 py-3 text-center">
+	                  <td class="px-3 py-4 text-center">
 	                    <div class="flex flex-col items-center gap-1">
 	                      <span
-	                        class="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight"
+	                        class="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-widest"
 	                        :class="item.connection_status === 'online' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'"
 	                      >
 	                        {{ item.connection_status }}
 	                      </span>
 	                      <span v-if="item.warning_count > 0" class="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 text-[9px] font-black animate-pulse">
-	                         ⚠️ {{ item.warning_count }} WARNING
+	                         ⚠️ {{ item.warning_count }}
 	                      </span>
 	                    </div>
 	                  </td>
-	                  <td class="px-3 py-3 text-center">
-                      <span class="text-[10px] font-bold uppercase tracking-tight px-2 py-0.5 rounded border dark:border-slate-800">
+	                  <td class="px-3 py-4 text-center">
+                      <span class="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg border dark:border-slate-800">
                         {{ item.status }}
                       </span>
                     </td>
-	                  <td class="px-3 py-3 text-center font-mono font-bold text-info dark:text-sky-400">{{ item.progress_percent }}%</td>
-	                  <td class="px-3 py-3 text-xs text-slate-500 dark:text-slate-500">{{ item.last_seen_at || '-' }}</td>
-	                </tr>
-	                <tr v-if="!filteredSessions.length">
-	                  <td colspan="5" class="px-3 py-10 text-center text-slate-400 dark:text-slate-500 italic">Belum ada sesi peserta untuk ujian ini.</td>
+	                  <td class="px-3 py-4 text-center font-mono font-black text-blue-600 dark:text-sky-400 text-lg">{{ item.progress_percent }}%</td>
+	                  <td class="px-6 py-4 text-xs text-slate-500 dark:text-slate-500">{{ item.last_seen_at || '-' }}</td>
 	                </tr>
               </tbody>
             </table>
+
+            <!-- Mobile Card View -->
+            <div class="sm:hidden divide-y divide-slate-100 dark:divide-slate-800">
+              <div v-for="item in filteredSessions" :key="item.session_id" class="p-4 flex flex-col gap-3">
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <div class="font-black text-slate-900 dark:text-white uppercase tracking-tighter">{{ item.student_name }}</div>
+                    <div class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">{{ item.student_username }}</div>
+                  </div>
+                  <div class="flex flex-col items-end gap-1.5">
+                    <span
+                      class="rounded-lg px-2 py-1 text-[9px] font-black uppercase tracking-widest shadow-sm"
+                      :class="item.connection_status === 'online' ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400'"
+                    >
+                      {{ item.connection_status }}
+                    </span>
+                    <span v-if="item.warning_count > 0" class="px-1.5 py-0.5 rounded bg-red-500 text-white text-[9px] font-black animate-pulse">
+                       ⚠️ {{ item.warning_count }} WARN
+                    </span>
+                  </div>
+                </div>
+                
+                <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-100 dark:border-slate-800">
+                  <div class="flex flex-col">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Status</span>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">{{ item.status }}</span>
+                  </div>
+                  <div class="flex flex-col items-center">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Progress</span>
+                    <span class="font-mono font-black text-blue-600 dark:text-sky-400 text-lg">{{ item.progress_percent }}%</span>
+                  </div>
+                  <div class="flex flex-col items-end">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Last Seen</span>
+                    <span class="text-[10px] font-bold text-slate-500">{{ item.last_seen_at?.split(' ')[1] || '-' }}</span>
+                  </div>
+                </div>
+              </div>
+              <div v-if="!filteredSessions.length" class="py-10 text-center text-slate-400 italic text-sm">
+                Belum ada sesi peserta.
+              </div>
+            </div>
           </div>
         </CardBox>
 

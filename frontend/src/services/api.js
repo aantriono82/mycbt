@@ -67,7 +67,7 @@ export const handleApiError = (
       )
     }
   } else if (status === 403) {
-    notificationStore?.pushError?.('Akses ditolak: Anda tidak memiliki izin untuk aksi ini.')
+    notificationStore?.pushError?.(`Akses ditolak: ${message}`)
   } else if (status >= 500) {
     notificationStore?.pushError?.(`Server Error: ${message}`)
   } else if (status !== 404) {

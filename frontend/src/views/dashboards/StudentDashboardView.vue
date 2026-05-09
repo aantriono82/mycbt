@@ -14,9 +14,10 @@ import DashboardCard from '@/components/DashboardCard.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
 import BaseSkeleton from '@/components/BaseSkeleton.vue'
-import { mdiContentCopy, mdiLockOutline } from '@mdi/js'
+import { mdiContentCopy, mdiLockOutline, mdiPlayCircleOutline } from '@mdi/js'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
+import CircularProgress from '@/components/CircularProgress.vue'
 
 const authStore = useAuthStore()
 
@@ -91,6 +92,10 @@ const averageScore = computed(() => {
   return Math.round(total / results.value.length)
 })
 
+const activeExam = computed(() => {
+  return exams.value.find((item) => item.session_status === 'in_progress')
+})
+
 const copyToken = (token) => {
   navigator.clipboard.writeText(token)
   alert('Token berhasil disalin: ' + token)
@@ -106,18 +111,54 @@ onMounted(() => {
     <SectionMain>
       <SectionTitleLineWithButton :icon="mdiHomeOutline" title="Dashboard Siswa" main />
 
-      <div class="mb-6 rounded-2xl bg-white dark:bg-slate-900/50 border border-blue-400/60 dark:border-blue-800/80 px-4 py-6 sm:px-6 sm:py-8 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
+      <div class="mb-6 rounded-[2rem] bg-white dark:bg-slate-900/50 border border-blue-400/60 dark:border-blue-800/80 px-6 py-8 sm:px-8 sm:py-10 shadow-sm relative overflow-hidden transition-all hover:shadow-md group">
         <!-- Decoration -->
-        <div class="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-blue-500/5 blur-3xl"></div>
+        <div class="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-blue-500/5 blur-3xl transition-all group-hover:scale-110"></div>
+        <div class="absolute bottom-0 left-0 -mb-10 -ml-10 h-48 w-48 rounded-full bg-indigo-500/5 blur-2xl"></div>
         
-        <div class="relative z-10 max-w-3xl">
-          <div class="mb-2 text-[10px] font-black uppercase tracking-[0.4em] text-blue-600 dark:text-sky-400">Portal Peserta AtigaCBT</div>
-          <h2 class="mb-2 text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">
-            {{ authStore.user?.name || 'Peserta' }}, cek jadwal ujian terbaru kamu.
-          </h2>
-          <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
-            Semua aktivitas ujian dan hasil belajar kamu dapat dipantau dari panel ini.
-          </p>
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div class="max-w-2xl">
+            <div class="mb-3 flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest">Portal Peserta</span>
+              <span class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">AtigaCBT v1.0</span>
+            </div>
+            <h2 class="mb-3 text-2xl sm:text-4xl font-black text-slate-800 dark:text-white tracking-tight leading-tight">
+              Selamat belajar, <span class="text-blue-600 dark:text-blue-400">{{ authStore.user?.name?.split(' ')[0] || 'Peserta' }}</span>!
+            </h2>
+            <p class="text-sm sm:text-base font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
+              Pantau jadwal ujian, hasil belajar, dan pengumuman terbaru kamu di sini.
+            </p>
+          </div>
+          
+          <div v-if="!isLoading" class="flex-none flex items-center justify-center bg-white dark:bg-slate-800 rounded-3xl p-4 shadow-xl border border-slate-100 dark:border-slate-700">
+            <CircularProgress :value="averageScore" :size="80" :stroke-width="10" color="blue" label="SKOR RATA2" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Resume Exam Card (Mobile Focused) -->
+      <div v-if="activeExam" class="mb-6 animate-fade-in">
+        <div class="group relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white shadow-xl transition-all hover:shadow-2xl active:scale-[0.98]">
+          <div class="absolute right-0 top-0 -mr-8 -mt-8 h-32 w-32 rounded-full bg-white/10 blur-2xl"></div>
+          <div class="relative z-10 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+              <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md shadow-inner">
+                <BaseIcon :path="mdiPlayCircleOutline" size="32" class="text-white animate-pulse" />
+              </div>
+              <div>
+                <div class="text-[10px] font-black uppercase tracking-widest opacity-80">Ujian Sedang Berlangsung</div>
+                <div class="text-lg font-black tracking-tight">{{ activeExam.title }}</div>
+                <div class="text-[11px] font-bold opacity-70 italic">{{ activeExam.subject_name }}</div>
+              </div>
+            </div>
+            <BaseButton 
+              :to="`/student/kerjakan/${activeExam.id}`" 
+              color="white" 
+              label="Lanjutkan" 
+              rounded-full
+              class="!text-blue-600 font-black px-6"
+            />
+          </div>
         </div>
       </div>
 
@@ -141,21 +182,26 @@ onMounted(() => {
           <DashboardCard
             :icon="mdiClipboardTextClockOutline"
             color="sky"
-            label="Ujian Mendatang"
+            label="Mendatang"
             :number="upcomingExams.length"
+            small
           />
           <DashboardCard
             :icon="mdiSchoolOutline"
             color="emerald"
-            label="Ujian Selesai"
+            label="Selesai"
             :number="completedExamsCount"
+            small
           />
-          <DashboardCard
-            :icon="mdiBellOutline"
-            color="amber"
-            label="Rata-rata Nilai"
-            :number="averageScore"
-          />
+          <div class="hidden md:block">
+            <DashboardCard
+              :icon="mdiBellOutline"
+              color="amber"
+              label="Rata-rata Nilai"
+              :number="averageScore"
+              small
+            />
+          </div>
         </template>
       </div>
 

@@ -14,6 +14,12 @@ import { useAuthStore } from '@/stores/auth.js'
 
 const authStore = useAuthStore()
 
+const vibrate = (pattern = 10) => {
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    navigator.vibrate(pattern)
+  }
+}
+
 const exams = ref([])
 const selectedExamId = ref('')
 const isLoading = ref(false)
@@ -177,6 +183,7 @@ const forceSubmitSession = async (item) => {
   try {
     actionSessionId.value = item.session_id
     await api.post(`/api/v1/exams/${selectedExamId.value}/sessions/${item.session_id}/force-submit`, {})
+    vibrate([20, 50, 20])
     successMessage.value = 'Force submit berhasil'
     await loadParticipants()
     startStream()
@@ -198,6 +205,7 @@ const resetSession = async (item) => {
   try {
     actionSessionId.value = item.session_id
     await api.post(`/api/v1/exams/${selectedExamId.value}/sessions/${item.session_id}/reset`, {})
+    vibrate(10)
     successMessage.value = 'Reset login berhasil'
     await loadParticipants()
     startStream()
@@ -370,26 +378,27 @@ onBeforeUnmount(() => {
       <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <CardBox color="purple">
           <h3 class="mb-4 text-lg font-semibold dark:text-slate-100">Status Peserta</h3>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
+          <div class="overflow-x-auto -mx-6 sm:mx-0">
+            <!-- Desktop Table -->
+            <table class="hidden sm:table w-full text-left text-sm">
               <thead class="border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 uppercase text-xs tracking-wider font-bold">
                 <tr>
-                  <th class="px-3 py-3">Nama</th>
-                  <th class="px-3 py-3 text-center">Status</th>
-                  <th class="px-3 py-3 text-center">Progress</th>
-                  <th class="px-3 py-3">Last Seen</th>
-                  <th class="px-3 py-3 text-center">Aksi</th>
+                  <th class="px-6 py-4">Nama</th>
+                  <th class="px-3 py-4 text-center">Status</th>
+                  <th class="px-3 py-4 text-center">Progress</th>
+                  <th class="px-6 py-4">Last Seen</th>
+                  <th class="px-6 py-4 text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="item in filteredParticipants" :key="item.student_id" class="border-b dark:border-slate-800 last:border-b-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                  <td class="px-3 py-3">
-                    <div class="font-medium dark:text-slate-100">{{ item.student_name }}</div>
+                  <td class="px-6 py-4">
+                    <div class="font-bold dark:text-slate-100">{{ item.student_name }}</div>
                     <div class="text-[10px] font-mono text-slate-500 dark:text-slate-400 italic">{{ item.student_username }} · {{ item.student_nis }}</div>
                   </td>
-                  <td class="px-3 py-3 text-center">
+                  <td class="px-3 py-4 text-center">
                     <span
-                      class="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight"
+                      class="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-widest"
                       :class="
                         item.connection_status === 'online'
                           ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
@@ -400,17 +409,17 @@ onBeforeUnmount(() => {
                     >
                       {{ item.connection_status }}
                     </span>
-                    <div class="mt-1 text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500">
+                    <div class="mt-1 text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
                       {{ item.session_status || 'NOT JOINED' }}
                     </div>
                   </td>
-                  <td class="px-3 py-3 text-center">
-                    <div class="font-bold text-info dark:text-sky-400">{{ item.progress_percent }}%</div>
-                    <div class="text-[10px] text-slate-500 dark:text-slate-500 font-mono">({{ item.answered_questions }}/{{ item.total_questions }})</div>
+                  <td class="px-3 py-4 text-center">
+                    <div class="font-black text-blue-600 dark:text-sky-400 text-lg">{{ item.progress_percent }}%</div>
+                    <div class="text-[9px] text-slate-500 dark:text-slate-500 font-black uppercase tracking-tighter">({{ item.answered_questions }}/{{ item.total_questions }})</div>
                   </td>
-                  <td class="px-3 py-3 text-xs text-slate-500 dark:text-slate-500 italic">{{ item.last_seen_at || '-' }}</td>
-                  <td class="px-3 py-3">
-                    <div class="flex flex-wrap gap-2">
+                  <td class="px-6 py-4 text-xs text-slate-500 dark:text-slate-500 italic">{{ item.last_seen_at || '-' }}</td>
+                  <td class="px-6 py-4">
+                    <div class="flex flex-wrap gap-2 justify-center">
                       <BaseButton
                         color="warning"
                         small
@@ -430,11 +439,67 @@ onBeforeUnmount(() => {
                     </div>
                   </td>
                 </tr>
-                <tr v-if="!filteredParticipants.length">
-                  <td colspan="5" class="px-3 py-10 text-center text-slate-400 dark:text-slate-500 italic">Belum ada peserta target untuk ujian ini.</td>
-                </tr>
               </tbody>
             </table>
+
+            <!-- Mobile Card View -->
+            <div class="sm:hidden divide-y divide-slate-100 dark:divide-slate-800">
+              <div v-for="item in filteredParticipants" :key="item.student_id" class="p-4 flex flex-col gap-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <div class="font-black text-slate-900 dark:text-white uppercase tracking-tighter">{{ item.student_name }}</div>
+                    <div class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">{{ item.student_username }} · {{ item.student_nis }}</div>
+                  </div>
+                  <span
+                    class="rounded-lg px-2 py-1 text-[9px] font-black uppercase tracking-widest shadow-sm"
+                    :class="
+                      item.connection_status === 'online'
+                        ? 'bg-emerald-500 text-white'
+                        : item.connection_status === 'blocked'
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                    "
+                  >
+                    {{ item.connection_status }}
+                  </span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                   <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center">
+                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Progress</span>
+                      <span class="font-mono font-black text-blue-600 dark:text-sky-400 text-xl">{{ item.progress_percent }}%</span>
+                      <span class="text-[8px] font-black text-slate-400 uppercase">{{ item.answered_questions }}/{{ item.total_questions }}</span>
+                   </div>
+                   <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center">
+                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Status Sesi</span>
+                      <span class="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 text-center">{{ item.session_status || 'NOT JOINED' }}</span>
+                      <span class="text-[8px] font-bold text-slate-400 uppercase mt-1">{{ item.last_seen_at?.split(' ')[1] || '-' }}</span>
+                   </div>
+                </div>
+
+                <div v-if="item.session_id" class="flex gap-2">
+                  <button
+                    type="button"
+                    class="flex-1 py-3 rounded-xl bg-amber-500 text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-amber-500/20 active:scale-95 transition-all disabled:opacity-30"
+                    :disabled="item.session_status !== 'in_progress' || actionSessionId === item.session_id || !!batchAction"
+                    @click="forceSubmitSession(item)"
+                  >
+                    Force Submit
+                  </button>
+                  <button
+                    type="button"
+                    class="flex-1 py-3 rounded-xl bg-blue-600 text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-30"
+                    :disabled="item.session_status === 'submitted' || item.session_status === 'forced' || actionSessionId === item.session_id || !!batchAction"
+                    @click="resetSession(item)"
+                  >
+                    Reset Login
+                  </button>
+                </div>
+              </div>
+              <div v-if="!filteredParticipants.length" class="py-10 text-center text-slate-400 italic text-sm">
+                Belum ada peserta target.
+              </div>
+            </div>
           </div>
         </CardBox>
 
