@@ -24,6 +24,7 @@ import { useAuthStore } from '@/stores/auth.js'
 import { useNotificationStore } from '@/stores/notification.js'
 import { api } from '@/services/api.js'
 import { resolveBackendAssetUrl } from '@/utils/assetUrl.js'
+import { compressImage } from '@/utils/image.js'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -70,8 +71,9 @@ const uploadPhoto = async () => {
   isUploading.value = true
   
   try {
+    const optimizedFile = await compressImage(photoFile.value, 400, 400, 0.8)
     const formData = new FormData()
-    formData.append('file', photoFile.value)
+    formData.append('file', optimizedFile)
     
     await api.post('/api/v1/me/photo', formData, {
       headers: {

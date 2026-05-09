@@ -143,3 +143,15 @@ input[type="datetime-local"]::-webkit-datetime-edit-minute-field {
   opacity: 0;
   transform: translateY(-10px);
 }
+
+/* Shimmer Animation for Premium Skeletons */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+

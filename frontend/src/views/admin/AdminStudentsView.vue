@@ -13,10 +13,10 @@ import FormField from '@/components/FormField.vue'
 import FormControl from '@/components/FormControl.vue'
 import PasswordField from '@/components/PasswordField.vue'
 import { api } from '@/services/api.js'
-import { useAuthStore } from '@/stores/auth.js'
 import { useNotificationStore } from '@/stores/notification.js'
 import { shortCode2 } from '@/utils/shortCode.js'
 import { resolveBackendAssetUrl } from '@/utils/assetUrl.js'
+import { compressImage } from '@/utils/image.js'
 
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
@@ -321,8 +321,9 @@ const uploadStudentPhoto = async () => {
   successMessage.value = ''
 
   try {
+    const optimizedFile = await compressImage(photoFile.value, 400, 400, 0.8)
     const formData = new FormData()
-    formData.append('file', photoFile.value)
+    formData.append('file', optimizedFile)
 
     const { data } = await api.post(`/api/v1/me/photo?target_user_id=${editingUserId.value}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },

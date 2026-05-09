@@ -22,9 +22,11 @@ import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
 import DashboardCard from '@/components/DashboardCard.vue'
 import QuickMenuCard from '@/components/QuickMenuCard.vue'
+import ActivityFeedCard from '@/components/ActivityFeedCard.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
+import { startAdminTour, checkAndStartTour } from '@/services/tour.js'
 
 const authStore = useAuthStore()
 
@@ -64,7 +66,10 @@ const loadStats = async () => {
   }
 }
 
-onMounted(loadStats)
+onMounted(() => {
+  loadStats()
+  checkAndStartTour()
+})
 </script>
 
 <template>
@@ -95,9 +100,13 @@ onMounted(loadStats)
             <BaseIcon :path="mdiEmailOutline" size="18" class="mr-1" />
             Email
           </a>
+          <button @click="startAdminTour" class="ml-4 rounded-full bg-white/20 hover:bg-white/30 text-blue-600 dark:text-blue-400 px-3 py-1 transition-colors border border-blue-200 dark:border-blue-800 flex items-center">
+            Mulai Tour Panduan
+          </button>
         </div>
       </div>
     </div>
+
 
 
       <div v-if="!authStore.isAuthenticated" class="mb-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-700 border border-amber-100">
@@ -260,8 +269,13 @@ onMounted(loadStats)
               Sinkronisasi statistik...
             </div>
           </div>
+          
+          <div class="mt-6 h-[400px]">
+            <ActivityFeedCard />
+          </div>
         </div>
       </div>
     </SectionMain>
+
   </LayoutAuthenticated>
 </template>

@@ -18,10 +18,12 @@ defineProps({
 <template>
   <div 
     :class="[
-      'animate-pulse bg-slate-200 dark:bg-slate-700',
+      'animate-pulse relative overflow-hidden bg-slate-200 dark:bg-slate-700/50',
       width,
       height,
       rounded
     ]"
-  ></div>
+  >
+    <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 dark:via-white/10 to-transparent animate-shimmer"></div>
+  </div>
 </template>
