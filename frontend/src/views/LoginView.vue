@@ -13,7 +13,11 @@ import BaseButtons from '@/components/BaseButtons.vue'
 import LayoutGuest from '@/layouts/LayoutGuest.vue'
 import NotificationBarInCard from '@/components/NotificationBarInCard.vue'
 import { useAuthStore } from '@/stores/auth.js'
+import { useSchoolIdentityStore } from '@/stores/schoolIdentity.js'
 import { api } from '@/services/api.js'
+
+const schoolStore = useSchoolIdentityStore()
+const authStore = useAuthStore()
 
 const form = reactive({
   login: '',
@@ -26,7 +30,6 @@ const showRegisterOptions = ref(false)
 
 const router = useRouter()
 const route = useRoute()
-const authStore = useAuthStore()
 const appVersion = __APP_VERSION__
 
 const submit = async () => {
@@ -73,6 +76,7 @@ const startRegistration = (role) => {
 }
 
 onMounted(async () => {
+  schoolStore.loadSchoolIdentity()
   const queryToken = route.query.token
   if (queryToken && typeof queryToken === 'string') {
     const ok = await authStore.loginWithToken(queryToken)

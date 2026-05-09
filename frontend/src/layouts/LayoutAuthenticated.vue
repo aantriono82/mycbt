@@ -13,7 +13,8 @@ import { useRouter } from 'vue-router'
 import { getMenuAsideMain, menuAsideBottom } from '@/menuAside.js'
 import { getMenuNavBar } from '@/menuNavBar.js'
 import { useDarkModeStore } from '@/stores/darkMode.js'
-import { homeRouteForRole, useAuthStore } from '@/stores/auth.js'
+import { useAuthStore } from '@/stores/auth.js'
+import { useSchoolIdentityStore } from '@/stores/schoolIdentity.js'
 import BaseIcon from '@/components/BaseIcon.vue'
 import NavBar from '@/components/NavBar.vue'
 import NavBarItemPlain from '@/components/NavBarItemPlain.vue'
@@ -25,6 +26,7 @@ import { api, getApiBaseUrl } from '@/services/api.js'
 
 const darkModeStore = useDarkModeStore()
 const authStore = useAuthStore()
+const schoolStore = useSchoolIdentityStore()
 
 const router = useRouter()
 
@@ -284,6 +286,9 @@ const stopNotificationsSync = () => {
 onMounted(() => {
   updateDigitalClock()
   clockTimer = setInterval(updateDigitalClock, 1000)
+
+  // Load school identity for branding
+  schoolStore.loadSchoolIdentity(authStore.role === 'admin')
 
   if (authStore.role !== 'student') return
   try {
