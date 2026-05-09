@@ -215,17 +215,17 @@ onMounted(loadStats)
             <h2 class="text-2xl font-bold">Spacer</h2>
           </div>
 
-          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-orange-400/60 dark:border-orange-800/80 shadow-sm p-6">
-            <div class="flex items-center mb-6">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-orange-400/60 dark:border-orange-800/80 shadow-sm p-6 pb-8">
+            <div class="flex items-center mb-4">
               <BaseIcon :path="mdiRocketLaunchOutline" size="24" class="text-orange-500 mr-2" />
               <h3 class="text-xl font-bold text-gray-800 dark:text-slate-100">Mulai Cepat AtigaCBT</h3>
             </div>
             
-            <p class="text-sm text-gray-600 dark:text-slate-400 mb-6">
+            <p class="text-sm text-gray-600 dark:text-slate-400 mb-4">
               Ikuti langkah berikut untuk mulai menggunakan AtigaCBT:
             </p>
             
-            <div class="space-y-4">
+            <div class="space-y-3">
               <div class="flex items-start">
                 <div class="text-blue-600 dark:text-blue-400 font-bold mr-3 mt-0.5">1.</div>
                 <div>
@@ -256,10 +256,9 @@ onMounted(loadStats)
               </div>
             </div>
 
-            <div v-if="isLoading" class="mt-8 flex items-center text-sm text-blue-500 dark:text-blue-400 italic">
+            <div v-if="isLoading" class="mt-4 flex items-center text-sm text-blue-500 dark:text-blue-400 italic">
               <div class="animate-spin mr-2 h-4 w-4 border-2 border-blue-500 dark:border-blue-400 border-t-transparent rounded-full"></div>
               Sinkronisasi statistik...
-            </div>
             </div>
           </div>
         </div>
