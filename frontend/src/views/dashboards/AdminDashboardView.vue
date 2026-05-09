@@ -22,11 +22,9 @@ import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
 import DashboardCard from '@/components/DashboardCard.vue'
 import QuickMenuCard from '@/components/QuickMenuCard.vue'
-import ActivityFeedCard from '@/components/ActivityFeedCard.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
-import { startAdminTour, checkAndStartTour } from '@/services/tour.js'
 
 const authStore = useAuthStore()
 
@@ -66,10 +64,7 @@ const loadStats = async () => {
   }
 }
 
-onMounted(() => {
-  loadStats()
-  checkAndStartTour()
-})
+onMounted(loadStats)
 </script>
 
 <template>
@@ -100,9 +95,6 @@ onMounted(() => {
             <BaseIcon :path="mdiEmailOutline" size="18" class="mr-1" />
             Email
           </a>
-          <button @click="startAdminTour" class="ml-4 rounded-full bg-white/20 hover:bg-white/30 text-blue-600 dark:text-blue-400 px-3 py-1 transition-colors border border-blue-200 dark:border-blue-800 flex items-center">
-            Mulai Tour Panduan
-          </button>
         </div>
       </div>
     </div>
@@ -268,10 +260,7 @@ onMounted(() => {
               <div class="animate-spin mr-2 h-4 w-4 border-2 border-blue-500 dark:border-blue-400 border-t-transparent rounded-full"></div>
               Sinkronisasi statistik...
             </div>
-          </div>
-          
-          <div class="mt-6 h-[400px]">
-            <ActivityFeedCard />
+            </div>
           </div>
         </div>
       </div>
