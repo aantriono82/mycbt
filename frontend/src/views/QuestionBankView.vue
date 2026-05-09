@@ -17,6 +17,7 @@ import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
 import CardBox from '@/components/CardBox.vue'
+import BaseEmptyState from '@/components/BaseEmptyState.vue'
 import CardBoxModal from '@/components/CardBoxModal.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseButtons from '@/components/BaseButtons.vue'
@@ -25,8 +26,10 @@ import FormField from '@/components/FormField.vue'
 import FormControl from '@/components/FormControl.vue'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
+import { useNotificationStore } from '@/stores/notification.js'
 
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -145,7 +148,7 @@ const openCloneModal = (id) => {
 
 const submitClone = async () => {
   if (!cloneTargetTeacherID.value) {
-    alert('Silakan pilih guru tujuan')
+    notificationStore.pushWarning('Silakan pilih guru tujuan')
     return
   }
   
@@ -158,7 +161,7 @@ const submitClone = async () => {
     isCloneModalActive.value = false
     await loadQuestionSets()
   } catch (error) {
-    alert(error?.response?.data?.error?.message || 'Gagal menyalin bank soal')
+    notificationStore.pushError(error?.response?.data?.error?.message || 'Gagal menyalin bank soal')
   } finally {
     isCloning.value = false
   }
@@ -295,6 +298,15 @@ onMounted(async () => {
                 </tr>
               </tbody>
             </table>
+            <div v-if="!questionSets.length && !isLoadingSets" class="py-12 border-t dark:border-slate-800">
+              <BaseEmptyState 
+                title="Bank Soal Kosong" 
+                description="Anda belum memiliki bank soal. Silakan buat baru melalui form di sebelah kiri."
+                button-label="Refresh Data"
+                :button-icon="mdiRefresh"
+                @click="loadQuestionSets"
+              />
+            </div>
           </div>
         </CardBox>
       </div>

@@ -21,11 +21,13 @@ import BaseIcon from '@/components/BaseIcon.vue'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
 import { useAuthStore } from '@/stores/auth.js'
+import { useNotificationStore } from '@/stores/notification.js'
 import { api } from '@/services/api.js'
 import { resolveBackendAssetUrl } from '@/utils/assetUrl.js'
 
 const route = useRoute()
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 
 const title = computed(() => route.meta?.title || 'Profil')
 const roleLabel = computed(() => authStore.roleLabel)
@@ -80,12 +82,12 @@ const uploadPhoto = async () => {
     // Refresh user data to update avatar everywhere
     await authStore.loadMe()
     
-    alert('Foto profil berhasil diperbarui!')
+    notificationStore.pushSuccess('Foto profil berhasil diperbarui!')
     photoFile.value = null
     photoPreview.value = null
   } catch (error) {
     console.error('Upload failed:', error)
-    alert(error?.response?.data?.error?.message || 'Gagal mengunggah foto profil')
+    notificationStore.pushError(error?.response?.data?.error?.message || 'Gagal mengunggah foto profil')
   } finally {
     isUploading.value = false
   }
@@ -95,7 +97,7 @@ const submitProfile = async () => {
   const name = String(profileForm.name || '').trim()
   const email = String(profileForm.email || '').trim()
   if (!name) {
-    alert('Nama wajib diisi')
+    notificationStore.pushWarning('Nama wajib diisi')
     return
   }
 
@@ -103,9 +105,9 @@ const submitProfile = async () => {
   try {
     await api.put('/api/v1/me', { name, email })
     await authStore.loadMe()
-    alert('Profil berhasil diperbarui')
+    notificationStore.pushSuccess('Profil berhasil diperbarui')
   } catch (error) {
-    alert(error?.response?.data?.error?.message || 'Gagal menyimpan profil')
+    notificationStore.pushError(error?.response?.data?.error?.message || 'Gagal menyimpan profil')
   } finally {
     isSavingProfile.value = false
   }
@@ -117,15 +119,15 @@ const submitPass = async () => {
   const confirm = String(passwordForm.password_confirmation || '')
 
   if (!current || !next || !confirm) {
-    alert('Semua field password wajib diisi')
+    notificationStore.pushWarning('Semua field password wajib diisi')
     return
   }
   if (next.length < 8) {
-    alert('Password baru minimal 8 karakter')
+    notificationStore.pushWarning('Password baru minimal 8 karakter')
     return
   }
   if (next !== confirm) {
-    alert('Konfirmasi password tidak sama')
+    notificationStore.pushWarning('Konfirmasi password tidak sama')
     return
   }
 
@@ -139,9 +141,9 @@ const submitPass = async () => {
     passwordForm.password_current = ''
     passwordForm.password = ''
     passwordForm.password_confirmation = ''
-    alert('Password berhasil diubah')
+    notificationStore.pushSuccess('Password berhasil diubah')
   } catch (error) {
-    alert(error?.response?.data?.error?.message || 'Gagal mengubah password')
+    notificationStore.pushError(error?.response?.data?.error?.message || 'Gagal mengubah password')
   } finally {
     isChangingPassword.value = false
   }

@@ -12,6 +12,7 @@ import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
 import CardBoxModal from '@/components/CardBoxModal.vue'
 import ItemAnalysisAI from '@/components/ItemAnalysisAI.vue'
+import { useNotificationStore } from '@/stores/notification.js'
 import BaseSkeleton from '@/components/BaseSkeleton.vue'
 import { mdiPencil, mdiClose } from '@mdi/js'
 
@@ -36,6 +37,7 @@ const formatDateTime = (value) => {
 }
 
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 
 const exams = ref([])
 const selectedExamId = ref('')
@@ -340,7 +342,7 @@ const saveEssayScore = async (attempt) => {
     })
     // No need to reload everything, just a subtle confirmation
   } catch (error) {
-    alert(error?.response?.data?.error?.message || 'Gagal menyimpan nilai')
+    notificationStore.pushError(error?.response?.data?.error?.message || 'Gagal menyimpan nilai')
   } finally {
     isSavingEssay.value = false
   }
@@ -406,9 +408,9 @@ const blastResults = async () => {
     const { data } = await api.post(`/api/v1/exams/${selectedExamId.value}/results/blast`, {
       channels: blastChannels.value,
     })
-    alert(`Blast selesai. Terkirim: ${data.data.sent_count}, Gagal: ${data.data.failed_count}`)
+    notificationStore.pushSuccess(`Blast selesai. Terkirim: ${data.data.sent_count}, Gagal: ${data.data.failed_count}`)
   } catch (error) {
-    alert(error?.response?.data?.error?.message || 'Gagal mengirim nilai')
+    notificationStore.pushError(error?.response?.data?.error?.message || 'Gagal mengirim nilai')
   } finally {
     isBlastingResults.value = false
   }
@@ -423,9 +425,9 @@ const syncLTIScores = async () => {
     const { data } = await api.post(`/api/v1/exams/${selectedExamId.value}/lti/sync-scores`)
     const result = data?.data || {}
     const detailText = Array.isArray(result.details) && result.details.length ? `\n\nDetail:\n- ${result.details.join('\n- ')}` : ''
-    alert(`Sync LMS selesai.\nTarget: ${result.target_count || 0}\nBerhasil: ${result.synced_count || 0}\nSkip: ${result.skipped_count || 0}\nGagal: ${result.failed_count || 0}${detailText}`)
+    notificationStore.pushSuccess(`Sync LMS selesai. Berhasil: ${result.synced_count || 0}`)
   } catch (error) {
-    alert(error?.response?.data?.error?.message || 'Gagal sinkronkan nilai ke LMS')
+    notificationStore.pushError(error?.response?.data?.error?.message || 'Gagal sinkronkan nilai ke LMS')
   } finally {
     isSyncingLTI.value = false
   }

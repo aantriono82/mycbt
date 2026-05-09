@@ -17,9 +17,11 @@ import BaseSkeleton from '@/components/BaseSkeleton.vue'
 import { mdiContentCopy, mdiLockOutline, mdiPlayCircleOutline } from '@mdi/js'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
+import { useNotificationStore } from '@/stores/notification.js'
 import CircularProgress from '@/components/CircularProgress.vue'
 
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 
 const exams = ref([])
 const results = ref([])
@@ -98,7 +100,7 @@ const activeExam = computed(() => {
 
 const copyToken = (token) => {
   navigator.clipboard.writeText(token)
-  alert('Token berhasil disalin: ' + token)
+  notificationStore.pushSuccess('Token berhasil disalin: ' + token)
 }
 
 onMounted(() => {

@@ -302,7 +302,7 @@ const submitExam = async () => {
     showSubmitModal.value = false
     await router.push('/student/hasil')
   } catch (err) {
-    alert(err.response?.data?.error?.message || 'Gagal mengirim jawaban')
+    notificationStore.pushError(err.response?.data?.error?.message || 'Gagal mengirim jawaban')
   }
 }
 
@@ -637,6 +637,7 @@ onMounted(() => {
   document.addEventListener('copy', preventDefault)
   document.addEventListener('paste', preventDefault)
   document.addEventListener('keydown', handleKeyPrevention)
+  document.addEventListener('keydown', handleKeyDown)
   window.addEventListener('online', updateOnlineStatus)
   window.addEventListener('offline', updateOnlineStatus)
   window.addEventListener('resize', scheduleMatchingLines)
@@ -654,6 +655,7 @@ onUnmounted(() => {
   document.removeEventListener('copy', preventDefault)
   document.removeEventListener('paste', preventDefault)
   document.removeEventListener('keydown', handleKeyPrevention)
+  document.removeEventListener('keydown', handleKeyDown)
   window.removeEventListener('online', updateOnlineStatus)
   window.removeEventListener('offline', updateOnlineStatus)
   window.removeEventListener('resize', scheduleMatchingLines)
@@ -698,6 +700,64 @@ const handleKeyPrevention = (e) => {
     (e.ctrlKey && e.key === 'u')
   ) {
     e.preventDefault()
+  }
+}
+
+const handleKeyDown = (e) => {
+  // If typing in an input/textarea/editable, don't trigger shortcuts
+  const active = document.activeElement
+  if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) {
+    return
+  }
+
+  const key = e.key.toLowerCase()
+
+  // Navigation
+  if (key === 'arrowright') {
+    if (currentIndex.value < questions.value.length - 1) {
+      e.preventDefault()
+      goNext()
+    }
+  } else if (key === 'arrowleft') {
+    if (currentIndex.value > 0) {
+      e.preventDefault()
+      goPrev()
+    }
+  }
+
+  // Options (A-E or 1-5)
+  const optionKeys = ['a', 'b', 'c', 'd', 'e']
+  const numKeys = ['1', '2', '3', '4', '5']
+  let optIdx = -1
+  if (optionKeys.includes(key)) optIdx = optionKeys.indexOf(key)
+  else if (numKeys.includes(key)) optIdx = numKeys.indexOf(key)
+
+  if (optIdx >= 0) {
+    const q = currentQuestion.value
+    if (q && (q.type === 'mc_single' || q.type === 'mc_multiple')) {
+      const opt = q.options?.[optIdx]
+      if (opt) {
+        e.preventDefault()
+        if (q.type === 'mc_single') {
+          answers.value[q.id] = { selected_option_id: String(opt.id) }
+          saveAnswer(q)
+        } else {
+          toggleMulti(q.id, opt.id)
+        }
+      }
+    }
+  }
+
+  // Flagged (Ragu-ragu)
+  if (key === 'f') {
+    e.preventDefault()
+    toggleFlagged()
+  }
+
+  // Submit (only if on last question and modal not already open)
+  if (key === 'enter' && currentIndex.value === questions.value.length - 1 && !showSubmitModal.value) {
+    e.preventDefault()
+    showSubmitModal.value = true
   }
 }
 

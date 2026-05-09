@@ -5,6 +5,7 @@ import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
 import CardBox from '@/components/CardBox.vue'
+import BaseEmptyState from '@/components/BaseEmptyState.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseButtons from '@/components/BaseButtons.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
@@ -13,10 +14,12 @@ import FormControl from '@/components/FormControl.vue'
 import PasswordField from '@/components/PasswordField.vue'
 import { api } from '@/services/api.js'
 import { useAuthStore } from '@/stores/auth.js'
+import { useNotificationStore } from '@/stores/notification.js'
 import { shortCode2 } from '@/utils/shortCode.js'
 import { resolveBackendAssetUrl } from '@/utils/assetUrl.js'
 
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 
 const students = ref([])
 const meta = ref({ total: 0 })
@@ -298,7 +301,7 @@ const uploadImport = async (event) => {
 
 const copyId = (id) => {
   navigator.clipboard.writeText(id)
-  alert('ID disalin ke clipboard')
+  notificationStore.pushInfo('ID disalin ke clipboard')
 }
 
 const shortId = (id) => shortCode2(id)
@@ -575,7 +578,7 @@ onMounted(async () => {
                   <th class="px-3 py-3">Aksi</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody v-if="students.length || isLoading">
                 <tr v-for="student in students" :key="student.id" class="border-b dark:border-slate-800 last:border-b-0 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors">
                   <td class="px-3 py-3">
                     <div class="h-10 w-10 overflow-hidden rounded-full border border-slate-200 dark:border-slate-700 bg-slate-100">
@@ -654,11 +657,18 @@ onMounted(async () => {
                     </div>
                   </td>
                 </tr>
-                <tr v-if="!students.length && !isLoading">
-                  <td colspan="11" class="px-3 py-8 text-center text-slate-400 dark:text-slate-500 italic">Belum ada data siswa.</td>
-                </tr>
               </tbody>
             </table>
+
+            <div v-if="!students.length && !isLoading" class="py-12 border-t dark:border-slate-800">
+               <BaseEmptyState 
+                  title="Siswa Tidak Ditemukan" 
+                  description="Tidak ada data siswa yang cocok dengan kriteria pencarian Anda."
+                  button-label="Muat Ulang Data"
+                  :button-icon="mdiRefresh"
+                  @click="query = ''; loadStudents()"
+               />
+            </div>
           </div>
         </CardBox>
       </div>
