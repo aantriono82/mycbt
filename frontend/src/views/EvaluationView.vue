@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { mdiChartBoxOutline, mdiDownload, mdiRefresh, mdiAccountGroup, mdiCheckCircleOutline, mdiClockAlertOutline, mdiChartLine, mdiSend, mdiCloudUploadOutline, mdiFilePdfBox } from '@mdi/js'
+import { mdiChartBoxOutline, mdiDownload, mdiRefresh, mdiAccountGroup, mdiCheckCircleOutline, mdiClockAlertOutline, mdiChartLine, mdiSend, mdiFilePdfBox } from '@mdi/js'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
@@ -60,7 +60,7 @@ const isLoadingEssays = ref(false)
 const isSavingEssay = ref(false)
 const errorMessage = ref('')
 const isBlastingResults = ref(false)
-const isSyncingLTI = ref(false)
+
 const blastChannels = ref(['email', 'whatsapp'])
 const showScoreDistribution = ref(true)
 const showItemAnalysis = ref(true)
@@ -416,22 +416,7 @@ const blastResults = async () => {
   }
 }
 
-const syncLTIScores = async () => {
-  if (!selectedExamId.value) return
-  if (!confirm('Sinkronkan nilai final yang sudah selesai dikoreksi ke LMS via LTI AGS?')) return
 
-  isSyncingLTI.value = true
-  try {
-    const { data } = await api.post(`/api/v1/exams/${selectedExamId.value}/lti/sync-scores`)
-    const result = data?.data || {}
-    const detailText = Array.isArray(result.details) && result.details.length ? `\n\nDetail:\n- ${result.details.join('\n- ')}` : ''
-    notificationStore.pushSuccess(`Sync LMS selesai. Berhasil: ${result.synced_count || 0}`)
-  } catch (error) {
-    notificationStore.pushError(error?.response?.data?.error?.message || 'Gagal sinkronkan nilai ke LMS')
-  } finally {
-    isSyncingLTI.value = false
-  }
-}
 
 const exportItemAnalysis = async () => {
   if (!canLoad.value || !selectedExamId.value) return
@@ -506,14 +491,7 @@ onMounted(async () => {
             label="Refresh" 
             @click="loadExams(); loadResults(); loadItemAnalysis(); loadScoreDistribution()" 
           />
-          <BaseButton 
-            :icon="mdiCloudUploadOutline" 
-            color="success" 
-            small
-            label="LMS" 
-            :disabled="isSyncingLTI || !selectedExamId" 
-            @click="syncLTIScores" 
-          />
+
           <BaseButton 
             :icon="mdiDownload" 
             color="purple" 
