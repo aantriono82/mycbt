@@ -62,6 +62,14 @@ const routes = [
   },
   {
     meta: {
+      title: 'System Health',
+    },
+    path: '/admin/system/health',
+    name: 'admin-system-health',
+    component: () => import('@/views/admin/AdminSystemHealthView.vue'),
+  },
+  {
+    meta: {
       title: 'Master Data',
     },
     path: '/admin/master-data',

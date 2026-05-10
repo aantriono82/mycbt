@@ -77,6 +77,9 @@ func (h *NotificationHandler) buildSnapshot(ctx context.Context, userID string, 
 }
 
 func (h *NotificationHandler) Stream(c *gin.Context) {
+	stopTracking := middleware.TrackSSEConnection()
+	defer stopTracking()
+
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
 		c.JSON(500, gin.H{"error": "streaming unsupported"})

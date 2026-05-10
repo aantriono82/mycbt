@@ -779,10 +779,24 @@ func (h *AdminMasterHandler) BlastAnnouncement(c *gin.Context) {
 
 	sentCount := 0
 	failedCount := 0
+	totalJobs := 0
 
 	for _, s := range students {
 		if useEmail && s.Email != "" {
+			totalJobs++
+		}
+		if useWA && s.Phone != "" {
+			totalJobs++
+		}
+	}
+	middleware.QueueBeginBatch("announcement_blast", totalJobs)
+	defer middleware.QueueCompleteBatch()
+
+	for _, s := range students {
+		if useEmail && s.Email != "" {
+			middleware.QueueStartJob()
 			err := h.notif.SendEmail(c.Request.Context(), s.Email, ann.Title, ann.Body)
+			middleware.QueueFinishJob(err)
 			if err != nil {
 				failedCount++
 			} else {
@@ -790,7 +804,9 @@ func (h *AdminMasterHandler) BlastAnnouncement(c *gin.Context) {
 			}
 		}
 		if useWA && s.Phone != "" {
+			middleware.QueueStartJob()
 			err := h.notif.SendWhatsApp(c.Request.Context(), s.Phone, fmt.Sprintf("*%s*\n\n%s", ann.Title, ann.Body))
+			middleware.QueueFinishJob(err)
 			if err != nil {
 				failedCount++
 			} else {
@@ -1076,15 +1092,15 @@ type updateTeacherReq struct {
 }
 
 type createTeacherReq struct {
-	Username   string `json:"username"`
-	Password   string `json:"password"`
-	Name       string `json:"name"`
-	Email      string `json:"email"`
-	Phone      string `json:"phone"`
-	NIP        string `json:"nip"`
-	Jenjang    string `json:"jenjang"`
-	MapelCodes string `json:"mapel_codes"`
-	GroupNames string `json:"group_names"`
+	Username   string  `json:"username"`
+	Password   string  `json:"password"`
+	Name       string  `json:"name"`
+	Email      string  `json:"email"`
+	Phone      string  `json:"phone"`
+	NIP        string  `json:"nip"`
+	Jenjang    string  `json:"jenjang"`
+	MapelCodes string  `json:"mapel_codes"`
+	GroupNames string  `json:"group_names"`
 	LevelNames string  `json:"level_names"`
 	SchoolID   *string `json:"school_id"`
 }

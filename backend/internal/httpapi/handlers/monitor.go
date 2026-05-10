@@ -79,6 +79,9 @@ func (h *MonitorHandler) ListSessions(c *gin.Context) {
 }
 
 func (h *MonitorHandler) Stream(c *gin.Context) {
+	stopTracking := middleware.TrackSSEConnection()
+	defer stopTracking()
+
 	role := middleware.GetUserRole(c)
 	userID := middleware.GetUserID(c)
 

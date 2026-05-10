@@ -27,6 +27,7 @@ import {
   mdiHistory,
   mdiClipboardTextSearchOutline,
   mdiDomain,
+  mdiHeartPulse,
 } from '@mdi/js'
 
 import { ROLES } from '@/stores/auth.js'
@@ -146,6 +147,7 @@ export const getMenuAsideMain = (role) => {
       icon: mdiCogOutline,
       menu: [
         { to: '/admin/settings', label: 'General Settings', icon: mdiCogOutline },
+        { to: '/admin/system/health', label: 'System Health', icon: mdiHeartPulse },
         { to: '/admin/settings/activity-log', label: 'Log Aktivitas', icon: mdiHistory },
         { to: '/admin/settings/audit-log', label: 'Audit Log', icon: mdiClipboardTextSearchOutline },
         { to: '/admin/lms', label: 'Integrasi LMS', icon: mdiDatabaseExportOutline },

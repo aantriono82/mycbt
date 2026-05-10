@@ -31,6 +31,7 @@ import {
   mdiBullhornOutline,
   mdiWeatherSunny,
   mdiMoonWaningCrescent,
+  mdiHeartPulse,
 } from '@mdi/js'
 import BaseIcon from '@/components/BaseIcon.vue'
 import { useAuthStore } from '@/stores/auth.js'
@@ -118,6 +119,7 @@ const moreItems = computed(() => {
     { label: 'Analitik', icon: mdiChartLine, to: '/admin/analytics' },
     { label: 'Cetak', icon: mdiPrinter, to: '/admin/cetak' },
     { label: 'Settings', icon: mdiCog, to: '/admin/settings' },
+    { label: 'System', icon: mdiHeartPulse, to: '/admin/system/health' },
     { label: 'Log Aktivitas', icon: mdiHistory, to: '/admin/settings/activity-log' },
     { label: 'Audit Log', icon: mdiClipboardTextSearch, to: '/admin/settings/audit-log' },
     { label: 'Integrasi LMS', icon: mdiDatabaseExport, to: '/admin/lms' },
