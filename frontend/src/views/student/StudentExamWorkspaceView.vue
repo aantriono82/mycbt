@@ -40,6 +40,9 @@ const {
   timeLeft, 
   isLoading, 
   isSaving,
+  isSyncingPending,
+  pendingSyncCount,
+  hasPendingSync,
   lastSavedAt,
   errorMessage, 
   submitDone, 
@@ -140,6 +143,7 @@ const verifyToken = async () => {
       // ignore
     }
     await examStore.loadExamData(route.params.sessionId)
+    await examStore.initSync()
     scheduleRenderMath()
   } catch (err) {
     tokenError.value = err?.response?.data?.error?.message || 'Token tidak valid'
@@ -298,11 +302,12 @@ const vibrate = (pattern = 10) => {
 const submitExam = async () => {
   vibrate([20, 50, 20])
   try {
+    await examStore.flushPendingAnswers()
     await examStore.submitExam()
     showSubmitModal.value = false
     await router.push('/student/hasil')
   } catch (err) {
-    notificationStore.pushError(err.response?.data?.error?.message || 'Gagal mengirim jawaban')
+    notificationStore.pushError(err?.response?.data?.error?.message || err?.message || 'Gagal mengirim jawaban')
   }
 }
 
@@ -626,7 +631,10 @@ onMounted(() => {
     try {
       if (localStorage.getItem(TOKEN_OK_KEY.value) === '1') {
         tokenVerified.value = true
-        examStore.loadExamData(sid).then(() => scheduleRenderMath())
+        examStore.loadExamData(sid).then(async () => {
+          await examStore.initSync()
+          scheduleRenderMath()
+        })
       }
     } catch {}
   }
@@ -916,15 +924,18 @@ const isMatchingRightUsed = (rightId) => {
           <div class="w-px h-3 bg-white/20"></div>
           <div class="flex items-center gap-1.5 min-w-max">
              <BaseIcon 
-               :path="isSaving ? mdiCloudSyncOutline : mdiCloudCheckOutline" 
+               :path="isSaving || isSyncingPending || hasPendingSync ? mdiCloudSyncOutline : mdiCloudCheckOutline" 
                :size="14" 
-               :class="isSaving ? 'text-amber-400 animate-spin' : 'text-emerald-400'" 
+               :class="isSaving || isSyncingPending ? 'text-amber-400 animate-spin' : hasPendingSync ? 'text-amber-300' : 'text-emerald-400'" 
              />
              <div class="flex flex-col">
                <span class="text-[9px] md:text-[10px] font-black uppercase tracking-tighter leading-none">
-                 {{ isSaving ? 'Save...' : 'Safe' }}
+                 {{ isSaving || isSyncingPending ? 'Sync...' : hasPendingSync ? 'Pending' : 'Safe' }}
                </span>
-               <span v-if="!isSaving && lastSavedAt" class="hidden md:inline text-[8px] opacity-60 font-medium">
+               <span v-if="hasPendingSync" class="hidden md:inline text-[8px] text-amber-300 font-medium">
+                 {{ pendingSyncCount }} menunggu
+               </span>
+               <span v-else-if="!isSaving && lastSavedAt" class="hidden md:inline text-[8px] opacity-60 font-medium">
                  {{ formatLastSaved(lastSavedAt) }}
                </span>
              </div>

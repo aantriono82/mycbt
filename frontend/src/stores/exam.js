@@ -2,6 +2,14 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { api } from '@/services/api.js'
 import { debounce } from '@/utils/debounce.js'
+import {
+    bumpRetryCount,
+    clearSessionQueue,
+    countPendingAnswers,
+    enqueueAnswer,
+    listPendingAnswers,
+    removeQueueItem,
+} from '@/services/answerSyncQueue.js'
 
 export const useExamStore = defineStore('exam', () => {
     const PERSIST_KEY = 'atigacbt:exam-store'
@@ -15,6 +23,8 @@ export const useExamStore = defineStore('exam', () => {
     const isLoading = ref(false)
     const errorMessage = ref('')
     const submitDone = ref(false)
+    const pendingSyncCount = ref(0)
+    const isSyncingPending = ref(false)
 
     const currentQuestionIdx = ref(0)
     const currentQuestion = computed(() => questions.value[currentQuestionIdx.value])
@@ -149,6 +159,79 @@ export const useExamStore = defineStore('exam', () => {
 
     const isSaving = ref(false)
     const lastSavedAt = ref(null)
+    const hasPendingSync = computed(() => pendingSyncCount.value > 0)
+    let syncInterval = null
+    let syncInFlight = false
+
+    const refreshPendingSyncCount = async () => {
+        try {
+            pendingSyncCount.value = await countPendingAnswers(sessionId.value || null)
+        } catch {
+            pendingSyncCount.value = 0
+        }
+    }
+
+    const postAnswer = async (sid, questionId, payload) => {
+        await api.post(`/api/v1/student/sessions/${sid}/answers`, {
+            question_id: questionId,
+            answer_json: JSON.stringify(payload),
+        })
+    }
+
+    const flushPendingAnswers = async () => {
+        if (!sessionId.value || syncInFlight) return
+        syncInFlight = true
+        isSyncingPending.value = true
+        try {
+            const pending = await listPendingAnswers(sessionId.value)
+            for (const item of pending) {
+                try {
+                    let parsedPayload = {}
+                    try {
+                        parsedPayload = JSON.parse(item.answerJson || '{}')
+                    } catch {
+                        parsedPayload = {}
+                    }
+                    await postAnswer(item.sessionId, item.questionId, parsedPayload)
+                    await removeQueueItem(item.id)
+                    lastSavedAt.value = new Date()
+                } catch (err) {
+                    await bumpRetryCount(item.id)
+                    const status = err?.response?.status
+                    if (!status || status >= 500 || status === 429) {
+                        break
+                    }
+                    if ([400, 401, 403, 404, 409, 422].includes(status)) {
+                        await removeQueueItem(item.id)
+                        continue
+                    }
+                    break
+                }
+            }
+        } finally {
+            await refreshPendingSyncCount()
+            isSyncingPending.value = false
+            syncInFlight = false
+        }
+    }
+
+    const startSyncLoop = () => {
+        if (syncInterval || typeof window === 'undefined') return
+        syncInterval = window.setInterval(() => {
+            flushPendingAnswers()
+        }, 12000)
+        window.addEventListener('online', flushPendingAnswers)
+    }
+
+    const stopSyncLoop = () => {
+        if (syncInterval && typeof window !== 'undefined') {
+            window.clearInterval(syncInterval)
+        }
+        syncInterval = null
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('online', flushPendingAnswers)
+        }
+    }
 
     const saveAnswer = async (questionId, answer = undefined) => {
         if (!sessionId.value || !questionId) return
@@ -160,13 +243,17 @@ export const useExamStore = defineStore('exam', () => {
 
         isSaving.value = true
         try {
-            await api.post(`/api/v1/student/sessions/${sessionId.value}/answers`, {
-                question_id: questionId,
-                answer_json: JSON.stringify(payload)
+            await enqueueAnswer({
+                sessionId: sessionId.value,
+                questionId,
+                answerJson: JSON.stringify(payload),
             })
+            await refreshPendingSyncCount()
+            await flushPendingAnswers()
             lastSavedAt.value = new Date()
         } catch (err) {
             console.error('Failed to save answer:', err)
+            await refreshPendingSyncCount()
         } finally {
             // Add a small delay so the 'Saving' state is visible for micro-interaction
             setTimeout(() => {
@@ -179,9 +266,16 @@ export const useExamStore = defineStore('exam', () => {
         if (!sessionId.value) return
         try {
             isLoading.value = true
+            await flushPendingAnswers()
+            await refreshPendingSyncCount()
+            if (pendingSyncCount.value > 0) {
+                throw new Error('Masih ada jawaban tersimpan lokal yang belum tersinkron.')
+            }
             await api.post(`/api/v1/student/sessions/${sessionId.value}/submit`)
             submitDone.value = true
             stopTimer()
+            await clearSessionQueue(sessionId.value)
+            await refreshPendingSyncCount()
         } catch (err) {
             throw err
         } finally {
@@ -190,7 +284,9 @@ export const useExamStore = defineStore('exam', () => {
     }
 
     const reset = () => {
+        const prevSessionId = sessionId.value
         stopTimer()
+        stopSyncLoop()
         sessionId.value = null
         startTime.value = null
         questions.value = []
@@ -201,13 +297,27 @@ export const useExamStore = defineStore('exam', () => {
         currentQuestionIdx.value = 0
         isSaving.value = false
         lastSavedAt.value = null
+        pendingSyncCount.value = 0
+        isSyncingPending.value = false
         persistNow()
+        if (prevSessionId) {
+            clearSessionQueue(prevSessionId).catch(() => {})
+        }
     }
 
     const finishExam = async () => {
         if (!sessionId.value) return
+        await flushPendingAnswers()
         await api.post(`/api/v1/student/sessions/${sessionId.value}/submit`)
+        await clearSessionQueue(sessionId.value)
+        await refreshPendingSyncCount()
         reset()
+    }
+
+    const initSync = async () => {
+        startSyncLoop()
+        await refreshPendingSyncCount()
+        await flushPendingAnswers()
     }
 
     return {
@@ -220,6 +330,9 @@ export const useExamStore = defineStore('exam', () => {
         isLoading,
         isSaving,
         lastSavedAt,
+        pendingSyncCount,
+        hasPendingSync,
+        isSyncingPending,
         errorMessage,
         submitDone,
         currentQuestion,
@@ -227,8 +340,10 @@ export const useExamStore = defineStore('exam', () => {
         startExam,
         loadExamData,
         saveAnswer,
+        flushPendingAnswers,
         submitExam,
         finishExam,
+        initSync,
         reset,
         startTimer,
         stopTimer
