@@ -27,6 +27,7 @@ const query = ref('')
 const editingId = ref('')
 const allGroups = ref([])
 const allLevels = ref([])
+const allSchools = ref([])
 
 const form = reactive({
   username: '',
@@ -40,6 +41,7 @@ const form = reactive({
   level_names: '',
   phone: '',
   is_active: true,
+  school_id: null,
 })
 
 const canLoad = computed(() => authStore.isAuthenticated)
@@ -58,6 +60,7 @@ const resetForm = () => {
   form.level_names = ''
   form.phone = ''
   form.is_active = true
+  form.school_id = null
 }
 
 const loadSubjects = async () => {
@@ -87,6 +90,16 @@ const loadLevels = async () => {
     allLevels.value = data?.data || []
   } catch {
     allLevels.value = []
+  }
+}
+
+const loadSchools = async () => {
+  if (!canLoad.value) return
+  try {
+    const { data } = await api.get('/api/v1/admin/schools')
+    allSchools.value = data?.data || []
+  } catch {
+    allSchools.value = []
   }
 }
 
@@ -121,6 +134,7 @@ const startEditTeacher = async (teacher) => {
   form.jenjang = teacher.jenjang || ''
   form.phone = teacher.phone || ''
   form.is_active = !!teacher.is_active
+  form.school_id = teacher.school_id || null
   form.mapel_codes = ''
   form.group_names = ''
   form.level_names = ''
@@ -162,6 +176,7 @@ const saveTeacher = async () => {
         jenjang: form.jenjang,
         phone: form.phone,
         is_active: form.is_active,
+        school_id: form.school_id,
       })
       await api.put(`/api/v1/admin/teachers/${editingId.value}/subjects`, {
         subject_codes: form.mapel_codes
@@ -186,6 +201,7 @@ const saveTeacher = async () => {
       await api.post('/api/v1/admin/teachers', {
         ...form,
         phone: form.phone,
+        school_id: form.school_id,
       })
       successMessage.value = 'Data guru berhasil ditambahkan'
     }
@@ -297,6 +313,7 @@ onMounted(async () => {
   await loadSubjects()
   await loadGroups()
   await loadLevels()
+  await loadSchools()
   await loadTeachers()
 })
 </script>
@@ -339,6 +356,16 @@ onMounted(async () => {
             </FormField>
             <FormField label="No. WhatsApp">
               <FormControl v-model="form.phone" placeholder="62812xxxx" />
+            </FormField>
+            <FormField label="Asal Sekolah">
+              <FormControl
+                v-model="form.school_id"
+                type="select"
+                :options="[
+                  { value: null, label: 'Default / AtigaCBT' },
+                  ...allSchools.map(s => ({ value: s.id, label: s.name }))
+                ]"
+              />
             </FormField>
             <FormField label="Jenjang">
               <FormControl

@@ -13,6 +13,7 @@ type User struct {
 	PhotoURL      string
 	GoogleID      string
 	IsActive      bool
+	SchoolID      *string
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }

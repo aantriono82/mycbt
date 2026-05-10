@@ -1064,14 +1064,15 @@ func (h *AdminMasterHandler) SetTeacherLevels(c *gin.Context) {
 }
 
 type updateTeacherReq struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Phone    string `json:"phone"`
-	NIP      string `json:"nip"`
-	Jenjang  string `json:"jenjang"`
-	IsActive *bool  `json:"is_active"`
+	Username string  `json:"username"`
+	Password string  `json:"password"`
+	Name     string  `json:"name"`
+	Email    string  `json:"email"`
+	Phone    string  `json:"phone"`
+	NIP      string  `json:"nip"`
+	Jenjang  string  `json:"jenjang"`
+	IsActive *bool   `json:"is_active"`
+	SchoolID *string `json:"school_id"`
 }
 
 type createTeacherReq struct {
@@ -1084,7 +1085,8 @@ type createTeacherReq struct {
 	Jenjang    string `json:"jenjang"`
 	MapelCodes string `json:"mapel_codes"`
 	GroupNames string `json:"group_names"`
-	LevelNames string `json:"level_names"`
+	LevelNames string  `json:"level_names"`
+	SchoolID   *string `json:"school_id"`
 }
 
 func (h *AdminMasterHandler) CreateTeacher(c *gin.Context) {
@@ -1142,6 +1144,7 @@ func (h *AdminMasterHandler) CreateTeacher(c *gin.Context) {
 		subjectIDs,
 		groupIDs,
 		levelIDs,
+		req.SchoolID,
 	)
 	if err != nil {
 		if pgerr.Code(err) == pgerr.CodeUniqueViolation {
@@ -1197,6 +1200,7 @@ func (h *AdminMasterHandler) UpdateTeacher(c *gin.Context) {
 		*req.IsActive,
 		passHash,
 		strings.TrimSpace(req.Password),
+		req.SchoolID,
 	)
 	if err != nil {
 		if pgerr.Code(err) == pgerr.CodeUniqueViolation {
@@ -1240,32 +1244,34 @@ func (h *AdminMasterHandler) GetStudent(c *gin.Context) {
 }
 
 type updateStudentReq struct {
-	Username  string `json:"username"`
-	Password  string `json:"password"`
-	Name      string `json:"name"`
-	Email     string `json:"email"`
-	Phone     string `json:"phone"`
-	NIS       string `json:"nis"`
-	ParticipantNo string `json:"participant_no"`
-	Jenjang   string `json:"jenjang"`
-	ProgramID string `json:"program_id"`
-	LevelID   string `json:"level_id"`
-	GroupID   string `json:"group_id"`
-	IsActive  *bool  `json:"is_active"`
+	Username      string  `json:"username"`
+	Password      string  `json:"password"`
+	Name          string  `json:"name"`
+	Email         string  `json:"email"`
+	Phone         string  `json:"phone"`
+	NIS           string  `json:"nis"`
+	ParticipantNo string  `json:"participant_no"`
+	Jenjang       string  `json:"jenjang"`
+	ProgramID     string  `json:"program_id"`
+	LevelID       string  `json:"level_id"`
+	GroupID       string  `json:"group_id"`
+	IsActive      *bool   `json:"is_active"`
+	SchoolID      *string `json:"school_id"`
 }
 
 type createStudentReq struct {
-	Username  string `json:"username"`
-	Password  string `json:"password"`
-	Name      string `json:"name"`
-	Email     string `json:"email"`
-	Phone     string `json:"phone"`
-	NIS       string `json:"nis"`
-	ParticipantNo string `json:"participant_no"`
-	Jenjang   string `json:"jenjang"`
-	ProgramID string `json:"program_id"`
-	LevelID   string `json:"level_id"`
-	GroupID   string `json:"group_id"`
+	Username      string  `json:"username"`
+	Password      string  `json:"password"`
+	Name          string  `json:"name"`
+	Email         string  `json:"email"`
+	Phone         string  `json:"phone"`
+	NIS           string  `json:"nis"`
+	ParticipantNo string  `json:"participant_no"`
+	Jenjang       string  `json:"jenjang"`
+	ProgramID     string  `json:"program_id"`
+	LevelID       string  `json:"level_id"`
+	GroupID       string  `json:"group_id"`
+	SchoolID      *string `json:"school_id"`
 }
 
 func (h *AdminMasterHandler) CreateStudent(c *gin.Context) {
@@ -1300,6 +1306,7 @@ func (h *AdminMasterHandler) CreateStudent(c *gin.Context) {
 		strings.TrimSpace(req.LevelID),
 		strings.TrimSpace(req.GroupID),
 		"",
+		req.SchoolID,
 	)
 	if err != nil {
 		if pgerr.Code(err) == pgerr.CodeUniqueViolation {
@@ -1353,6 +1360,7 @@ func (h *AdminMasterHandler) UpdateStudent(c *gin.Context) {
 		*req.IsActive,
 		passHash,
 		strings.TrimSpace(req.Password),
+		req.SchoolID,
 	)
 	if err != nil {
 		if pgerr.Code(err) == pgerr.CodeUniqueViolation {
@@ -1643,7 +1651,7 @@ FOR UPDATE`
 		if _, spErr := tx.Exec(ctx, `SAVEPOINT sp_create_user`); spErr != nil {
 			return fmt.Errorf("create savepoint teacher approval: %w", spErr)
 		}
-		if teacherID, userID, err := h.teachers.CreateTeacherTx(ctx, tx, username, passwordHash, passwordPlain, name, email, phone, nip, "", googleID, subjectIDs, nil, nil); err != nil {
+		if teacherID, userID, err := h.teachers.CreateTeacherTx(ctx, tx, username, passwordHash, passwordPlain, name, email, phone, nip, "", googleID, subjectIDs, nil, nil, nil); err != nil {
 			if pgerr.Code(err) == pgerr.CodeUniqueViolation {
 				// Roll back the failed insert attempt to clear the aborted-tx state.
 				_, _ = tx.Exec(ctx, `ROLLBACK TO SAVEPOINT sp_create_user`)
@@ -1741,7 +1749,7 @@ WHERE id = $2 AND (google_id IS NULL OR google_id = '')`, googleID, existingUser
 		if _, spErr := tx.Exec(ctx, `SAVEPOINT sp_create_user`); spErr != nil {
 			return fmt.Errorf("create savepoint student approval: %w", spErr)
 		}
-		if studentID, userID, err := h.students.CreateStudentTx(ctx, tx, username, passwordHash, passwordPlain, name, email, phone, nis, "", "", programID, levelID, groupID, googleID); err != nil {
+		if studentID, userID, err := h.students.CreateStudentTx(ctx, tx, username, passwordHash, passwordPlain, name, email, phone, nis, "", "", programID, levelID, groupID, googleID, nil); err != nil {
 			if pgerr.Code(err) == pgerr.CodeUniqueViolation {
 				_, _ = tx.Exec(ctx, `ROLLBACK TO SAVEPOINT sp_create_user`)
 
@@ -2040,7 +2048,7 @@ func (h *AdminMasterHandler) ImportTeachers(c *gin.Context) {
 			continue
 		}
 
-		_, _, err = h.teachers.CreateTeacher(c.Request.Context(), username, hash, password, name, email, phone, nip, "", "", subjectIDs, nil, nil)
+		_, _, err = h.teachers.CreateTeacher(c.Request.Context(), username, hash, password, name, email, phone, nip, "", "", subjectIDs, nil, nil, nil)
 		if err != nil {
 			res.Errors = append(res.Errors, importError{Row: rowNum, Message: "insert failed (duplicate?)"})
 			continue
@@ -2133,7 +2141,7 @@ func (h *AdminMasterHandler) ImportStudents(c *gin.Context) {
 			}
 		}
 
-		_, _, err = h.students.CreateStudent(c.Request.Context(), username, hash, password, name, email, phone, nis, participantNo, jenjang, programID, levelID, groupID, "")
+		_, _, err = h.students.CreateStudent(c.Request.Context(), username, hash, password, name, email, phone, nis, participantNo, jenjang, programID, levelID, groupID, "", nil)
 		if err != nil {
 			res.Errors = append(res.Errors, importError{Row: rowNum, Message: "insert failed (duplicate?)"})
 			continue

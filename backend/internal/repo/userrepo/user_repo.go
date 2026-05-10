@@ -19,7 +19,7 @@ func New(pool *pgxpool.Pool) *Repo {
 
 func (r *Repo) GetByUsername(ctx context.Context, username string) (model.User, bool, error) {
 	const q = `
-SELECT id, username, password_hash, COALESCE(password_plain,''), role, name, COALESCE(email,''), COALESCE(photo_url,''), COALESCE(google_id,''), is_active, created_at, updated_at
+SELECT id, username, password_hash, COALESCE(password_plain,''), role, name, COALESCE(email,''), COALESCE(photo_url,''), COALESCE(google_id,''), is_active, school_id, created_at, updated_at
 FROM users
 WHERE username = $1
 LIMIT 1`
@@ -36,6 +36,7 @@ LIMIT 1`
 		&u.PhotoURL,
 		&u.GoogleID,
 		&u.IsActive,
+		&u.SchoolID,
 		&u.CreatedAt,
 		&u.UpdatedAt,
 	)
@@ -50,7 +51,7 @@ LIMIT 1`
 
 func (r *Repo) GetByID(ctx context.Context, id string) (model.User, bool, error) {
 	const q = `
-SELECT id, username, password_hash, COALESCE(password_plain,''), role, name, COALESCE(email,''), COALESCE(photo_url,''), COALESCE(google_id,''), is_active, created_at, updated_at
+SELECT id, username, password_hash, COALESCE(password_plain,''), role, name, COALESCE(email,''), COALESCE(photo_url,''), COALESCE(google_id,''), is_active, school_id, created_at, updated_at
 FROM users
 WHERE id = $1
 LIMIT 1`
@@ -67,6 +68,7 @@ LIMIT 1`
 		&u.PhotoURL,
 		&u.GoogleID,
 		&u.IsActive,
+		&u.SchoolID,
 		&u.CreatedAt,
 		&u.UpdatedAt,
 	)
@@ -94,7 +96,7 @@ RETURNING id`
 
 func (r *Repo) GetByGoogleID(ctx context.Context, googleID string) (model.User, bool, error) {
 	const q = `
-SELECT id, username, password_hash, COALESCE(password_plain,''), role, name, COALESCE(email,''), COALESCE(photo_url,''), COALESCE(google_id,''), is_active, created_at, updated_at
+SELECT id, username, password_hash, COALESCE(password_plain,''), role, name, COALESCE(email,''), COALESCE(photo_url,''), COALESCE(google_id,''), is_active, school_id, created_at, updated_at
 FROM users
 WHERE google_id = $1
 LIMIT 1`
@@ -111,6 +113,7 @@ LIMIT 1`
 		&u.PhotoURL,
 		&u.GoogleID,
 		&u.IsActive,
+		&u.SchoolID,
 		&u.CreatedAt,
 		&u.UpdatedAt,
 	)
@@ -125,14 +128,14 @@ LIMIT 1`
 
 func (r *Repo) GetByEmail(ctx context.Context, email string) (model.User, bool, error) {
 	const q = `
-SELECT id, username, password_hash, COALESCE(password_plain,''), role, name, COALESCE(email,''), COALESCE(photo_url,''), COALESCE(google_id,''), is_active, created_at, updated_at
+SELECT id, username, password_hash, COALESCE(password_plain,''), role, name, COALESCE(email,''), COALESCE(photo_url,''), COALESCE(google_id,''), is_active, school_id, created_at, updated_at
 FROM users
 WHERE email = $1
 LIMIT 1`
 
 	var u model.User
 	err := r.pool.QueryRow(ctx, q, email).Scan(
-		&u.ID, &u.Username, &u.PasswordHash, &u.PasswordPlain, &u.Role, &u.Name, &u.Email, &u.PhotoURL, &u.GoogleID, &u.IsActive, &u.CreatedAt, &u.UpdatedAt,
+		&u.ID, &u.Username, &u.PasswordHash, &u.PasswordPlain, &u.Role, &u.Name, &u.Email, &u.PhotoURL, &u.GoogleID, &u.IsActive, &u.SchoolID, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
 		if isNoRows(err) {

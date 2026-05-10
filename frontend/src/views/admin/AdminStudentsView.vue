@@ -46,6 +46,7 @@ const bulkPhotoError = ref('')
 const programs = ref([])
 const levels = ref([])
 const groups = ref([])
+const allSchools = ref([])
 
 const form = reactive({
   username: '',
@@ -61,6 +62,7 @@ const form = reactive({
   phone: '',
   photo_url: '',
   is_active: true,
+  school_id: null,
 })
 
 // Pemetaan jenjang -> rentang kelas
@@ -106,6 +108,7 @@ const resetForm = () => {
   form.phone = ''
   form.photo_url = ''
   form.is_active = true
+  form.school_id = null
   photoFile.value = null
   photoPreview.value = null
 }
@@ -125,6 +128,16 @@ const loadLookups = async () => {
     programs.value = []
     levels.value = []
     groups.value = []
+  }
+}
+
+const loadSchools = async () => {
+  if (!canLoad.value) return
+  try {
+    const { data } = await api.get('/api/v1/admin/schools')
+    allSchools.value = data?.data || []
+  } catch {
+    allSchools.value = []
   }
 }
 
@@ -164,6 +177,7 @@ const startEditStudent = (student) => {
   form.phone = student.phone || ''
   form.photo_url = student.photo_url || ''
   form.is_active = !!student.is_active
+  form.school_id = student.school_id || null
   editingUserId.value = student.user_id || ''
   photoFile.value = null
   photoPreview.value = null
@@ -188,6 +202,7 @@ const saveStudent = async () => {
         group_id: form.group_id,
         phone: form.phone,
         is_active: form.is_active,
+        school_id: form.school_id,
       })
       successMessage.value = 'Data siswa berhasil diperbarui'
     } else {
@@ -203,6 +218,7 @@ const saveStudent = async () => {
         level_id: form.level_id,
         group_id: form.group_id,
         phone: form.phone,
+        school_id: form.school_id,
       })
       successMessage.value = 'Data siswa berhasil ditambahkan'
     }
@@ -241,6 +257,7 @@ const copyStudent = (student) => {
   form.level_id = student.level_id
   form.group_id = student.group_id
   form.phone = student.phone
+  form.school_id = student.school_id
   
   successMessage.value = 'Data siswa disalin ke form. Silakan isi username & password baru.'
 }
@@ -394,6 +411,7 @@ const uploadBulkPhotos = async () => {
 
 onMounted(async () => {
   await loadLookups()
+  await loadSchools()
   await loadStudents()
 })
 </script>
@@ -470,6 +488,16 @@ onMounted(async () => {
             </FormField>
             <FormField label="No. WhatsApp">
               <FormControl v-model="form.phone" placeholder="62812xxxx" />
+            </FormField>
+            <FormField label="Asal Sekolah">
+              <FormControl
+                v-model="form.school_id"
+                type="select"
+                :options="[
+                  { value: null, label: 'Default / AtigaCBT' },
+                  ...allSchools.map(s => ({ value: s.id, label: s.name }))
+                ]"
+              />
             </FormField>
             <FormField label="Jenjang">
               <FormControl

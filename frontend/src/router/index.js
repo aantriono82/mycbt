@@ -111,6 +111,14 @@ const routes = [
   },
   {
     meta: {
+      title: 'Manajemen Sekolah',
+    },
+    path: '/admin/master-data/sekolah',
+    name: 'admin-master-sekolah',
+    component: () => import('@/views/admin/AdminSchoolsView.vue'),
+  },
+  {
+    meta: {
       title: 'Program',resourceConfig: {
         endpoint: '/api/v1/admin/programs',
         itemLabel: 'Program',
@@ -438,6 +446,12 @@ const routes = [
     component: () => import('@/views/EvaluationView.vue'),
   },
   {
+    meta: { title: 'Profil Sekolah' },
+    path: '/teacher/sekolah',
+    name: 'teacher-sekolah',
+    component: () => import('@/views/teacher/TeacherSchoolView.vue'),
+  },
+  {
     meta: { title: 'Profil'},
     path: '/teacher/profil',
     name: 'teacher-profil',
@@ -486,6 +500,12 @@ const routes = [
     path: '/student/hasil',
     name: 'student-hasil',
     component: () => import('@/views/ResultsView.vue'),
+  },
+  {
+    meta: { title: 'Pembahasan Soal'},
+    path: '/student/hasil/:examId/pembahasan',
+    name: 'student-hasil-pembahasan',
+    component: () => import('@/views/student/StudentResultDiscussionView.vue'),
   },
   {
     meta: { title: 'Pengumuman'},

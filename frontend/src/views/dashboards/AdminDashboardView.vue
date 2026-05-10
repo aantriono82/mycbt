@@ -80,24 +80,8 @@ onMounted(loadStats)
             <h1 class="text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">Selamat Datang, Admin Utama!</h1>
             <p class="text-slate-500 mt-1 dark:text-slate-400 font-medium">Kelola sistem ujian berbasis komputer dengan lebih elegan</p>
           </div>
-          
-          <div class="flex items-center space-x-6 mt-6 md:mt-0 text-sm font-bold">
-            <span class="text-slate-400 dark:text-slate-500 uppercase tracking-widest text-[10px]">Support:</span>
-          <a href="https://t.me/aantriono" target="_blank" class="flex items-center text-blue-600 hover:text-blue-700">
-            <BaseIcon :path="mdiSend" size="18" class="mr-1 rotate-[-30deg]" />
-            Telegram
-          </a>
-          <a href="http://www.aantriono.com" target="_blank" class="flex items-center text-emerald-600 hover:text-emerald-700">
-            <BaseIcon :path="mdiWeb" size="18" class="mr-1" />
-            Website
-          </a>
-          <a href="mailto:aantriono82@gmail.com" class="flex items-center text-purple-600 hover:text-purple-700">
-            <BaseIcon :path="mdiEmailOutline" size="18" class="mr-1" />
-            Email
-          </a>
         </div>
       </div>
-    </div>
 
 
 

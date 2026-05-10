@@ -10,19 +10,22 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"atigacbt/backend/internal/repo/masterrepo"
+	"atigacbt/backend/internal/repo/userrepo"
 	"atigacbt/backend/internal/storage"
 )
 
 type SettingsHandler struct {
 	settings *masterrepo.SettingsRepo
+	schools  *masterrepo.SchoolRepo
+	users    *userrepo.Repo
 	store    storage.ObjectStore
 }
 
-func NewSettingsHandler(settings *masterrepo.SettingsRepo, store storage.ObjectStore) *SettingsHandler {
+func NewSettingsHandler(settings *masterrepo.SettingsRepo, schools *masterrepo.SchoolRepo, users *userrepo.Repo, store storage.ObjectStore) *SettingsHandler {
 	if store == nil {
 		store = storage.NewLocalObjectStore("uploads")
 	}
-	return &SettingsHandler{settings: settings, store: store}
+	return &SettingsHandler{settings: settings, schools: schools, users: users, store: store}
 }
 
 func (h *SettingsHandler) GetSchoolIdentity(c *gin.Context) {
@@ -35,6 +38,33 @@ func (h *SettingsHandler) GetSchoolIdentity(c *gin.Context) {
 }
 
 func (h *SettingsHandler) GetPublicSchoolIdentity(c *gin.Context) {
+	// 1. Try to get user from context (if logged in)
+	userID, _ := c.Get("user_id")
+	userIDStr, _ := userID.(string)
+
+	if userIDStr != "" && h.schools != nil && h.users != nil {
+		user, ok, err := h.users.GetByID(c.Request.Context(), userIDStr)
+		if err == nil && ok && user.SchoolID != nil && *user.SchoolID != "" {
+			school, ok, err := h.schools.GetByID(c.Request.Context(), *user.SchoolID)
+			if err == nil && ok {
+				// Return school-specific identity
+				c.JSON(200, gin.H{
+					"data": gin.H{
+						"school_name":    school.Name,
+						"logo_url":       school.LogoURL,
+						"address":        school.Address,
+						"phone":          school.Phone,
+						"email":          school.Email,
+						"website":        school.Website,
+						"principal_name": school.PrincipalName,
+					},
+				})
+				return
+			}
+		}
+	}
+
+	// 2. Fallback to global settings
 	data, err := h.settings.GetSchoolIdentity(c.Request.Context())
 	if err != nil {
 		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})

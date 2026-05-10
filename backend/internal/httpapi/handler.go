@@ -168,10 +168,11 @@ func NewHandler(deps Deps) http.Handler {
 	}
 
 	// Public settings (read-only school identity for branding in all panels)
-	if deps.Pool != nil {
+	if deps.Pool != nil && deps.Users != nil {
 		settings := masterrepo.NewSettings(deps.Pool)
-		h := handlers.NewSettingsHandler(settings, deps.ObjectStore)
-		v1.GET("/public/school-identity", h.GetPublicSchoolIdentity)
+		schools := masterrepo.NewSchool(deps.Pool)
+		h := handlers.NewSettingsHandler(settings, schools, deps.Users, deps.ObjectStore)
+		v1.GET("/public/school-identity", middleware.TryAuth(deps.Auth), h.GetPublicSchoolIdentity)
 	}
 
 	// Question bank (admin/teacher)
@@ -288,6 +289,7 @@ func NewHandler(deps Deps) http.Handler {
 		sg.POST("/sessions/:id/submit", h.Submit)
 		sg.POST("/sessions/:id/heartbeat", h.Heartbeat)
 		sg.GET("/results", h.ListResults)
+		sg.GET("/results/:examId/discussion", h.GetResultDiscussion)
 		sg.GET("/announcements", h.ListAnnouncements)
 		sg.POST("/announcements/read", h.MarkAnnouncementsRead)
 		sg.POST("/attendance", h.SubmitAttendance)
@@ -297,6 +299,15 @@ func NewHandler(deps Deps) http.Handler {
 		attendanceSessRepo := masterrepo.NewAttendanceSessions(deps.Pool)
 		qrH := handlers.NewAttendanceHandler(attendanceSessRepo, st, masterrepo.NewSettings(deps.Pool))
 		sg.POST("/attendance/scan", qrH.ScanAttendance)
+
+		// Teacher school management
+		schoolsRepo := masterrepo.NewSchool(deps.Pool)
+		th := handlers.NewTeacherSchoolHandler(schoolsRepo, deps.Users, deps.ObjectStore)
+		tg := v1.Group("/teacher/school")
+		tg.Use(middleware.RequireAuth(deps.Auth), middleware.RequireRole("teacher"))
+		tg.GET("", th.Get)
+		tg.PUT("", th.Update)
+		tg.POST("/logo", middleware.LimitBodyBytes(4<<20), th.UploadLogo)
 
 		// Compatibility endpoints for legacy CBT flow contracts.
 		compat := v1.Group("")
@@ -343,7 +354,8 @@ func NewHandler(deps Deps) http.Handler {
 		sg.Use(middleware.RequireAuth(deps.Auth), middleware.RequireRole("admin"))
 
 		settings := masterrepo.NewSettings(deps.Pool)
-		h := handlers.NewSettingsHandler(settings, deps.ObjectStore)
+		schools := masterrepo.NewSchool(deps.Pool)
+		h := handlers.NewSettingsHandler(settings, schools, deps.Users, deps.ObjectStore)
 
 		sg.GET("/school-identity", h.GetSchoolIdentity)
 		sg.PUT("/school-identity", h.PutSchoolIdentity)
@@ -354,6 +366,22 @@ func NewHandler(deps Deps) http.Handler {
 		sg.PUT("/smtp", h.PutSMTP)
 		sg.GET("/whatsapp", h.GetWhatsApp)
 		sg.PUT("/whatsapp", h.PutWhatsApp)
+	}
+
+	// Schools management (admin)
+	if deps.Auth != nil && deps.Pool != nil {
+		schoolsRepo := masterrepo.NewSchool(deps.Pool)
+		h := handlers.NewSchoolHandler(schoolsRepo, deps.ObjectStore)
+
+		g := v1.Group("/admin/schools")
+		g.Use(middleware.RequireAuth(deps.Auth), middleware.RequireRole("admin"))
+
+		g.GET("", h.List)
+		g.POST("", h.Create)
+		g.GET("/:id", h.Get)
+		g.PUT("/:id", h.Update)
+		g.DELETE("/:id", h.Delete)
+		g.POST("/:id/logo", middleware.LimitBodyBytes(4<<20), h.UploadLogo)
 	}
 
 	// Maintenance (admin)

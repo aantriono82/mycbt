@@ -21,9 +21,10 @@ type Teacher struct {
 	Jenjang       string `json:"jenjang"`
 	PhotoURL      string `json:"photo_url"`
 	IsActive      bool   `json:"is_active"`
-	MapelSummary  string `json:"mapel_summary"`
-	LevelSummary  string `json:"level_summary"`
-	GroupSummary  string `json:"group_summary"`
+	MapelSummary  string  `json:"mapel_summary"`
+	LevelSummary  string  `json:"level_summary"`
+	GroupSummary  string  `json:"group_summary"`
+	SchoolID      *string `json:"school_id"`
 }
 
 type Student struct {
@@ -40,8 +41,9 @@ type Student struct {
 	ProgramID     string `json:"program_id"`
 	LevelID       string `json:"level_id"`
 	GroupID       string `json:"group_id"`
-	PhotoURL      string `json:"photo_url"`
-	IsActive      bool   `json:"is_active"`
+	PhotoURL      string  `json:"photo_url"`
+	IsActive      bool    `json:"is_active"`
+	SchoolID      *string `json:"school_id"`
 }
 
 type TeachersRepo struct{ pool *pgxpool.Pool }
@@ -86,7 +88,7 @@ LIMIT $2 OFFSET $3`
 	out := []Teacher{}
 	for rows.Next() {
 		var it Teacher
-		if err := rows.Scan(&it.ID, &it.UserID, &it.Username, &it.PasswordPlain, &it.Name, &it.Email, &it.Phone, &it.NIP, &it.Jenjang, &it.PhotoURL, &it.IsActive, &it.MapelSummary, &it.LevelSummary, &it.GroupSummary); err != nil {
+		if err := rows.Scan(&it.ID, &it.UserID, &it.Username, &it.PasswordPlain, &it.Name, &it.Email, &it.Phone, &it.NIP, &it.Jenjang, &it.PhotoURL, &it.IsActive, &it.MapelSummary, &it.LevelSummary, &it.GroupSummary, &it.SchoolID); err != nil {
 			return nil, 0, fmt.Errorf("scan: %w", err)
 		}
 		out = append(out, it)
@@ -136,7 +138,7 @@ LEFT JOIN (
 WHERE t.id = $1
 LIMIT 1`
 	var it Teacher
-	err := r.pool.QueryRow(ctx, q, id).Scan(&it.ID, &it.UserID, &it.Username, &it.PasswordPlain, &it.Name, &it.Email, &it.Phone, &it.NIP, &it.Jenjang, &it.PhotoURL, &it.IsActive, &it.MapelSummary, &it.LevelSummary, &it.GroupSummary)
+	err := r.pool.QueryRow(ctx, q, id).Scan(&it.ID, &it.UserID, &it.Username, &it.PasswordPlain, &it.Name, &it.Email, &it.Phone, &it.NIP, &it.Jenjang, &it.PhotoURL, &it.IsActive, &it.MapelSummary, &it.LevelSummary, &it.GroupSummary, &it.SchoolID)
 	if err != nil {
 		if isNoRows(err) {
 			return Teacher{}, false, nil
@@ -165,7 +167,7 @@ LIMIT $2 OFFSET $3`
 	out := []Student{}
 	for rows.Next() {
 		var it Student
-		if err := rows.Scan(&it.ID, &it.UserID, &it.Username, &it.PasswordPlain, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.ParticipantNo, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.PhotoURL, &it.IsActive); err != nil {
+		if err := rows.Scan(&it.ID, &it.UserID, &it.Username, &it.PasswordPlain, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.ParticipantNo, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.PhotoURL, &it.IsActive, &it.SchoolID); err != nil {
 			return nil, 0, fmt.Errorf("scan: %w", err)
 		}
 		out = append(out, it)
@@ -201,7 +203,7 @@ WHERE ($1 = '' OR u.username ILIKE '%'||$1||'%' OR u.name ILIKE '%'||$1||'%' OR 
 	const q = `
 SELECT s.id, u.id, u.username, COALESCE(u.password_plain,''), u.name, COALESCE(u.email,''), COALESCE(u.phone,''), s.nis, COALESCE(s.participant_no,''),
        COALESCE(s.jenjang,''), COALESCE(s.program_id::text,''), COALESCE(s.level_id::text,''), COALESCE(s.group_id::text,''),
-       COALESCE(u.photo_url,''), u.is_active ` + base + `
+       COALESCE(u.photo_url,''), u.is_active, u.school_id ` + base + `
 ORDER BY u.name ASC
 LIMIT $3 OFFSET $4`
 
@@ -214,7 +216,7 @@ LIMIT $3 OFFSET $4`
 	out := []Student{}
 	for rows.Next() {
 		var it Student
-		if err := rows.Scan(&it.ID, &it.UserID, &it.Username, &it.PasswordPlain, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.ParticipantNo, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.PhotoURL, &it.IsActive); err != nil {
+		if err := rows.Scan(&it.ID, &it.UserID, &it.Username, &it.PasswordPlain, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.ParticipantNo, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.PhotoURL, &it.IsActive, &it.SchoolID); err != nil {
 			return nil, 0, fmt.Errorf("scan: %w", err)
 		}
 		out = append(out, it)
@@ -241,7 +243,7 @@ JOIN users u ON u.id = s.user_id
 WHERE s.id = $1
 LIMIT 1`
 	var it Student
-	err := r.pool.QueryRow(ctx, q, id).Scan(&it.ID, &it.UserID, &it.Username, &it.PasswordPlain, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.ParticipantNo, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.PhotoURL, &it.IsActive)
+	err := r.pool.QueryRow(ctx, q, id).Scan(&it.ID, &it.UserID, &it.Username, &it.PasswordPlain, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.ParticipantNo, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.PhotoURL, &it.IsActive, &it.SchoolID)
 	if err != nil {
 		if isNoRows(err) {
 			return Student{}, false, nil
@@ -251,7 +253,7 @@ LIMIT 1`
 	return it, true, nil
 }
 
-func (r *TeachersRepo) UpdateTeacher(ctx context.Context, teacherID, username, name, email, phone, nip, jenjang string, isActive bool, passwordHash, passwordPlain string) (Teacher, bool, error) {
+func (r *TeachersRepo) UpdateTeacher(ctx context.Context, teacherID, username, name, email, phone, nip, jenjang string, isActive bool, passwordHash, passwordPlain string, schoolID *string) (Teacher, bool, error) {
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return Teacher{}, false, fmt.Errorf("begin tx: %w", err)
@@ -271,13 +273,13 @@ func (r *TeachersRepo) UpdateTeacher(ctx context.Context, teacherID, username, n
 	}
 
 	if passwordHash != "" {
-		const q = `UPDATE users SET username=$2, name=$3, email=NULLIF($4,''), phone=NULLIF($5,''), is_active=$6, password_hash=$7, password_plain=NULLIF($8,''), updated_at=now() WHERE id=$1`
-		if _, err := tx.Exec(ctx, q, userID, username, name, email, phone, isActive, passwordHash, passwordPlain); err != nil {
+		const q = `UPDATE users SET username=$2, name=$3, email=NULLIF($4,''), phone=NULLIF($5,''), is_active=$6, password_hash=$7, password_plain=NULLIF($8,''), school_id=NULLIF($9,'')::uuid, updated_at=now() WHERE id=$1`
+		if _, err := tx.Exec(ctx, q, userID, username, name, email, phone, isActive, passwordHash, passwordPlain, schoolID); err != nil {
 			return Teacher{}, false, fmt.Errorf("update user: %w", err)
 		}
 	} else {
-		const q = `UPDATE users SET username=$2, name=$3, email=NULLIF($4,''), phone=NULLIF($5,''), is_active=$6, updated_at=now() WHERE id=$1`
-		if _, err := tx.Exec(ctx, q, userID, username, name, email, phone, isActive); err != nil {
+		const q = `UPDATE users SET username=$2, name=$3, email=NULLIF($4,''), phone=NULLIF($5,''), is_active=$6, school_id=NULLIF($7,'')::uuid, updated_at=now() WHERE id=$1`
+		if _, err := tx.Exec(ctx, q, userID, username, name, email, phone, isActive, schoolID); err != nil {
 			return Teacher{}, false, fmt.Errorf("update user: %w", err)
 		}
 	}
@@ -295,7 +297,7 @@ func (r *TeachersRepo) UpdateTeacher(ctx context.Context, teacherID, username, n
 	return it, ok, err
 }
 
-func (r *StudentsRepo) UpdateStudent(ctx context.Context, studentID, username, name, email, phone, nis, participantNo, jenjang, programID, levelID, groupID string, isActive bool, passwordHash, passwordPlain string) (Student, bool, error) {
+func (r *StudentsRepo) UpdateStudent(ctx context.Context, studentID, username, name, email, phone, nis, participantNo, jenjang, programID, levelID, groupID string, isActive bool, passwordHash, passwordPlain string, schoolID *string) (Student, bool, error) {
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return Student{}, false, fmt.Errorf("begin tx: %w", err)
@@ -315,13 +317,13 @@ func (r *StudentsRepo) UpdateStudent(ctx context.Context, studentID, username, n
 	}
 
 	if passwordHash != "" {
-		const q = `UPDATE users SET username=$2, name=$3, email=NULLIF($4,''), phone=NULLIF($5,''), is_active=$6, password_hash=$7, password_plain=NULLIF($8,''), updated_at=now() WHERE id=$1`
-		if _, err := tx.Exec(ctx, q, userID, username, name, email, phone, isActive, passwordHash, passwordPlain); err != nil {
+		const q = `UPDATE users SET username=$2, name=$3, email=NULLIF($4,''), phone=NULLIF($5,''), is_active=$6, password_hash=$7, password_plain=NULLIF($8,''), school_id=NULLIF($9,'')::uuid, updated_at=now() WHERE id=$1`
+		if _, err := tx.Exec(ctx, q, userID, username, name, email, phone, isActive, passwordHash, passwordPlain, schoolID); err != nil {
 			return Student{}, false, fmt.Errorf("update user: %w", err)
 		}
 	} else {
-		const q = `UPDATE users SET username=$2, name=$3, email=NULLIF($4,''), phone=NULLIF($5,''), is_active=$6, updated_at=now() WHERE id=$1`
-		if _, err := tx.Exec(ctx, q, userID, username, name, email, phone, isActive); err != nil {
+		const q = `UPDATE users SET username=$2, name=$3, email=NULLIF($4,''), phone=NULLIF($5,''), is_active=$6, school_id=NULLIF($7,'')::uuid, updated_at=now() WHERE id=$1`
+		if _, err := tx.Exec(ctx, q, userID, username, name, email, phone, isActive, schoolID); err != nil {
 			return Student{}, false, fmt.Errorf("update user: %w", err)
 		}
 	}
@@ -367,9 +369,9 @@ func (r *StudentsRepo) Delete(ctx context.Context, studentID string) (bool, erro
 	return ct.RowsAffected() > 0, nil
 }
 
-func (r *TeachersRepo) CreateTeacherTx(ctx context.Context, tx pgx.Tx, username, passwordHash, passwordPlain, name, email, phone, nip, jenjang, googleID string, subjectIDs []string, groupIDs []string, levelIDs []string) (teacherID, userID string, err error) {
-	const insUser = `INSERT INTO users (username, password_hash, password_plain, role, name, email, phone, google_id, is_active) VALUES ($1,$2,NULLIF($3,''),'teacher',$4,NULLIF($5,''),NULLIF($6,''),NULLIF($7,''),true) RETURNING id`
-	if err := tx.QueryRow(ctx, insUser, username, passwordHash, passwordPlain, name, email, phone, googleID).Scan(&userID); err != nil {
+func (r *TeachersRepo) CreateTeacherTx(ctx context.Context, tx pgx.Tx, username, passwordHash, passwordPlain, name, email, phone, nip, jenjang, googleID string, subjectIDs []string, groupIDs []string, levelIDs []string, schoolID *string) (teacherID, userID string, err error) {
+	const insUser = `INSERT INTO users (username, password_hash, password_plain, role, name, email, phone, google_id, is_active, school_id) VALUES ($1,$2,NULLIF($3,''),'teacher',$4,NULLIF($5,''),NULLIF($6,''),NULLIF($7,''),true,NULLIF($8,'')::uuid) RETURNING id`
+	if err := tx.QueryRow(ctx, insUser, username, passwordHash, passwordPlain, name, email, phone, googleID, schoolID).Scan(&userID); err != nil {
 		return "", "", fmt.Errorf("insert user: %w", err)
 	}
 
@@ -405,9 +407,9 @@ func (r *TeachersRepo) CreateTeacherTx(ctx context.Context, tx pgx.Tx, username,
 	return teacherID, userID, nil
 }
 
-func (r *StudentsRepo) CreateStudentTx(ctx context.Context, tx pgx.Tx, username, passwordHash, passwordPlain, name, email, phone, nis, participantNo, jenjang, programID, levelID, groupID, googleID string) (studentID, userID string, err error) {
-	const insUser = `INSERT INTO users (username, password_hash, password_plain, role, name, email, phone, google_id, is_active) VALUES ($1,$2,NULLIF($3,''),'student',$4,NULLIF($5,''),NULLIF($6,''),NULLIF($7,''),true) RETURNING id`
-	if err := tx.QueryRow(ctx, insUser, username, passwordHash, passwordPlain, name, email, phone, googleID).Scan(&userID); err != nil {
+func (r *StudentsRepo) CreateStudentTx(ctx context.Context, tx pgx.Tx, username, passwordHash, passwordPlain, name, email, phone, nis, participantNo, jenjang, programID, levelID, groupID, googleID string, schoolID *string) (studentID, userID string, err error) {
+	const insUser = `INSERT INTO users (username, password_hash, password_plain, role, name, email, phone, google_id, is_active, school_id) VALUES ($1,$2,NULLIF($3,''),'student',$4,NULLIF($5,''),NULLIF($6,''),NULLIF($7,''),true,NULLIF($8,'')::uuid) RETURNING id`
+	if err := tx.QueryRow(ctx, insUser, username, passwordHash, passwordPlain, name, email, phone, googleID, schoolID).Scan(&userID); err != nil {
 		return "", "", fmt.Errorf("insert user: %w", err)
 	}
 
@@ -423,7 +425,7 @@ RETURNING id`
 }
 
 // CreateTeacher creates user(role=teacher) + teacher in one transaction.
-func (r *TeachersRepo) CreateTeacher(ctx context.Context, username, passwordHash, passwordPlain, name, email, phone, nip, jenjang, googleID string, subjectIDs []string, groupIDs []string, levelIDs []string) (teacherID, userID string, err error) {
+func (r *TeachersRepo) CreateTeacher(ctx context.Context, username, passwordHash, passwordPlain, name, email, phone, nip, jenjang, googleID string, subjectIDs []string, groupIDs []string, levelIDs []string, schoolID *string) (teacherID, userID string, err error) {
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return "", "", fmt.Errorf("begin tx: %w", err)
@@ -434,7 +436,7 @@ func (r *TeachersRepo) CreateTeacher(ctx context.Context, username, passwordHash
 		}
 	}()
 
-	teacherID, userID, err = r.CreateTeacherTx(ctx, tx, username, passwordHash, passwordPlain, name, email, phone, nip, jenjang, googleID, subjectIDs, groupIDs, levelIDs)
+	teacherID, userID, err = r.CreateTeacherTx(ctx, tx, username, passwordHash, passwordPlain, name, email, phone, nip, jenjang, googleID, subjectIDs, groupIDs, levelIDs, schoolID)
 	if err != nil {
 		return "", "", err
 	}
@@ -446,7 +448,7 @@ func (r *TeachersRepo) CreateTeacher(ctx context.Context, username, passwordHash
 }
 
 // CreateStudent creates user(role=student) + student in one transaction.
-func (r *StudentsRepo) CreateStudent(ctx context.Context, username, passwordHash, passwordPlain, name, email, phone, nis, participantNo, jenjang, programID, levelID, groupID, googleID string) (studentID, userID string, err error) {
+func (r *StudentsRepo) CreateStudent(ctx context.Context, username, passwordHash, passwordPlain, name, email, phone, nis, participantNo, jenjang, programID, levelID, groupID, googleID string, schoolID *string) (studentID, userID string, err error) {
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return "", "", fmt.Errorf("begin tx: %w", err)
@@ -457,7 +459,7 @@ func (r *StudentsRepo) CreateStudent(ctx context.Context, username, passwordHash
 		}
 	}()
 
-	studentID, userID, err = r.CreateStudentTx(ctx, tx, username, passwordHash, passwordPlain, name, email, phone, nis, participantNo, jenjang, programID, levelID, groupID, googleID)
+	studentID, userID, err = r.CreateStudentTx(ctx, tx, username, passwordHash, passwordPlain, name, email, phone, nis, participantNo, jenjang, programID, levelID, groupID, googleID, schoolID)
 	if err != nil {
 		return "", "", err
 	}
@@ -478,7 +480,7 @@ JOIN users u ON u.id = s.user_id
 WHERE s.nis = $1 OR u.username = $1
 LIMIT 1`
 	var it Student
-	err := r.pool.QueryRow(ctx, q, key).Scan(&it.ID, &it.UserID, &it.Username, &it.PasswordPlain, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.ParticipantNo, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.PhotoURL, &it.IsActive)
+	err := r.pool.QueryRow(ctx, q, key).Scan(&it.ID, &it.UserID, &it.Username, &it.PasswordPlain, &it.Name, &it.Email, &it.Phone, &it.NIS, &it.ParticipantNo, &it.Jenjang, &it.ProgramID, &it.LevelID, &it.GroupID, &it.PhotoURL, &it.IsActive, &it.SchoolID)
 	if err != nil {
 		if isNoRows(err) {
 			return Student{}, false, nil
@@ -515,7 +517,8 @@ SELECT s.id::text,
        COALESCE(s.level_id::text,''),
        COALESCE(s.group_id::text,''),
        COALESCE(u.photo_url,''),
-       u.is_active
+       u.is_active,
+       u.school_id
 `+base, strings.TrimSpace(levelID), strings.TrimSpace(groupID), strings.TrimSpace(studentID))
 	if err != nil {
 		return nil, 0, fmt.Errorf("list students by target: %w", err)
@@ -541,6 +544,7 @@ SELECT s.id::text,
 			&it.GroupID,
 			&it.PhotoURL,
 			&it.IsActive,
+			&it.SchoolID,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan student: %w", err)
 		}

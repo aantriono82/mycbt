@@ -11,6 +11,7 @@ import (
 const (
 	ctxUserIDKey   = "user_id"
 	ctxUserRoleKey = "user_role"
+	ctxSchoolIDKey = "school_id"
 )
 
 func RequireAuth(auth *authsvc.Service) gin.HandlerFunc {
@@ -30,6 +31,32 @@ func RequireAuth(auth *authsvc.Service) gin.HandlerFunc {
 		claims, err := auth.ParseToken(parts[1])
 		if err != nil {
 			c.AbortWithStatusJSON(401, gin.H{"error": gin.H{"code": "unauthorized", "message": "invalid token"}})
+			return
+		}
+
+		c.Set(ctxUserIDKey, claims.Subject)
+		c.Set(ctxUserRoleKey, claims.Role)
+		c.Next()
+	}
+}
+
+func TryAuth(auth *authsvc.Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		h := c.GetHeader("Authorization")
+		if h == "" {
+			c.Next()
+			return
+		}
+
+		parts := strings.SplitN(h, " ", 2)
+		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+			c.Next()
+			return
+		}
+
+		claims, err := auth.ParseToken(parts[1])
+		if err != nil {
+			c.Next()
 			return
 		}
 

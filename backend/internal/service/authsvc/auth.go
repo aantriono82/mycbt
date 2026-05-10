@@ -42,6 +42,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 	Role     string `json:"role"`
 	Username string `json:"username"`
+	SchoolID string `json:"school_id,omitempty"`
 }
 
 type TokenBlocklist interface {
@@ -95,6 +96,9 @@ func (s *Service) Login(ctx context.Context, username, password string) (token s
 		Role:     u.Role,
 		Username: u.Username,
 	}
+	if u.SchoolID != nil {
+		claims.SchoolID = *u.SchoolID
+	}
 
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	token, err = t.SignedString(s.secret)
@@ -120,6 +124,9 @@ func (s *Service) IssueToken(user model.User) (token string, expiresAt time.Time
 		},
 		Role:     user.Role,
 		Username: user.Username,
+	}
+	if user.SchoolID != nil {
+		claims.SchoolID = *user.SchoolID
 	}
 
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

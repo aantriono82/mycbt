@@ -26,6 +26,7 @@ import {
   mdiChartLine,
   mdiHistory,
   mdiClipboardTextSearchOutline,
+  mdiDomain,
 } from '@mdi/js'
 
 import { ROLES } from '@/stores/auth.js'
@@ -43,6 +44,7 @@ export const getMenuAsideMain = (role) => {
   if (role === ROLES.TEACHER) {
     return [
       { to: '/teacher/dashboard', icon: mdiHomeOutline, label: 'Dashboard' },
+      { to: '/teacher/sekolah', label: 'Identitas Sekolah', icon: mdiDomain },
       {
         label: 'Bank Soal',
         icon: mdiBookOpenVariant,
@@ -95,6 +97,11 @@ export const getMenuAsideMain = (role) => {
       label: 'Master Data',
       icon: mdiFolderOutline,
       menu: [
+        {
+          to: '/admin/master-data/sekolah',
+          label: 'Sekolah',
+          icon: mdiDomain,
+        },
         { to: '/admin/master-data/guru', label: 'Guru', icon: mdiAccountTie },
         { to: '/admin/master-data/siswa', label: 'Siswa', icon: mdiAccountSchool },
         {

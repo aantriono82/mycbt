@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { mdiChartBar, mdiTrophyOutline } from '@mdi/js'
+import { useRouter } from 'vue-router'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
@@ -13,6 +14,7 @@ import { useResultStore } from '@/stores/result.js'
 import { storeToRefs } from 'pinia'
 
 const resultStore = useResultStore()
+const router = useRouter()
 const { results, isLoading, errorMessage, averageScore, totalExams } = storeToRefs(resultStore)
 
 onMounted(() => resultStore.loadResults())
@@ -41,6 +43,11 @@ const statusLabel = (value) => {
   if (status === 'expired') return 'Expired'
   if (status === 'forced') return 'Forced'
   return value || '-'
+}
+
+const openDiscussion = (item) => {
+  if (!item?.exam_id) return
+  router.push(`/student/hasil/${item.exam_id}/pembahasan`)
 }
 </script>
 
@@ -135,6 +142,14 @@ const statusLabel = (value) => {
               <div v-if="item.pending_grading_count > 0" class="text-[9px] font-black text-amber-500 dark:text-amber-400 uppercase tracking-widest animate-pulse">
                 Menunggu Koreksi Guru
               </div>
+              <button
+                v-if="item.discussion_available"
+                type="button"
+                class="rounded-lg bg-indigo-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300"
+                @click="openDiscussion(item)"
+              >
+                Lihat Pembahasan
+              </button>
            </div>
         </div>
 

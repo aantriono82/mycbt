@@ -72,18 +72,19 @@ func (h *ExamsHandler) List(c *gin.Context) {
 }
 
 type createExamReq struct {
-	SubjectID        string `json:"subject_id"`
-	TeacherID        string `json:"teacher_id"` // required for admin
-	SessionID        string `json:"session_id"`
-	Title            string `json:"title"`
-	StartsAt         string `json:"starts_at"` // RFC3339
-	EndsAt           string `json:"ends_at"`   // RFC3339
-	DurationMinutes  *int   `json:"duration_minutes"`
-	ShuffleQuestions bool   `json:"shuffle_questions"`
-	ShuffleOptions   bool   `json:"shuffle_options"`
-	ScoringMode      string `json:"scoring_mode"` // partial|absolute
-	MaxAttempts      *int   `json:"max_attempts"`
-	PassingScore     *int   `json:"passing_score"`
+	SubjectID                string `json:"subject_id"`
+	TeacherID                string `json:"teacher_id"` // required for admin
+	SessionID                string `json:"session_id"`
+	Title                    string `json:"title"`
+	StartsAt                 string `json:"starts_at"` // RFC3339
+	EndsAt                   string `json:"ends_at"`   // RFC3339
+	DurationMinutes          *int   `json:"duration_minutes"`
+	ShuffleQuestions         bool   `json:"shuffle_questions"`
+	ShuffleOptions           bool   `json:"shuffle_options"`
+	ScoringMode              string `json:"scoring_mode"` // partial|absolute
+	MaxAttempts              *int   `json:"max_attempts"`
+	PassingScore             *int   `json:"passing_score"`
+	ShowDiscussionToStudents *bool  `json:"show_discussion_to_students"`
 }
 
 func (h *ExamsHandler) Create(c *gin.Context) {
@@ -122,6 +123,10 @@ func (h *ExamsHandler) Create(c *gin.Context) {
 	if passingScore < 0 || passingScore > 100 {
 		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "passing_score must be between 0 and 100"}})
 		return
+	}
+	showDiscussion := false
+	if req.ShowDiscussionToStudents != nil {
+		showDiscussion = *req.ShowDiscussionToStudents
 	}
 	scoringMode := strings.TrimSpace(strings.ToLower(req.ScoringMode))
 	if scoringMode == "" {
@@ -184,18 +189,19 @@ func (h *ExamsHandler) Create(c *gin.Context) {
 	}
 
 	it, err := h.ex.Create(c.Request.Context(), examrepo.CreateInput{
-		SubjectID:        req.SubjectID,
-		TeacherID:        teacherID,
-		SessionID:        sessID,
-		Title:            req.Title,
-		StartsAt:         startsAt,
-		EndsAt:           endsAt,
-		DurationMinutes:  req.DurationMinutes,
-		ShuffleQuestions: req.ShuffleQuestions,
-		ShuffleOptions:   req.ShuffleOptions,
-		ScoringMode:      scoringMode,
-		MaxAttempts:      maxAttempts,
-		PassingScore:     passingScore,
+		SubjectID:                req.SubjectID,
+		TeacherID:                teacherID,
+		SessionID:                sessID,
+		Title:                    req.Title,
+		StartsAt:                 startsAt,
+		EndsAt:                   endsAt,
+		DurationMinutes:          req.DurationMinutes,
+		ShuffleQuestions:         req.ShuffleQuestions,
+		ShuffleOptions:           req.ShuffleOptions,
+		ScoringMode:              scoringMode,
+		MaxAttempts:              maxAttempts,
+		PassingScore:             passingScore,
+		ShowDiscussionToStudents: showDiscussion,
 	})
 	if err != nil {
 		if pgerr.Code(err) == pgerr.CodeForeignKeyViolation {
@@ -238,17 +244,18 @@ func (h *ExamsHandler) Get(c *gin.Context) {
 }
 
 type patchExamReq struct {
-	SessionID        *string `json:"session_id"`
-	Title            *string `json:"title"`
-	StartsAt         *string `json:"starts_at"`
-	EndsAt           *string `json:"ends_at"`
-	DurationMinutes  **int   `json:"duration_minutes"` // can set null
-	ShuffleQuestions *bool   `json:"shuffle_questions"`
-	ShuffleOptions   *bool   `json:"shuffle_options"`
-	ScoringMode      *string `json:"scoring_mode"` // partial|absolute
-	MaxAttempts      *int    `json:"max_attempts"`
-	PassingScore     *int    `json:"passing_score"`
-	Status           *string `json:"status"`       // draft|published|archived
+	SessionID                *string `json:"session_id"`
+	Title                    *string `json:"title"`
+	StartsAt                 *string `json:"starts_at"`
+	EndsAt                   *string `json:"ends_at"`
+	DurationMinutes          **int   `json:"duration_minutes"` // can set null
+	ShuffleQuestions         *bool   `json:"shuffle_questions"`
+	ShuffleOptions           *bool   `json:"shuffle_options"`
+	ScoringMode              *string `json:"scoring_mode"` // partial|absolute
+	MaxAttempts              *int    `json:"max_attempts"`
+	PassingScore             *int    `json:"passing_score"`
+	ShowDiscussionToStudents *bool   `json:"show_discussion_to_students"`
+	Status                   *string `json:"status"` // draft|published|archived
 }
 
 func (h *ExamsHandler) Patch(c *gin.Context) {
@@ -373,6 +380,10 @@ func (h *ExamsHandler) Patch(c *gin.Context) {
 		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "passing_score must be between 0 and 100"}})
 		return
 	}
+	showDiscussion := cur.ShowDiscussionToStudents
+	if req.ShowDiscussionToStudents != nil {
+		showDiscussion = *req.ShowDiscussionToStudents
+	}
 	status := cur.Status
 	if req.Status != nil {
 		status = strings.TrimSpace(*req.Status)
@@ -396,17 +407,18 @@ func (h *ExamsHandler) Patch(c *gin.Context) {
 	}
 
 	it, ok, err := h.ex.Update(c.Request.Context(), c.Param("id"), examrepo.UpdateInput{
-		SessionID:        sessID,
-		Title:            title,
-		StartsAt:         startsAt,
-		EndsAt:           endsAt,
-		DurationMinutes:  dur,
-		ShuffleQuestions: shQ,
-		ShuffleOptions:   shO,
-		ScoringMode:      scoringMode,
-		MaxAttempts:      maxAttempts,
-		PassingScore:     passingScore,
-		Status:           status,
+		SessionID:                sessID,
+		Title:                    title,
+		StartsAt:                 startsAt,
+		EndsAt:                   endsAt,
+		DurationMinutes:          dur,
+		ShuffleQuestions:         shQ,
+		ShuffleOptions:           shO,
+		ScoringMode:              scoringMode,
+		MaxAttempts:              maxAttempts,
+		PassingScore:             passingScore,
+		ShowDiscussionToStudents: showDiscussion,
+		Status:                   status,
 	})
 	if err != nil {
 		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})

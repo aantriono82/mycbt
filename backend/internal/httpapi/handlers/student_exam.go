@@ -38,6 +38,7 @@ type studentExamRepo interface {
 	ComputeAutoScore(ctx context.Context, sessionID, studentID string, nowUTC time.Time) (studentexamrepo.AutoScoreSummary, error)
 	Heartbeat(ctx context.Context, sessionID, studentID string, payload json.RawMessage) error
 	ListStudentResults(ctx context.Context, studentID string, f studentexamrepo.ListStudentResultsFilter) ([]studentexamrepo.StudentResultSummary, int, error)
+	GetStudentDiscussionByExam(ctx context.Context, examID, studentID string) (studentexamrepo.StudentDiscussion, error)
 	ListStudentAnnouncements(ctx context.Context, studentID, levelID, groupID string, f studentexamrepo.ListStudentAnnouncementsFilter) ([]studentexamrepo.StudentAnnouncement, int, error)
 	MarkAnnouncementsRead(ctx context.Context, studentID string, announcementIDs []string) error
 	EnsureStudentCanAttendExam(ctx context.Context, examID, studentID, levelID, groupID string) (bool, error)
@@ -945,6 +946,44 @@ func (h *StudentExamHandler) ListResults(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"data": items, "meta": gin.H{"limit": limit, "offset": offset, "total": total}})
+}
+
+func (h *StudentExamHandler) GetResultDiscussion(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+
+	st, ok, err := h.repo.StudentByUserID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if !ok {
+		c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "student not registered"}})
+		return
+	}
+	if !st.IsActive {
+		c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "user inactive"}})
+		return
+	}
+
+	examID := strings.TrimSpace(c.Param("examId"))
+	if examID == "" {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "exam id required"}})
+		return
+	}
+
+	data, err := h.repo.GetStudentDiscussionByExam(c.Request.Context(), examID, st.StudentID)
+	if err != nil {
+		switch err {
+		case studentexamrepo.ErrDiscussionNotAvailable:
+			c.JSON(409, gin.H{"error": gin.H{"code": "discussion_locked", "message": "pembahasan belum tersedia"}})
+		case studentexamrepo.ErrDiscussionNotFound:
+			c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "not found"}})
+		default:
+			c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		}
+		return
+	}
+	c.JSON(200, gin.H{"data": data})
 }
 
 func (h *StudentExamHandler) ListAnnouncements(c *gin.Context) {

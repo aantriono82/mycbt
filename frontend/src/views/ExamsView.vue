@@ -75,6 +75,7 @@ const selectedExamSessionId = ref('')
 const selectedExamScoringMode = ref('partial')
 const selectedExamMaxAttempts = ref(1)
 const selectedExamPassingScore = ref(75)
+const selectedExamShowDiscussion = ref(false)
 const selectedExam = computed(() => exams.value.find((x) => x.id === selectedExamId.value) || null)
 const selectedExamShortId = computed(() => shortCode2(selectedExamId.value))
 
@@ -548,6 +549,21 @@ const updateExamPassingScore = async () => {
   }
 }
 
+const updateExamDiscussionVisibility = async () => {
+  if (!selectedExamId.value) return
+  errorMessage.value = ''
+  successMessage.value = ''
+  try {
+    await api.patch(`/api/v1/exams/${selectedExamId.value}`, {
+      show_discussion_to_students: !!selectedExamShowDiscussion.value,
+    })
+    successMessage.value = 'Visibilitas pembahasan berhasil diperbarui'
+    await loadExams()
+  } catch (error) {
+    errorMessage.value = error?.response?.data?.error?.message || 'Gagal memperbarui visibilitas pembahasan'
+  }
+}
+
 const createExam = async () => {
   successMessage.value = ''
   errorMessage.value = ''
@@ -569,6 +585,7 @@ const createExam = async () => {
     shuffle_questions: form.shuffle_questions,
     shuffle_options: form.shuffle_options,
     scoring_mode: String(form.scoring_mode || 'partial').trim() || 'partial',
+    show_discussion_to_students: false,
   }
   if (!isTeacherArea.value) {
     payload.teacher_id = form.teacher_id
@@ -696,11 +713,13 @@ watch(selectedExamId, (newId) => {
     selectedExamScoringMode.value = selectedExam.value.scoring_mode || 'partial'
     selectedExamMaxAttempts.value = Number(selectedExam.value.max_attempts) > 0 ? Number(selectedExam.value.max_attempts) : 1
     selectedExamPassingScore.value = clampScore(selectedExam.value.passing_score, 75)
+    selectedExamShowDiscussion.value = !!selectedExam.value.show_discussion_to_students
   } else {
     selectedExamSessionId.value = ''
     selectedExamScoringMode.value = 'partial'
     selectedExamMaxAttempts.value = 1
     selectedExamPassingScore.value = 75
+    selectedExamShowDiscussion.value = false
   }
 })
 
@@ -957,6 +976,23 @@ onMounted(async () => {
                         />
                       </div>
                       <BaseButton class="w-full" color="info" label="Update Lulus" small @click="updateExamPassingScore" />
+                    </div>
+                  </div>
+
+                  <div class="min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900/50">
+                    <div class="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Pembahasan Soal</div>
+                    <div class="flex flex-col gap-3">
+                      <div class="flex-1">
+                        <FormControl
+                          v-model="selectedExamShowDiscussion"
+                          :options="[
+                            { id: true, label: 'Tampilkan ke siswa' },
+                            { id: false, label: 'Sembunyikan' },
+                          ]"
+                          small
+                        />
+                      </div>
+                      <BaseButton class="w-full" color="info" label="Update Pembahasan" small @click="updateExamDiscussionVisibility" />
                     </div>
                   </div>
                 </div>

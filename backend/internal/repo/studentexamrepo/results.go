@@ -19,13 +19,16 @@ type StudentResultSummary struct {
 	SessionStatus string `json:"session_status"`
 	SubmittedAt   string `json:"submitted_at,omitempty"`
 
-	TotalQuestions      int `json:"total_questions"`
-	AnsweredQuestions   int `json:"answered_questions"`
-	AutoScorable        int `json:"auto_scorable_questions"`
-	CorrectCount        int `json:"correct_count"`
-	Score               int `json:"score"`
-	ManualScoredCount   int `json:"manual_scored_count"`
-	PendingGradingCount int `json:"pending_grading_count"`
+	TotalQuestions      int  `json:"total_questions"`
+	AnsweredQuestions   int  `json:"answered_questions"`
+	AutoScorable        int  `json:"auto_scorable_questions"`
+	CorrectCount        int  `json:"correct_count"`
+	Score               int  `json:"score"`
+	ManualScoredCount   int  `json:"manual_scored_count"`
+	PendingGradingCount int  `json:"pending_grading_count"`
+	AttemptsUsed        int  `json:"attempts_used"`
+	MaxAttempts         int  `json:"max_attempts"`
+	DiscussionAvailable bool `json:"discussion_available"`
 }
 
 type ListStudentResultsFilter struct {
@@ -51,7 +54,16 @@ SELECT s.id::text,
        e.title,
        sub.name,
        s.status,
-       COALESCE(to_char(s.finished_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),'') AS finished_at
+       COALESCE(to_char(s.finished_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') ,'') AS finished_at,
+       e.max_attempts,
+       e.show_discussion_to_students,
+       (
+         SELECT COUNT(*)
+         FROM exam_sessions sx
+         WHERE sx.exam_id = s.exam_id
+           AND sx.student_id = s.student_id
+           AND sx.status IN ('submitted','forced','expired')
+       ) AS attempts_used
 FROM exam_sessions s
 JOIN exams e ON e.id = s.exam_id
 JOIN subjects sub ON sub.id = e.subject_id
@@ -67,12 +79,17 @@ ORDER BY s.finished_at DESC NULLS LAST, s.started_at DESC`, studentID)
 	for rows.Next() {
 		var it StudentResultSummary
 		var finished string
-		if err := rows.Scan(&it.SessionID, &it.ExamID, &it.ExamTitle, &it.SubjectName, &it.SessionStatus, &finished); err != nil {
+		var showDiscussion bool
+		if err := rows.Scan(&it.SessionID, &it.ExamID, &it.ExamTitle, &it.SubjectName, &it.SessionStatus, &finished, &it.MaxAttempts, &showDiscussion, &it.AttemptsUsed); err != nil {
 			return nil, 0, fmt.Errorf("scan result: %w", err)
 		}
 		if finished != "" {
 			it.SubmittedAt = finished
 		}
+		if it.MaxAttempts <= 0 {
+			it.MaxAttempts = 1
+		}
+		it.DiscussionAvailable = showDiscussion && it.AttemptsUsed >= it.MaxAttempts && isFinalSessionStatus(it.SessionStatus)
 		allRows = append(allRows, it)
 	}
 	if err := rows.Err(); err != nil {

@@ -190,6 +190,10 @@ func (m *mockStudentExamRepo) ListStudentResults(ctx context.Context, studentID 
 	return nil, 0, nil
 }
 
+func (m *mockStudentExamRepo) GetStudentDiscussionByExam(ctx context.Context, examID, studentID string) (studentexamrepo.StudentDiscussion, error) {
+	return studentexamrepo.StudentDiscussion{}, studentexamrepo.ErrDiscussionNotFound
+}
+
 func (m *mockStudentExamRepo) ListStudentAnnouncements(ctx context.Context, studentID, levelID, groupID string, f studentexamrepo.ListStudentAnnouncementsFilter) ([]studentexamrepo.StudentAnnouncement, int, error) {
 	return m.announcements, m.announcementsTotal, m.announcementsErr
 }

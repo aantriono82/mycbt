@@ -35,6 +35,12 @@ import { shortCode2 } from '@/utils/shortCode.js'
 const router = useRouter()
 const route = useRoute()
 const routeRolePrefix = computed(() => (route.path.startsWith('/admin') ? '/admin' : '/teacher'))
+const updateRouteQuery = (patch = {}) => {
+  const next = { ...route.query, ...patch }
+  if (!next.id) delete next.id
+  if (!next.qid) delete next.qid
+  router.replace({ path: route.path, query: next })
+}
 
 // State management
 const currentSetId = ref(route.query.id || '')
@@ -72,6 +78,7 @@ const editorRenderVersion = ref(0)
 const questionForm = reactive({
   type: 'mc_single',
   stem: '',
+  explanation: '',
   order_no: 1,
   weight: 1,
   options_text: 'A|Opsi A|true\nB|Opsi B|false',
@@ -330,6 +337,12 @@ const buildQuestionCardAnswerPreviewHtml = (item) => {
   return `<ul class="space-y-1">${compact.map((line) => `<li class="line-clamp-1">${escapeHtml(line)}</li>`).join('')}</ul>`
 }
 
+const buildQuestionCardExplanationPreview = (item) => {
+  const summary = summarizeText(item?.explanation, 120)
+  if (!summary) return ''
+  return summary
+}
+
 
 const docxFile = ref(null)
 const isImporting = ref(false)
@@ -390,6 +403,15 @@ const initEditorFromFirstQuestion = async () => {
   if (initializedSetId.value === currentSetId.value) return
   initializedSetId.value = currentSetId.value
 
+  const queryQuestionID = String(route.query.qid || '').trim()
+  if (queryQuestionID && questions.value.length > 0) {
+    const selected = questions.value.find((q) => String(q?.id || '') === queryQuestionID)
+    if (selected) {
+      await populateQuestionForm(selected)
+      return
+    }
+  }
+
   if (questions.value.length > 0) {
     await populateQuestionForm(questions.value[0])
     return
@@ -448,10 +470,14 @@ const updateMetadata = async () => {
 const resetQuestionForm = (keepType = true) => {
   const lastType = questionForm.type
   editingQuestionId.value = ''
+  if (route.query.qid) {
+    updateRouteQuery({ qid: '' })
+  }
   if (!keepType) questionForm.type = 'mc_single'
   else questionForm.type = lastType
   
   questionForm.stem = ''
+  questionForm.explanation = ''
   questionForm.order_no = getNextOrderNo()
   questionForm.weight = 1
   questionForm.options_text = 'A|Opsi A|true\nB|Opsi B|false'
@@ -593,6 +619,7 @@ const buildQuestionPayload = () => {
   const payload = {
     type: questionForm.type,
     stem: questionForm.stem,
+    explanation: questionForm.explanation,
     order_no: Number(questionForm.order_no) || 1,
     weight: Number(questionForm.weight) > 0 ? Number(questionForm.weight) : 1,
   }
@@ -679,7 +706,11 @@ const applyQuestionToForm = (item) => {
   if (!item) return
   const nextType = String(item.type || '').trim() || 'mc_single'
   editingQuestionId.value = item.id
+  if (item.id && String(route.query.qid || '') !== String(item.id)) {
+    updateRouteQuery({ qid: item.id })
+  }
   questionForm.stem = item.stem || ''
+  questionForm.explanation = item.explanation || ''
   questionForm.order_no = item.order_no
   questionForm.weight = Number(item.weight) > 0 ? Number(item.weight) : 1
   questionForm.options_text = (item.options || []).map(o => `${o.label}|${o.content}|${o.is_correct}`).join('\n')
@@ -796,7 +827,7 @@ const syncEditorTypeRoute = (nextType) => {
   if (current === normalized) return
   router.replace({
     path: `${routeRolePrefix.value}/bank-soal/new/${normalized}`,
-    query: route.query,
+    query: { ...route.query, qid: editingQuestionId.value || route.query.qid || '' },
   })
 }
 
@@ -1088,6 +1119,10 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
               <div class="space-y-4">
                 <label class="block font-black text-[11px] uppercase tracking-[0.2em] text-slate-400">Soal</label>
                 <RichEditor :key="`${activeEditorScopeKey}-stem`" v-model="questionForm.stem" :height="500" :toolbar="stemToolbar" placeholder="Tulis soal disini..." />
+                <div class="rounded-xl border border-indigo-200 bg-indigo-50/40 p-3 dark:border-indigo-900/40 dark:bg-indigo-900/10">
+                  <div class="mb-2 text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-300">Pembahasan Soal</div>
+                  <RichEditor :key="`${activeEditorScopeKey}-explanation`" v-model="questionForm.explanation" :height="220" :toolbar="optionToolbar" placeholder="Tulis pembahasan yang akan ditampilkan ke siswa..." />
+                </div>
               </div>
 
 
@@ -1169,8 +1204,15 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                     </div>
                   </div>
                   <div class="mb-2 text-[10px] font-mono text-slate-400 truncate" :title="item.id">ID: {{ formatQuestionId(item.id) }}</div>
+                  <div class="mb-1">
+                    <span v-if="buildQuestionCardExplanationPreview(item)" class="inline-block rounded px-2 py-0.5 text-[9px] font-black uppercase bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">Ada Pembahasan</span>
+                    <span v-else class="inline-block rounded px-2 py-0.5 text-[9px] font-black uppercase bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">Belum</span>
+                  </div>
                   <div class="text-xs text-slate-600 dark:text-slate-300 line-clamp-3" v-html="item.stem"></div>
                   <div v-if="buildQuestionCardAnswerPreviewHtml(item)" class="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300" v-html="buildQuestionCardAnswerPreviewHtml(item)"></div>
+                  <div v-if="buildQuestionCardExplanationPreview(item)" class="mt-2 rounded-lg border border-indigo-200 bg-indigo-50/50 px-2.5 py-2 text-[11px] text-indigo-700 dark:border-indigo-900/40 dark:bg-indigo-900/20 dark:text-indigo-300">
+                    <span class="mr-1 font-black uppercase tracking-widest text-[9px]">Pembahasan:</span>{{ buildQuestionCardExplanationPreview(item) }}
+                  </div>
                </div>
              </div>
           </div>
@@ -1235,6 +1277,10 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
               </div>
               <div class="p-4">
                 <RichEditor :key="`${activeEditorScopeKey}-stem`" v-model="questionForm.stem" :height="480" :toolbar="stemToolbar" placeholder="Tulis soal disini..." />
+                <div class="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/40 p-3 dark:border-indigo-900/40 dark:bg-indigo-900/10">
+                  <div class="mb-2 text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-300">Pembahasan Soal</div>
+                  <RichEditor :key="`${activeEditorScopeKey}-explanation`" v-model="questionForm.explanation" :height="220" :toolbar="optionToolbar" placeholder="Tulis pembahasan yang akan ditampilkan ke siswa..." />
+                </div>
               </div>
             </div>
 
@@ -1312,9 +1358,16 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                     </div>
                   </div>
                   <div class="mb-2 text-[10px] font-mono text-slate-400 truncate" :title="item.id">ID: {{ formatQuestionId(item.id) }}</div>
+                  <div class="mb-1">
+                    <span v-if="buildQuestionCardExplanationPreview(item)" class="inline-block rounded px-2 py-0.5 text-[9px] font-black uppercase bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">Ada Pembahasan</span>
+                    <span v-else class="inline-block rounded px-2 py-0.5 text-[9px] font-black uppercase bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">Belum</span>
+                  </div>
                   <span class="inline-block mb-1 px-2 py-0.5 rounded text-[9px] font-black uppercase bg-slate-100 dark:bg-slate-800 text-slate-500">{{ item.type.replace('_', ' ') }}</span>
                   <div class="text-xs text-slate-600 dark:text-slate-300 line-clamp-3" v-html="item.stem"></div>
                   <div v-if="buildQuestionCardAnswerPreviewHtml(item)" class="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300" v-html="buildQuestionCardAnswerPreviewHtml(item)"></div>
+                  <div v-if="buildQuestionCardExplanationPreview(item)" class="mt-2 rounded-lg border border-indigo-200 bg-indigo-50/50 px-2.5 py-2 text-[11px] text-indigo-700 dark:border-indigo-900/40 dark:bg-indigo-900/20 dark:text-indigo-300">
+                    <span class="mr-1 font-black uppercase tracking-widest text-[9px]">Pembahasan:</span>{{ buildQuestionCardExplanationPreview(item) }}
+                  </div>
                </div>
              </div>
           </div>
@@ -1384,6 +1437,10 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
               <!-- Card Body -->
               <div class="p-4">
                 <RichEditor :key="`${activeEditorScopeKey}-stem`" v-model="questionForm.stem" :height="480" :toolbar="stemToolbar" placeholder="Tulis soal isian singkat disini..." />
+                <div class="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/40 p-3 dark:border-indigo-900/40 dark:bg-indigo-900/10">
+                  <div class="mb-2 text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-300">Pembahasan Soal</div>
+                  <RichEditor :key="`${activeEditorScopeKey}-explanation`" v-model="questionForm.explanation" :height="220" :toolbar="optionToolbar" placeholder="Tulis pembahasan yang akan ditampilkan ke siswa..." />
+                </div>
               </div>
             </div>
 
@@ -1461,9 +1518,16 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                     </div>
                   </div>
                   <div class="mb-2 text-[10px] font-mono text-slate-400 truncate" :title="item.id">ID: {{ formatQuestionId(item.id) }}</div>
+                  <div class="mb-1">
+                    <span v-if="buildQuestionCardExplanationPreview(item)" class="inline-block rounded px-2 py-0.5 text-[9px] font-black uppercase bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">Ada Pembahasan</span>
+                    <span v-else class="inline-block rounded px-2 py-0.5 text-[9px] font-black uppercase bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">Belum</span>
+                  </div>
                   <span class="inline-block mb-1 px-2 py-0.5 rounded text-[9px] font-black uppercase bg-teal-100 dark:bg-teal-900/40 text-teal-600">{{ item.type.replace('_', ' ') }}</span>
                   <div class="text-xs text-slate-600 dark:text-slate-300 line-clamp-3" v-html="item.stem"></div>
                   <div v-if="buildQuestionCardAnswerPreviewHtml(item)" class="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300" v-html="buildQuestionCardAnswerPreviewHtml(item)"></div>
+                  <div v-if="buildQuestionCardExplanationPreview(item)" class="mt-2 rounded-lg border border-indigo-200 bg-indigo-50/50 px-2.5 py-2 text-[11px] text-indigo-700 dark:border-indigo-900/40 dark:bg-indigo-900/20 dark:text-indigo-300">
+                    <span class="mr-1 font-black uppercase tracking-widest text-[9px]">Pembahasan:</span>{{ buildQuestionCardExplanationPreview(item) }}
+                  </div>
                </div>
              </div>
           </div>
@@ -1533,6 +1597,10 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
               <!-- Card Body -->
               <div class="p-4">
                 <RichEditor :key="`${activeEditorScopeKey}-stem`" v-model="questionForm.stem" :height="480" :toolbar="stemToolbar" placeholder="Tulis soal uraian disini..." />
+                <div class="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/40 p-3 dark:border-indigo-900/40 dark:bg-indigo-900/10">
+                  <div class="mb-2 text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-300">Pembahasan Soal</div>
+                  <RichEditor :key="`${activeEditorScopeKey}-explanation`" v-model="questionForm.explanation" :height="220" :toolbar="optionToolbar" placeholder="Tulis pembahasan yang akan ditampilkan ke siswa..." />
+                </div>
               </div>
             </div>
 
@@ -1611,9 +1679,16 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                     </div>
                   </div>
                   <div class="mb-2 text-[10px] font-mono text-slate-400 truncate" :title="item.id">ID: {{ formatQuestionId(item.id) }}</div>
+                  <div class="mb-1">
+                    <span v-if="buildQuestionCardExplanationPreview(item)" class="inline-block rounded px-2 py-0.5 text-[9px] font-black uppercase bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">Ada Pembahasan</span>
+                    <span v-else class="inline-block rounded px-2 py-0.5 text-[9px] font-black uppercase bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">Belum</span>
+                  </div>
                   <span class="inline-block mb-1 px-2 py-0.5 rounded text-[9px] font-black uppercase bg-violet-100 dark:bg-violet-900/40 text-violet-600">{{ item.type.replace('_', ' ') }}</span>
                   <div class="text-xs text-slate-600 dark:text-slate-300 line-clamp-3" v-html="item.stem"></div>
                   <div v-if="buildQuestionCardAnswerPreviewHtml(item)" class="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300" v-html="buildQuestionCardAnswerPreviewHtml(item)"></div>
+                  <div v-if="buildQuestionCardExplanationPreview(item)" class="mt-2 rounded-lg border border-indigo-200 bg-indigo-50/50 px-2.5 py-2 text-[11px] text-indigo-700 dark:border-indigo-900/40 dark:bg-indigo-900/20 dark:text-indigo-300">
+                    <span class="mr-1 font-black uppercase tracking-widest text-[9px]">Pembahasan:</span>{{ buildQuestionCardExplanationPreview(item) }}
+                  </div>
                </div>
              </div>
           </div>
@@ -1676,6 +1751,10 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                   <label class="font-black text-[11px] uppercase tracking-[0.2em] text-slate-400">Stimulus / Soal Utama</label>
                 </div>
                 <RichEditor :key="`${activeEditorScopeKey}-stem`" v-model="questionForm.stem" :height="450" :toolbar="stemToolbar" placeholder="Tulis stimulus soal disini..." />
+                <div class="rounded-xl border border-indigo-200 bg-indigo-50/40 p-3 dark:border-indigo-900/40 dark:bg-indigo-900/10">
+                  <div class="mb-2 text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-300">Pembahasan Soal</div>
+                  <RichEditor :key="`${activeEditorScopeKey}-explanation`" v-model="questionForm.explanation" :height="220" :toolbar="optionToolbar" placeholder="Tulis pembahasan yang akan ditampilkan ke siswa..." />
+                </div>
               </div>
 
               <!-- Right: Statements Management -->
@@ -1751,11 +1830,18 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                     </div>
                   </div>
                   <div class="mb-2 text-[10px] font-mono text-slate-400 truncate" :title="item.id">ID: {{ formatQuestionId(item.id) }}</div>
+                  <div class="mb-1">
+                    <span v-if="buildQuestionCardExplanationPreview(item)" class="inline-block rounded px-2 py-0.5 text-[9px] font-black uppercase bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">Ada Pembahasan</span>
+                    <span v-else class="inline-block rounded px-2 py-0.5 text-[9px] font-black uppercase bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">Belum</span>
+                  </div>
                   <div class="flex gap-2 mb-2">
                      <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter" :class="item.type === 'mc_single' ? 'bg-indigo-100 text-indigo-600' : 'bg-emerald-100 text-emerald-600'">{{ item.type.replace('_', ' ') }}</span>
                   </div>
                   <div class="text-xs text-slate-600 dark:text-slate-300 font-medium line-clamp-2 leading-relaxed" v-html="item.stem"></div>
                   <div v-if="buildQuestionCardAnswerPreviewHtml(item)" class="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300" v-html="buildQuestionCardAnswerPreviewHtml(item)"></div>
+                  <div v-if="buildQuestionCardExplanationPreview(item)" class="mt-2 rounded-lg border border-indigo-200 bg-indigo-50/50 px-2.5 py-2 text-[11px] text-indigo-700 dark:border-indigo-900/40 dark:bg-indigo-900/20 dark:text-indigo-300">
+                    <span class="mr-1 font-black uppercase tracking-widest text-[9px]">Pembahasan:</span>{{ buildQuestionCardExplanationPreview(item) }}
+                  </div>
                </div>
              </div>
           </div>
@@ -1818,6 +1904,10 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                   <label class="font-black text-[11px] uppercase tracking-[0.2em] text-slate-400">Stimulus / Soal Utama</label>
                 </div>
                 <RichEditor :key="`${activeEditorScopeKey}-stem`" v-model="questionForm.stem" :height="450" :toolbar="stemToolbar" placeholder="Tulis stimulus soal disini..." />
+                <div class="rounded-xl border border-indigo-200 bg-indigo-50/40 p-3 dark:border-indigo-900/40 dark:bg-indigo-900/10">
+                  <div class="mb-2 text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-300">Pembahasan Soal</div>
+                  <RichEditor :key="`${activeEditorScopeKey}-explanation`" v-model="questionForm.explanation" :height="220" :toolbar="optionToolbar" placeholder="Tulis pembahasan yang akan ditampilkan ke siswa..." />
+                </div>
               </div>
 
               <!-- Right: Pairs Management -->
@@ -1917,9 +2007,16 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                     </div>
                   </div>
                   <div class="mb-2 text-[10px] font-mono text-slate-400 truncate" :title="item.id">ID: {{ formatQuestionId(item.id) }}</div>
+                  <div class="mb-1">
+                    <span v-if="buildQuestionCardExplanationPreview(item)" class="inline-block rounded px-2 py-0.5 text-[9px] font-black uppercase bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">Ada Pembahasan</span>
+                    <span v-else class="inline-block rounded px-2 py-0.5 text-[9px] font-black uppercase bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">Belum</span>
+                  </div>
                   <span class="inline-block mb-1 px-2 py-0.5 rounded text-[9px] font-black uppercase bg-amber-100 dark:bg-amber-900/40 text-amber-600">{{ item.type.replace('_', ' ') }}</span>
                   <div class="text-xs text-slate-600 dark:text-slate-300 line-clamp-3" v-html="item.stem"></div>
                   <div v-if="buildQuestionCardAnswerPreviewHtml(item)" class="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300" v-html="buildQuestionCardAnswerPreviewHtml(item)"></div>
+                  <div v-if="buildQuestionCardExplanationPreview(item)" class="mt-2 rounded-lg border border-indigo-200 bg-indigo-50/50 px-2.5 py-2 text-[11px] text-indigo-700 dark:border-indigo-900/40 dark:bg-indigo-900/20 dark:text-indigo-300">
+                    <span class="mr-1 font-black uppercase tracking-widest text-[9px]">Pembahasan:</span>{{ buildQuestionCardExplanationPreview(item) }}
+                  </div>
                </div>
              </div>
           </div>
@@ -1967,6 +2064,9 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                       <span>{{ opt.content }}</span>
                    </div>
                 </div>
+                <div v-if="buildQuestionCardExplanationPreview(item)" class="ml-6 mt-3 rounded-lg border border-indigo-200 bg-indigo-50/50 px-2.5 py-2 text-[11px] text-indigo-700 dark:border-indigo-900/40 dark:bg-indigo-900/20 dark:text-indigo-300">
+                  <span class="mr-1 font-black uppercase tracking-widest text-[9px]">Pembahasan:</span>{{ buildQuestionCardExplanationPreview(item) }}
+                </div>
               </div>
             </div>
             <div v-else class="rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 p-24 text-center">
@@ -1994,6 +2094,9 @@ const optionToolbar = 'bold italic underline | fontfamily fontsize | alignleft |
                  </FormField>
                  <FormField label="Isi Pertanyaan">
                    <FormControl v-model="questionForm.stem" type="textarea" rows="4" />
+                 </FormField>
+                 <FormField label="Pembahasan Soal">
+                   <FormControl v-model="questionForm.explanation" type="textarea" rows="4" />
                  </FormField>
                  
                  <div v-if="['mc_single'].includes(questionForm.type)">

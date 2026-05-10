@@ -271,17 +271,18 @@ func (h *QuestionBankHandler) ListQuestions(c *gin.Context) {
 }
 
 type createQuestionReq struct {
-	Type       string                            `json:"type"`
-	Stem       string                            `json:"stem"`
-	OrderNo    int                               `json:"order_no"`
-	Weight     *int                              `json:"weight"`
-	Options    []questionbankrepo.QuestionOption `json:"options"`
-	Pairs      []questionbankrepo.MatchingPair   `json:"pairs"`
-	Answers    []questionbankrepo.ShortAnswer    `json:"answers"`
-	Correct    *bool                             `json:"correct"`
-	RubricText string                            `json:"rubric_text"`
-	MaxScore   *int                              `json:"max_score"`
-	Statements []questionbankrepo.TFStatement    `json:"statements"`
+	Type        string                            `json:"type"`
+	Stem        string                            `json:"stem"`
+	Explanation string                            `json:"explanation"`
+	OrderNo     int                               `json:"order_no"`
+	Weight      *int                              `json:"weight"`
+	Options     []questionbankrepo.QuestionOption `json:"options"`
+	Pairs       []questionbankrepo.MatchingPair   `json:"pairs"`
+	Answers     []questionbankrepo.ShortAnswer    `json:"answers"`
+	Correct     *bool                             `json:"correct"`
+	RubricText  string                            `json:"rubric_text"`
+	MaxScore    *int                              `json:"max_score"`
+	Statements  []questionbankrepo.TFStatement    `json:"statements"`
 }
 
 func (h *QuestionBankHandler) CreateQuestion(c *gin.Context) {
@@ -425,17 +426,18 @@ func (h *QuestionBankHandler) GetQuestion(c *gin.Context) {
 }
 
 type patchQuestionReq struct {
-	Type       *string                            `json:"type"`
-	Stem       *string                            `json:"stem"`
-	OrderNo    *int                               `json:"order_no"`
-	Weight     *int                               `json:"weight"`
-	Options    *[]questionbankrepo.QuestionOption `json:"options"`
-	Pairs      *[]questionbankrepo.MatchingPair   `json:"pairs"`
-	Answers    *[]questionbankrepo.ShortAnswer    `json:"answers"`
-	Correct    *bool                              `json:"correct"`
-	RubricText *string                            `json:"rubric_text"`
-	MaxScore   nullableInt                        `json:"max_score"`
-	Statements *[]questionbankrepo.TFStatement    `json:"statements"`
+	Type        *string                            `json:"type"`
+	Stem        *string                            `json:"stem"`
+	Explanation *string                            `json:"explanation"`
+	OrderNo     *int                               `json:"order_no"`
+	Weight      *int                               `json:"weight"`
+	Options     *[]questionbankrepo.QuestionOption `json:"options"`
+	Pairs       *[]questionbankrepo.MatchingPair   `json:"pairs"`
+	Answers     *[]questionbankrepo.ShortAnswer    `json:"answers"`
+	Correct     *bool                              `json:"correct"`
+	RubricText  *string                            `json:"rubric_text"`
+	MaxScore    nullableInt                        `json:"max_score"`
+	Statements  *[]questionbankrepo.TFStatement    `json:"statements"`
 }
 
 func (h *QuestionBankHandler) PatchQuestion(c *gin.Context) {
@@ -493,6 +495,9 @@ LIMIT 1`
 	}
 	if req.Stem != nil {
 		next.Stem = strings.TrimSpace(*req.Stem)
+	}
+	if req.Explanation != nil {
+		next.Explanation = strings.TrimSpace(*req.Explanation)
 	}
 	if req.OrderNo != nil {
 		next.OrderNo = *req.OrderNo
@@ -566,17 +571,18 @@ LIMIT 1`
 
 	// Validate final shape.
 	cReq := createQuestionReq{
-		Type:       next.Type,
-		Stem:       next.Stem,
-		OrderNo:    next.OrderNo,
-		Weight:     &next.Weight,
-		Options:    next.Options,
-		Pairs:      next.MatchingPairs,
-		Answers:    next.ShortAnswers,
-		Correct:    nil,
-		RubricText: "",
-		MaxScore:   nil,
-		Statements: next.Statements,
+		Type:        next.Type,
+		Stem:        next.Stem,
+		Explanation: next.Explanation,
+		OrderNo:     next.OrderNo,
+		Weight:      &next.Weight,
+		Options:     next.Options,
+		Pairs:       next.MatchingPairs,
+		Answers:     next.ShortAnswers,
+		Correct:     nil,
+		RubricText:  "",
+		MaxScore:    nil,
+		Statements:  next.Statements,
 	}
 	if next.TrueFalse != nil {
 		cReq.Correct = &next.TrueFalse.Correct
@@ -594,6 +600,7 @@ LIMIT 1`
 	updated, ok, err := h.qb.UpdateQuestion(c.Request.Context(), c.Param("id"), questionbankrepo.UpdateQuestionInput{
 		Type:          in.Type,
 		Stem:          in.Stem,
+		Explanation:   in.Explanation,
 		OrderNo:       in.OrderNo,
 		Weight:        in.Weight,
 		Options:       in.Options,
@@ -647,10 +654,11 @@ func validateAndBuildCreateQuestionInput(req createQuestionReq) (questionbankrep
 	}
 
 	in := questionbankrepo.CreateQuestionInput{
-		Type:    qType,
-		Stem:    stem,
-		OrderNo: req.OrderNo,
-		Weight:  1,
+		Type:        qType,
+		Stem:        stem,
+		Explanation: strings.TrimSpace(req.Explanation),
+		OrderNo:     req.OrderNo,
+		Weight:      1,
 	}
 	if req.Weight != nil {
 		if *req.Weight <= 0 {
