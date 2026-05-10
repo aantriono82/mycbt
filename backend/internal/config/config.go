@@ -51,6 +51,14 @@ type Config struct {
 	SMTPUser           string
 	SMTPPass           string
 	SMTPFrom           string
+
+	EssayAIEnabled   string
+	EssayAIProvider  string
+	EssayAIModel     string
+	EssayAITimeoutMS string
+	EssayAIMaxTokens string
+	GeminiAPIKey     string
+	OllamaBaseURL    string
 }
 
 func Load() Config {
@@ -102,6 +110,14 @@ func Load() Config {
 		SMTPUser:           getenv("SMTP_USER", ""),
 		SMTPPass:           getenv("SMTP_PASS", ""),
 		SMTPFrom:           getenv("SMTP_FROM", "no-reply@atigacbt.com"),
+
+		EssayAIEnabled:   getenv("ESSAY_AI_ENABLED", "false"),
+		EssayAIProvider:  getenv("ESSAY_AI_PROVIDER", "gemini"),
+		EssayAIModel:     getenv("ESSAY_AI_MODEL", ""),
+		EssayAITimeoutMS: getenv("ESSAY_AI_TIMEOUT_MS", "15000"),
+		EssayAIMaxTokens: getenv("ESSAY_AI_MAX_TOKENS", "800"),
+		GeminiAPIKey:     getenv("GEMINI_API_KEY", ""),
+		OllamaBaseURL:    getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434"),
 	}
 }
 

@@ -24,6 +24,7 @@ import (
 	"atigacbt/backend/internal/repo/studentexamrepo"
 	"atigacbt/backend/internal/repo/userrepo"
 	"atigacbt/backend/internal/service/authsvc"
+	"atigacbt/backend/internal/service/essayaisvc"
 	"atigacbt/backend/internal/service/ltisvc"
 	"atigacbt/backend/internal/service/notificationsvc"
 	"atigacbt/backend/internal/storage"
@@ -51,6 +52,7 @@ func NewHandler(deps Deps) http.Handler {
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(middleware.RequestID())
+	r.Use(middleware.RequestMetrics())
 	r.Use(middleware.StructuredLogger())
 	r.Use(middleware.SecurityHeaders())
 	up := handlers.NewUploadsHandler(deps.ObjectStore)
@@ -202,6 +204,15 @@ func NewHandler(deps Deps) http.Handler {
 		qg.POST("/uploads/images", middleware.LimitBodyBytes(maxUploadImageBody), up.UploadImage)
 	}
 
+	// System health (admin only)
+	if deps.Auth != nil {
+		sh := handlers.NewSystemHealthHandler()
+		ah := v1.Group("/admin/system")
+		ah.Use(middleware.RequireAuth(deps.Auth), middleware.RequireRole("admin"))
+		ah.GET("/health", sh.Get)
+		ah.DELETE("/health/queue-history", sh.ClearQueueHistory)
+	}
+
 	// Exams (admin/teacher)
 	if deps.Auth != nil && deps.Pool != nil {
 		ex := examrepo.New(deps.Pool)
@@ -214,7 +225,7 @@ func NewHandler(deps Deps) http.Handler {
 
 		h := handlers.NewExamsHandler(ex, teacherSubs, teacherGroups, teacherLevels)
 		mon := handlers.NewMonitorHandler(ex, studentexamrepo.New(deps.Pool))
-		res := handlers.NewExamResultsHandler(ex, lti, ltisvc.NewAGSService(nil), studentexamrepo.New(deps.Pool), notifSvc)
+		res := handlers.NewExamResultsHandler(ex, lti, ltisvc.NewAGSService(nil), studentexamrepo.New(deps.Pool), notifSvc, essayaisvc.New(cfg))
 		reset := handlers.NewResetLoginHandler(ex, studentexamrepo.New(deps.Pool), settingsRepo)
 
 		eg := v1.Group("")
@@ -250,6 +261,7 @@ func NewHandler(deps Deps) http.Handler {
 		eg.GET("/exams/:id/attendance", res.Attendance)
 		eg.GET("/exams/:id/sessions/:sessionId/essays", res.ListEssays)
 		eg.POST("/exams/:id/sessions/:sessionId/essays/score", res.SaveEssayScore)
+		eg.POST("/exams/:id/sessions/:sessionId/essays/ai-suggestion", res.EssayAISuggestion)
 		eg.GET("/exams/:id/monitor/sessions", mon.ListSessions)
 		eg.GET("/exams/:id/monitor/participants", mon.ListParticipants)
 		eg.POST("/exams/:id/sessions/:sessionId/reset", reset.ResetSession)

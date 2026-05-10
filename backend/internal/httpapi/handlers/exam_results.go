@@ -17,21 +17,23 @@ import (
 	"atigacbt/backend/internal/repo/examrepo"
 	"atigacbt/backend/internal/repo/ltirepo"
 	"atigacbt/backend/internal/repo/studentexamrepo"
+	"atigacbt/backend/internal/service/essayaisvc"
 	"atigacbt/backend/internal/service/ltisvc"
 	"atigacbt/backend/internal/service/notificationsvc"
 	"atigacbt/backend/internal/util/simplepdf"
 )
 
 type ExamResultsHandler struct {
-	ex     examResultsExamRepo
-	lti    examResultsLTIRepo
-	ltiAGS agsPublisher
-	st     examResultsStudentRepo
-	notif  notificationSender
+	ex      examResultsExamRepo
+	lti     examResultsLTIRepo
+	ltiAGS  agsPublisher
+	st      examResultsStudentRepo
+	notif   notificationSender
+	essayAI essaySuggestionService
 }
 
-func NewExamResultsHandler(ex *examrepo.Repo, lti *ltirepo.Repo, ltiAGS *ltisvc.AGSService, st *studentexamrepo.Repo, notif *notificationsvc.Service) *ExamResultsHandler {
-	return &ExamResultsHandler{ex: ex, lti: lti, ltiAGS: ltiAGS, st: st, notif: notif}
+func NewExamResultsHandler(ex *examrepo.Repo, lti *ltirepo.Repo, ltiAGS *ltisvc.AGSService, st *studentexamrepo.Repo, notif *notificationsvc.Service, essayAI *essayaisvc.Service) *ExamResultsHandler {
+	return &ExamResultsHandler{ex: ex, lti: lti, ltiAGS: ltiAGS, st: st, notif: notif, essayAI: essayAI}
 }
 
 type examResultsExamRepo interface {
@@ -61,6 +63,11 @@ type agsPublisher interface {
 type notificationSender interface {
 	SendEmail(ctx context.Context, to string, subject string, body string) error
 	SendWhatsApp(ctx context.Context, to string, message string) error
+}
+
+type essaySuggestionService interface {
+	Enabled() bool
+	Suggest(ctx context.Context, in essayaisvc.SuggestionInput) (essayaisvc.Suggestion, error)
 }
 
 func (h *ExamResultsHandler) authorizeExam(c *gin.Context) (examrepo.Exam, bool) {
@@ -1017,6 +1024,70 @@ func (h *ExamResultsHandler) SaveEssayScore(c *gin.Context) {
 	c.JSON(200, gin.H{"data": gin.H{"ok": true}})
 }
 
+func (h *ExamResultsHandler) EssayAISuggestion(c *gin.Context) {
+	exam, ok := h.authorizeExam(c)
+	if !ok {
+		return
+	}
+	if h.essayAI == nil || !h.essayAI.Enabled() {
+		c.JSON(503, gin.H{"error": gin.H{"code": "essay_ai_disabled", "message": "Essay AI belum diaktifkan"}})
+		return
+	}
+
+	sessionID := c.Param("sessionId")
+	sessExamID, found, err := h.ex.SessionExamID(c.Request.Context(), sessionID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	if !found {
+		c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "session not found"}})
+		return
+	}
+	if sessExamID != exam.ID {
+		c.JSON(403, gin.H{"error": gin.H{"code": "forbidden", "message": "session does not belong to this exam"}})
+		return
+	}
+
+	var req struct {
+		QuestionID string `json:"question_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "invalid request body"}})
+		return
+	}
+
+	items, err := h.st.ListEssayAttempts(c.Request.Context(), sessionID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		return
+	}
+	var target *studentexamrepo.EssayAttempt
+	for i := range items {
+		if items[i].QuestionID == req.QuestionID {
+			target = &items[i]
+			break
+		}
+	}
+	if target == nil {
+		c.JSON(404, gin.H{"error": gin.H{"code": "not_found", "message": "essay question not found in this session"}})
+		return
+	}
+
+	suggestion, err := h.essayAI.Suggest(c.Request.Context(), essayaisvc.SuggestionInput{
+		QuestionText: target.QuestionStem,
+		RubricText:   target.RubricText,
+		AnswerText:   target.AnswerText,
+		MaxScore:     target.MaxScore,
+	})
+	if err != nil {
+		c.JSON(502, gin.H{"error": gin.H{"code": "essay_ai_failed", "message": err.Error()}})
+		return
+	}
+
+	c.JSON(200, gin.H{"data": suggestion})
+}
+
 type blastResultsReq struct {
 	Channels []string `json:"channels"` // "email", "whatsapp"
 }
@@ -1058,6 +1129,21 @@ func (h *ExamResultsHandler) BlastResults(c *gin.Context) {
 
 	sentCount := 0
 	failedCount := 0
+	totalJobs := 0
+
+	for _, row := range items {
+		if row.Status != "submitted" && row.Status != "forced" {
+			continue
+		}
+		if useEmail && row.StudentEmail != "" {
+			totalJobs++
+		}
+		if useWA && row.StudentPhone != "" {
+			totalJobs++
+		}
+	}
+	middleware.QueueBeginBatch("exam_results_blast", totalJobs)
+	defer middleware.QueueCompleteBatch()
 
 	for _, row := range items {
 		// Only blast if submitted or forced
@@ -1076,7 +1162,9 @@ Terima kasih.`, row.StudentName, exam.Title, row.Score, row.CorrectCount, row.To
 			exam.Title, row.StudentName, row.Score, row.CorrectCount, row.TotalQuestions)
 
 		if useEmail && row.StudentEmail != "" {
+			middleware.QueueStartJob()
 			err := h.notif.SendEmail(c.Request.Context(), row.StudentEmail, subject, body)
+			middleware.QueueFinishJob(err)
 			if err != nil {
 				failedCount++
 			} else {
@@ -1084,7 +1172,9 @@ Terima kasih.`, row.StudentName, exam.Title, row.Score, row.CorrectCount, row.To
 			}
 		}
 		if useWA && row.StudentPhone != "" {
+			middleware.QueueStartJob()
 			err := h.notif.SendWhatsApp(c.Request.Context(), row.StudentPhone, waMsg)
+			middleware.QueueFinishJob(err)
 			if err != nil {
 				failedCount++
 			} else {

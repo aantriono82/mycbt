@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { mdiChartBoxOutline, mdiDownload, mdiRefresh, mdiAccountGroup, mdiCheckCircleOutline, mdiClockAlertOutline, mdiChartLine, mdiSend, mdiFilePdfBox } from '@mdi/js'
+import { mdiChartBoxOutline, mdiDownload, mdiRefresh, mdiAccountGroup, mdiCheckCircleOutline, mdiClockAlertOutline, mdiChartLine, mdiSend, mdiFilePdfBox, mdiAutoFix } from '@mdi/js'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
@@ -58,6 +58,7 @@ const isLoadingItems = ref(false)
 const isLoadingDistribution = ref(false)
 const isLoadingEssays = ref(false)
 const isSavingEssay = ref(false)
+const isSuggestingEssayAI = ref(false)
 const errorMessage = ref('')
 const isBlastingResults = ref(false)
 
@@ -345,6 +346,33 @@ const saveEssayScore = async (attempt) => {
     notificationStore.pushError(error?.response?.data?.error?.message || 'Gagal menyimpan nilai')
   } finally {
     isSavingEssay.value = false
+  }
+}
+
+const requestEssayAISuggestion = async (attempt) => {
+  if (isSuggestingEssayAI.value) return
+  isSuggestingEssayAI.value = true
+  attempt.ai_error = ''
+  try {
+    const { data } = await api.post(`/api/v1/exams/${selectedExamId.value}/sessions/${selectedSessionForEssay.value.session_id}/essays/ai-suggestion`, {
+      question_id: attempt.question_id,
+    })
+    attempt.ai_suggestion = data?.data || null
+  } catch (error) {
+    attempt.ai_suggestion = null
+    attempt.ai_error = error?.response?.data?.error?.message || 'Gagal mendapatkan saran AI'
+    notificationStore.pushError(attempt.ai_error)
+  } finally {
+    isSuggestingEssayAI.value = false
+  }
+}
+
+const applyAISuggestionAsDraft = (attempt) => {
+  const score = Number(attempt?.ai_suggestion?.recommended_score)
+  if (!Number.isFinite(score)) return
+  attempt.manual_score = Math.max(0, Math.min(Number(attempt.max_score || 0), Math.round(score)))
+  if (!attempt.manual_feedback && attempt?.ai_suggestion?.feedback) {
+    attempt.manual_feedback = attempt.ai_suggestion.feedback
   }
 }
 
@@ -1104,6 +1132,48 @@ onMounted(async () => {
                   class="w-full"
                   :disabled="isSavingEssay"
                   @click="saveEssayScore(att)"
+                />
+              </div>
+            </div>
+
+            <div class="mt-4 rounded-lg border border-sky-100 dark:border-sky-900/40 bg-sky-50/50 dark:bg-sky-950/20 p-3">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="text-[10px] font-bold uppercase tracking-widest text-sky-700 dark:text-sky-300">AI Suggestion</div>
+                <BaseButton
+                  :icon="mdiAutoFix"
+                  color="info"
+                  small
+                  label="AI Suggestion"
+                  :disabled="isSuggestingEssayAI"
+                  @click="requestEssayAISuggestion(att)"
+                />
+              </div>
+              <div v-if="att.ai_error" class="mt-2 text-xs text-rose-600 dark:text-rose-400">{{ att.ai_error }}</div>
+              <div v-else-if="att.ai_suggestion" class="mt-2 space-y-2">
+                <div class="flex flex-wrap items-center gap-2 text-xs">
+                  <span class="rounded bg-white dark:bg-slate-900 px-2 py-1 border border-slate-200 dark:border-slate-700">
+                    Rekomendasi Nilai: <strong>{{ att.ai_suggestion.recommended_score }}</strong>/{{ att.max_score }}
+                  </span>
+                  <span class="rounded bg-white dark:bg-slate-900 px-2 py-1 border border-slate-200 dark:border-slate-700">
+                    Confidence: <strong>{{ att.ai_suggestion.confidence }}</strong>
+                  </span>
+                  <span class="rounded bg-white dark:bg-slate-900 px-2 py-1 border border-slate-200 dark:border-slate-700">
+                    {{ att.ai_suggestion.provider }} · {{ att.ai_suggestion.model }}
+                  </span>
+                </div>
+                <div v-if="att.ai_suggestion.reasoning_summary?.length" class="text-xs text-slate-600 dark:text-slate-300">
+                  <ul class="list-disc pl-4 space-y-1">
+                    <li v-for="(item, i) in att.ai_suggestion.reasoning_summary" :key="`${att.question_id}-${i}`">{{ item }}</li>
+                  </ul>
+                </div>
+                <div v-if="att.ai_suggestion.feedback" class="text-xs text-slate-600 dark:text-slate-300">
+                  {{ att.ai_suggestion.feedback }}
+                </div>
+                <BaseButton
+                  color="whiteDark"
+                  small
+                  label="Apply as Draft"
+                  @click="applyAISuggestionAsDraft(att)"
                 />
               </div>
             </div>
