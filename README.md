@@ -258,6 +258,51 @@ Ujian (jadwal + token; admin/teacher; requires JWT):
 - `GET /api/v1/exams/:id/score-distribution` (distribusi nilai + min/avg/median/max)
 - `GET /api/v1/exams/:id/export` (export `.xlsx` multi-sheet: ExecutiveSummary + Results + Score Distribution + Item Analysis)
 - `GET /api/v1/exams/:id/item-analysis/export` (export analisis butir + d-index + distraktor ke `.xlsx`)
+
+## Sistem Pembobotan Soal dan Konversi Nilai
+
+### Ringkasannya
+- Bobot disimpan per soal pada field `weight` (minimal `> 0`).
+- Nilai akhir peserta selalu dinormalisasi ke skala `0-100`.
+- Mode penilaian ujian yang direkomendasikan untuk skema HOTS: `partial`.
+
+### Preset Bobot HOTS/Analitis (per tipe soal)
+- `mc_single` (Pilihan Ganda): `1`
+- `mc_multiple` (PG Kompleks): `2`
+- `matching` (Menjodohkan): `2`
+- `short_answer` (Isian Singkat): `1`
+- `true_false` (Benar/Salah): `1`
+- `essay` (Esai/Uraian): `3`
+
+### Rumus Konversi ke Nilai Akhir
+Setiap soal dinilai dulu dalam rentang `0-100`, lalu dihitung berbobot:
+
+`Nilai Akhir = round((sum((skor_soal/100) * bobot_soal) / sum(bobot_soal)) * 100)`
+
+Bentuk ekuivalen:
+
+`Nilai Akhir = round(sum(skor_soal * bobot_soal) / sum(bobot_soal))`
+
+Catatan:
+- `sum(skor_soal * bobot_soal)` adalah total poin berbobot (contoh angka seperti `3320` berasal dari sini).
+- `round(...)` mengikuti pembulatan ke bilangan bulat terdekat.
+
+### Contoh Kasus (30 Soal Campuran)
+Komposisi soal:
+- 10 PG, 6 PG Kompleks, 4 Menjodohkan, 5 Isian, 3 Benar/Salah, 2 Esai.
+
+Dengan preset HOTS, total bobot maksimum:
+- `10*1 + 6*2 + 4*2 + 5*1 + 3*1 + 2*3 = 44`
+
+Jika jawaban benar:
+- 5 PG, 3 PG Kompleks, 2 Menjodohkan, 2 Isian, 1 Benar/Salah, 1 Esai.
+
+Maka bobot tercapai:
+- `5*1 + 3*2 + 2*2 + 2*1 + 1*1 + 1*3 = 21`
+
+Hasil:
+- Skor berbobot: `21 dari 44` (setara `2100 dari 4400` pada skala poin berbobot).
+- Nilai akhir: `(21/44)*100 = 47.73`, dibulatkan menjadi `48`.
 - `GET /api/v1/exams/:id/attendance` (rekap absensi peserta + persentase kehadiran; teacher: hanya ujian miliknya)
 - `GET /api/v1/exams/:id/monitor/sessions` (snapshot sesi peserta + progress; polling-friendly)
 - `GET /api/v1/exams/:id/monitor/participants` (snapshot peserta target + status join/online/progress; polling-friendly)

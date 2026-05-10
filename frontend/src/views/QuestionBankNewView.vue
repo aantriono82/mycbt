@@ -103,6 +103,16 @@ const questionTypeOptions = reactive([
   { value: 'true_false', label: 'Benar / Salah' },
 ])
 const allowedQuestionTypes = computed(() => questionTypeOptions.map((item) => item.value))
+const HOTS_WEIGHT_BY_TYPE = {
+  mc_single: 1,
+  mc_multiple: 2,
+  matching: 2,
+  short_answer: 1,
+  true_false: 1,
+  essay: 3,
+}
+const getHOTSWeight = (type) => HOTS_WEIGHT_BY_TYPE[String(type || '').trim()] || 1
+
 const normalizeEditorType = (value) => {
   const normalized = String(value || '').trim()
   if (!normalized || !allowedQuestionTypes.value.includes(normalized)) return 'mc_single'
@@ -391,7 +401,7 @@ const loadQuestions = async () => {
     questions.value = data?.data || []
     if (!editingQuestionId.value) {
       questionForm.order_no = questions.value.length + 1
-      questionForm.weight = 1
+      questionForm.weight = getHOTSWeight(questionForm.type)
     }
   } catch {
     errorMessage.value = 'Gagal memuat pertanyaan'
@@ -479,7 +489,7 @@ const resetQuestionForm = (keepType = true) => {
   questionForm.stem = ''
   questionForm.explanation = ''
   questionForm.order_no = getNextOrderNo()
-  questionForm.weight = 1
+  questionForm.weight = getHOTSWeight(questionForm.type)
   questionForm.options_text = 'A|Opsi A|true\nB|Opsi B|false'
   questionForm.answers_text = ''
   questionForm.pairs_text = ''
@@ -519,7 +529,7 @@ const openQuickAddModal = () => {
 
 const buildTemplateQuestionPayload = (type, orderNo) => {
   const stem = `Soal ${orderNo}`
-  const payload = { type, stem, order_no: orderNo, weight: 1 }
+  const payload = { type, stem, order_no: orderNo, weight: getHOTSWeight(type) }
 
   if (type === 'mc_single') {
     payload.options = [
@@ -855,6 +865,9 @@ watch(
   () => questionForm.type,
   (nextType) => {
     syncEditorTypeRoute(nextType)
+    if (!editingQuestionId.value) {
+      questionForm.weight = getHOTSWeight(nextType)
+    }
   },
 )
 
