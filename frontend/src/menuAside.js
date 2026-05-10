@@ -58,7 +58,7 @@ export const getMenuAsideMain = (role) => {
         label: 'Ujian',
         icon: mdiClipboardTextOutline,
         menu: [
-          { to: '/teacher/ujian/jadwal', label: 'Jadwal Ujian', icon: mdiCalendarClockOutline },
+          { to: '/teacher/ujian/jadwal', label: 'Jadwal Ujian', icon: mdiCalendarCheckOutline },
           { to: '/teacher/ujian/token', label: 'Token', icon: mdiKeyVariant },
           { to: '/teacher/ujian/monitor-ujian', label: 'Monitor Ujian', icon: mdiMonitorEye },
           {
@@ -109,11 +109,6 @@ export const getMenuAsideMain = (role) => {
           label: 'Registrasi',
           icon: mdiAccountCheckOutline,
         },
-        {
-          to: '/admin/master-data/sesi',
-          label: 'Sesi',
-          icon: mdiCalendarClockOutline,
-        },
       ],
     },
     {
@@ -129,7 +124,8 @@ export const getMenuAsideMain = (role) => {
       label: 'Ujian',
       icon: mdiClipboardTextOutline,
       menu: [
-        { to: '/admin/ujian/jadwal', label: 'Jadwal Ujian', icon: mdiCalendarClockOutline },
+        { to: '/admin/master-data/sesi', label: 'Sesi', icon: mdiCalendarClockOutline },
+        { to: '/admin/ujian/jadwal', label: 'Jadwal Ujian', icon: mdiCalendarCheckOutline },
         { to: '/admin/ujian/token', label: 'Token', icon: mdiKeyVariant },
         { to: '/admin/ujian/monitor-ujian', label: 'Monitor Ujian', icon: mdiMonitorEye },
         { to: '/admin/ujian/monitor-peserta', label: 'Mon. Peserta', icon: mdiAccountSearchOutline },

@@ -9,7 +9,6 @@ import {
   mdiLayersTripleOutline,
   mdiSchoolOutline,
   mdiAccountGroupOutline,
-  mdiCalendarClockOutline,
 } from '@mdi/js'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
@@ -148,20 +147,6 @@ import BaseButton from '@/components/BaseButton.vue'
           </div>
         </CardBox>
 
-        <CardBox is-hoverable color="purple">
-          <div class="flex items-start justify-between gap-4">
-            <div>
-              <div class="text-lg font-semibold dark:text-slate-100">Sesi</div>
-              <div class="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                Kelola pembagian sesi waktu ujian (pagi/siang/sore).
-              </div>
-            </div>
-            <BaseButton :icon="mdiCalendarClockOutline" color="info" small rounded-full />
-          </div>
-          <div class="mt-4">
-            <BaseButton to="/admin/master-data/sesi" label="Buka" color="contrast" />
-          </div>
-        </CardBox>
       </div>
     </SectionMain>
   </LayoutAuthenticated>
