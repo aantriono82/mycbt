@@ -7,10 +7,11 @@ WORKDIR /app/backend
 RUN go mod download
 
 COPY backend/ .
-RUN go build -o /out/api ./cmd/api
-RUN go build -o /out/migrate ./cmd/migrate
-RUN go build -o /out/seed ./cmd/seed
-RUN go build -o /out/cleanup ./cmd/cleanup
+ENV CGO_ENABLED=0 GOFLAGS=-trimpath
+RUN go build -ldflags="-s -w" -o /out/api ./cmd/api
+RUN go build -ldflags="-s -w" -o /out/migrate ./cmd/migrate
+RUN go build -ldflags="-s -w" -o /out/seed ./cmd/seed
+RUN go build -ldflags="-s -w" -o /out/cleanup ./cmd/cleanup
 
 FROM alpine:latest
 

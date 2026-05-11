@@ -1,2 +1,9 @@
 .env
 .env.*
+api
+api_*
+migrate
+seed
+cleanup
+uploads
+run.log

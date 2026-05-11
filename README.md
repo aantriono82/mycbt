@@ -105,6 +105,17 @@ make test-backend-integration
 
 Dokumentasi detail ada di [backend/README.md](/home/aantriono/dev/atigacbt/backend/README.md).
 
+## Optimasi Ukuran Workspace dan VPS
+
+Agar repo dan server tetap ringan:
+
+1. Bersihkan cache/build lokal secara berkala:
+```bash
+./scripts/cleanup-workspace.sh
+```
+2. Jangan commit binary hasil build (`api_bin`, `backend/api*`, `seed`, `migrate`) atau cache lokal.
+3. Untuk production gunakan image dari `deploy/compose.production.yml` (multi-stage Dockerfile sudah dioptimasi dengan Go stripped binary).
+
 ## Branch Protection
 
 Rekomendasi minimum untuk branch `main`:
@@ -303,6 +314,7 @@ Maka bobot tercapai:
 Hasil:
 - Skor berbobot: `21 dari 44` (setara `2100 dari 4400` pada skala poin berbobot).
 - Nilai akhir: `(21/44)*100 = 47.73`, dibulatkan menjadi `48`.
+- Supaya konsisten HOTS, set juga **Mode Penilaian ujian = `partial`** (agar PG kompleks/menjodohkan/benar-salah bisa dapat nilai proporsional, tidak 0/100 penuh).
 - `GET /api/v1/exams/:id/attendance` (rekap absensi peserta + persentase kehadiran; teacher: hanya ujian miliknya)
 - `GET /api/v1/exams/:id/monitor/sessions` (snapshot sesi peserta + progress; polling-friendly)
 - `GET /api/v1/exams/:id/monitor/participants` (snapshot peserta target + status join/online/progress; polling-friendly)

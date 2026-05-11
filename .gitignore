@@ -9,7 +9,15 @@ frontend/.env
 *.exe
 *.out
 *.log
-backend/api_bin
+api_bin
+backend/api
+backend/api_*
+backend/migrate
+backend/seed
+backend/cleanup
+.gocache/
+.tooling/
+.tmp/
 
 # Git
 .git
@@ -24,4 +32,4 @@ deploy/.env.production
 .DS_Store
 
 # Local test/build caches
-.tmp/
+.cache/
