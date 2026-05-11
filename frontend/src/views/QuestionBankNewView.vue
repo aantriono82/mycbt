@@ -681,6 +681,29 @@ const buildQuestionPayload = () => {
   return payload
 }
 
+const mapQuestionSaveErrorMessage = (err) => {
+  const backendMessage = String(err?.response?.data?.error?.message || '').trim()
+  if (!backendMessage) return 'Gagal menyimpan soal: Terjadi kesalahan'
+
+  const typeLabel = questionTypeOptions.find((item) => item.value === questionForm.type)?.label || questionForm.type
+  const isTypeChange = backendMessage.includes('when changing type to')
+  if (!isTypeChange) return `Gagal menyimpan soal: ${backendMessage}`
+
+  if (backendMessage.includes('options required')) {
+    return `Tipe soal diubah ke ${typeLabel}. Lengkapi opsi jawaban dulu, lalu klik Update Soal lagi.`
+  }
+  if (backendMessage.includes('pairs required')) {
+    return `Tipe soal diubah ke ${typeLabel}. Lengkapi pasangan menjodohkan dulu, lalu klik Update Soal lagi.`
+  }
+  if (backendMessage.includes('answers required')) {
+    return `Tipe soal diubah ke ${typeLabel}. Lengkapi daftar jawaban isian dulu, lalu klik Update Soal lagi.`
+  }
+  if (backendMessage.includes('correct required')) {
+    return `Tipe soal diubah ke ${typeLabel}. Tentukan kunci benar/salah dulu, lalu klik Update Soal lagi.`
+  }
+  return `Gagal mengubah tipe soal ke ${typeLabel}. Lengkapi data sesuai tipe baru lalu simpan ulang.`
+}
+
 const saveQuestion = async () => {
   successMessage.value = ''
   errorMessage.value = ''
@@ -698,7 +721,7 @@ const saveQuestion = async () => {
     // Auto clear success message after 5 seconds
     setTimeout(() => { successMessage.value = '' }, 5000)
   } catch (err) {
-    errorMessage.value = 'Gagal menyimpan soal: ' + (err.response?.data?.error?.message || 'Terjadi kesalahan')
+    errorMessage.value = mapQuestionSaveErrorMessage(err)
   }
 }
 
@@ -792,6 +815,7 @@ const populateQuestionForm = async (item) => {
     return
   }
 
+  const initialType = String(item.type || '').trim() || 'mc_single'
   const seq = ++questionPopulateSeq.value
   // Apply list payload immediately so editor never appears empty while waiting detail API.
   applyQuestionToForm(item)
@@ -805,6 +829,9 @@ const populateQuestionForm = async (item) => {
   }
 
   if (seq !== questionPopulateSeq.value) return
+  // User may already switch type while detail request is still in-flight.
+  // In that case, don't re-apply stale payload that would force type back.
+  if (String(editingQuestionId.value || '') === String(item.id) && questionForm.type !== initialType) return
   applyQuestionToForm(hydrated)
 }
 
@@ -864,7 +891,11 @@ watch(
 watch(
   () => questionForm.type,
   (nextType) => {
-    syncEditorTypeRoute(nextType)
+    // Keep route editorType stable while editing an existing question to avoid
+    // route churn that can re-hydrate old payload and force type rollback.
+    if (!editingQuestionId.value) {
+      syncEditorTypeRoute(nextType)
+    }
     if (!editingQuestionId.value) {
       questionForm.weight = getHOTSWeight(nextType)
     }
