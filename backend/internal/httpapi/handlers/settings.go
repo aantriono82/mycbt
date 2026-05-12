@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -19,13 +20,18 @@ type SettingsHandler struct {
 	schools  *masterrepo.SchoolRepo
 	users    *userrepo.Repo
 	store    storage.ObjectStore
+	notif    emailSender
 }
 
-func NewSettingsHandler(settings *masterrepo.SettingsRepo, schools *masterrepo.SchoolRepo, users *userrepo.Repo, store storage.ObjectStore) *SettingsHandler {
+type emailSender interface {
+	SendEmail(ctx context.Context, to string, subject string, body string) error
+}
+
+func NewSettingsHandler(settings *masterrepo.SettingsRepo, schools *masterrepo.SchoolRepo, users *userrepo.Repo, store storage.ObjectStore, notif emailSender) *SettingsHandler {
 	if store == nil {
 		store = storage.NewLocalObjectStore("uploads")
 	}
-	return &SettingsHandler{settings: settings, schools: schools, users: users, store: store}
+	return &SettingsHandler{settings: settings, schools: schools, users: users, store: store, notif: notif}
 }
 
 func (h *SettingsHandler) GetSchoolIdentity(c *gin.Context) {
@@ -280,6 +286,49 @@ func (h *SettingsHandler) PutSMTP(c *gin.Context) {
 	hasPassword := strings.TrimSpace(data.Password) != ""
 	data.Password = ""
 	c.JSON(200, gin.H{"data": data, "meta": gin.H{"has_password": hasPassword}})
+}
+
+type testSMTPReq struct {
+	To string `json:"to"`
+}
+
+func (h *SettingsHandler) TestSMTP(c *gin.Context) {
+	if h.notif == nil {
+		c.JSON(503, gin.H{"error": gin.H{"code": "unavailable", "message": "email service is not available"}})
+		return
+	}
+
+	var req testSMTPReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": gin.H{"code": "bad_request", "message": "invalid json"}})
+		return
+	}
+
+	to := strings.TrimSpace(req.To)
+	if to == "" {
+		cfg, err := h.settings.GetSMTP(c.Request.Context())
+		if err != nil {
+			c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+			return
+		}
+		to = strings.TrimSpace(cfg.User)
+		if to == "" {
+			to = strings.TrimSpace(cfg.From)
+		}
+	}
+	if to == "" {
+		c.JSON(400, gin.H{"error": gin.H{"code": "validation", "message": "alamat email tujuan test belum diisi (isi Username / Email atau From Email)"}})
+		return
+	}
+
+	subject := "SMTP Test - Atiga CBT"
+	body := fmt.Sprintf("<p>SMTP test berhasil dikirim dari Atiga CBT.</p><p>Waktu: %s</p>", time.Now().Format(time.RFC3339))
+	if err := h.notif.SendEmail(c.Request.Context(), to, subject, body); err != nil {
+		c.JSON(400, gin.H{"error": gin.H{"code": "smtp_test_failed", "message": err.Error()}})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Email test berhasil dikirim", "data": gin.H{"to": to}})
 }
 
 func (h *SettingsHandler) GetWhatsApp(c *gin.Context) {
