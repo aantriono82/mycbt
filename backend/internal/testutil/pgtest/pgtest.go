@@ -106,8 +106,8 @@ func applyMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 				if strings.TrimSpace(rest) == "" {
 					continue
 				}
-				if _, restErr := pool.Exec(ctx, rest); restErr == nil {
-					continue
+				if _, restErr := pool.Exec(ctx, rest); restErr != nil {
+					return fmt.Errorf("exec migration %s (post-extension-race): %w", filepath.Base(path), restErr)
 				}
 				continue
 			}
