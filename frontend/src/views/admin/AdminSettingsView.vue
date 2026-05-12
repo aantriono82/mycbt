@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, ref } from 'vue'
-import { mdiCogOutline, mdiRefresh, mdiContentSave, mdiEmailOutline } from '@mdi/js'
+import { mdiCogOutline, mdiRefresh, mdiContentSave, mdiEmailOutline, mdiSend } from '@mdi/js'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionMain from '@/components/SectionMain.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
@@ -22,6 +22,7 @@ const errorMessage = ref('')
 const successMessage = ref('')
 const logoFile = ref(null)
 const isSavingSMTP = ref(false)
+const isTestingSMTP = ref(false)
 
 const schoolIdentity = ref({
   school_name: '',
@@ -132,6 +133,22 @@ const saveSMTP = async () => {
     errorMessage.value = error?.response?.data?.error?.message || 'Gagal menyimpan SMTP'
   } finally {
     isSavingSMTP.value = false
+  }
+}
+
+const testSMTP = async () => {
+  if (!authStore.isAuthenticated) return
+  isTestingSMTP.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+  try {
+    const to = String(smtpConfig.value.user || smtpConfig.value.from || '').trim()
+    const { data } = await api.post('/api/v1/settings/smtp/test', { to })
+    successMessage.value = data?.message || 'Email test berhasil dikirim.'
+  } catch (error) {
+    errorMessage.value = error?.response?.data?.error?.message || 'Gagal test SMTP'
+  } finally {
+    isTestingSMTP.value = false
   }
 }
 
@@ -386,15 +403,27 @@ onMounted(loadSettings)
               </label>
             </FormField>
           </div>
-          <div class="flex items-center gap-3 mt-4">
-            <BaseButton
-              :icon="mdiContentSave"
-              color="info"
-              label="Simpan SMTP"
-              :disabled="isLoading || isSavingSMTP"
-              @click="saveSMTP"
-            />
-            <div v-if="isSavingSMTP" class="text-sm text-slate-500 dark:text-slate-400 italic">Menyimpan...</div>
+          <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <BaseButton
+                :icon="mdiContentSave"
+                color="info"
+                label="Simpan SMTP"
+                :disabled="isLoading || isSavingSMTP || isTestingSMTP"
+                @click="saveSMTP"
+              />
+              <div v-if="isSavingSMTP" class="text-sm text-slate-500 dark:text-slate-400 italic">Menyimpan...</div>
+            </div>
+            <div class="flex items-center gap-3">
+              <BaseButton
+                :icon="mdiSend"
+                color="success"
+                label="Test SendMail"
+                :disabled="isLoading || isSavingSMTP || isTestingSMTP"
+                @click="testSMTP"
+              />
+              <div v-if="isTestingSMTP" class="text-sm text-slate-500 dark:text-slate-400 italic">Mengirim test...</div>
+            </div>
           </div>
         </CardBox>
 
