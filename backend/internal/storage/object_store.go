@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"atigacbt/backend/internal/config"
+
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
@@ -26,6 +28,7 @@ func NewLocalObjectStore(baseDir string) *LocalObjectStore {
 	if baseDir == "" {
 		baseDir = "uploads"
 	}
+	baseDir = config.ResolveAppPath(baseDir)
 	return &LocalObjectStore{BaseDir: baseDir}
 }
 

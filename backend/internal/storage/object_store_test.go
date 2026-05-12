@@ -12,8 +12,11 @@ func TestNewLocalObjectStore_DefaultBaseDir(t *testing.T) {
 	t.Parallel()
 
 	store := NewLocalObjectStore(" ")
-	if store.BaseDir != "uploads" {
-		t.Fatalf("expected default uploads dir, got %q", store.BaseDir)
+	if !filepath.IsAbs(store.BaseDir) {
+		t.Fatalf("expected absolute uploads dir, got %q", store.BaseDir)
+	}
+	if !strings.HasSuffix(filepath.ToSlash(store.BaseDir), "/uploads") {
+		t.Fatalf("expected uploads suffix in base dir, got %q", store.BaseDir)
 	}
 }
 

@@ -2,6 +2,7 @@ package pgtest
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -96,10 +98,24 @@ func applyMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 			continue
 		}
 		if _, err := pool.Exec(ctx, string(body)); err != nil {
+			if isExtensionCreateRace(string(body), err) {
+				continue
+			}
 			return fmt.Errorf("exec migration %s: %w", filepath.Base(path), err)
 		}
 	}
 	return nil
+}
+
+func isExtensionCreateRace(sql string, err error) bool {
+	if !strings.Contains(strings.ToUpper(sql), "CREATE EXTENSION IF NOT EXISTS") {
+		return false
+	}
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) {
+		return false
+	}
+	return pgErr.Code == "23505" && strings.EqualFold(pgErr.ConstraintName, "pg_extension_name_index")
 }
 
 func migrationFiles() ([]string, error) {

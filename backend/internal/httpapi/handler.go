@@ -173,7 +173,7 @@ func NewHandler(deps Deps) http.Handler {
 	if deps.Pool != nil && deps.Users != nil {
 		settings := masterrepo.NewSettings(deps.Pool)
 		schools := masterrepo.NewSchool(deps.Pool)
-		h := handlers.NewSettingsHandler(settings, schools, deps.Users, deps.ObjectStore)
+		h := handlers.NewSettingsHandler(settings, schools, deps.Users, deps.ObjectStore, notifSvc)
 		v1.GET("/public/school-identity", middleware.TryAuth(deps.Auth), h.GetPublicSchoolIdentity)
 	}
 
@@ -367,7 +367,7 @@ func NewHandler(deps Deps) http.Handler {
 
 		settings := masterrepo.NewSettings(deps.Pool)
 		schools := masterrepo.NewSchool(deps.Pool)
-		h := handlers.NewSettingsHandler(settings, schools, deps.Users, deps.ObjectStore)
+		h := handlers.NewSettingsHandler(settings, schools, deps.Users, deps.ObjectStore, notifSvc)
 
 		sg.GET("/school-identity", h.GetSchoolIdentity)
 		sg.PUT("/school-identity", h.PutSchoolIdentity)
@@ -376,6 +376,7 @@ func NewHandler(deps Deps) http.Handler {
 		sg.PUT("/system", h.PutSystem)
 		sg.GET("/smtp", h.GetSMTP)
 		sg.PUT("/smtp", h.PutSMTP)
+		sg.POST("/smtp/test", h.TestSMTP)
 		sg.GET("/whatsapp", h.GetWhatsApp)
 		sg.PUT("/whatsapp", h.PutWhatsApp)
 	}
@@ -590,8 +591,14 @@ func NewHandler(deps Deps) http.Handler {
 			localUploadDir = config.ResolveAppPath("uploads")
 		}
 		r.Static("/uploads", filepath.Clean(localUploadDir))
+		// Compatibility alias for deployments that only proxy /api* paths.
+		r.Static("/api/uploads", filepath.Clean(localUploadDir))
+		r.Static("/api/v1/uploads", filepath.Clean(localUploadDir))
 	} else {
 		r.GET("/uploads/*filepath", up.ServeObject)
+		// Compatibility alias for deployments that only proxy /api* paths.
+		r.GET("/api/uploads/*filepath", up.ServeObject)
+		r.GET("/api/v1/uploads/*filepath", up.ServeObject)
 	}
 	return r
 }

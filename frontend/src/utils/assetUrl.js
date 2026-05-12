@@ -1,6 +1,18 @@
 const getApiBaseUrl = () => String(import.meta.env.VITE_API_BASE_URL || '').trim()
 const DEFAULT_API_ORIGIN = 'http://localhost:8080'
 
+const getApiBasePath = () => {
+  const baseUrl = getApiBaseUrl()
+  if (!baseUrl) return ''
+  try {
+    const parsed = new URL(baseUrl, 'http://localhost')
+    const path = String(parsed.pathname || '').replace(/\/+$/, '')
+    return path === '/' ? '' : path
+  } catch {
+    return ''
+  }
+}
+
 export const getApiOrigin = () => {
   const baseUrl = getApiBaseUrl()
   if (baseUrl) {
@@ -22,6 +34,7 @@ export const resolveBackendAssetUrl = (value) => {
   if (raw.startsWith('data:') || raw.startsWith('blob:')) return raw
 
   const origin = getApiOrigin().replace(/\/+$/, '')
+  const apiBasePath = getApiBasePath()
   if (/^(https?:)?\/\//i.test(raw)) {
     try {
       const url = new URL(raw)
@@ -35,6 +48,11 @@ export const resolveBackendAssetUrl = (value) => {
       return raw
     }
   }
-  if (raw.startsWith('/')) return `${origin}${raw}`
+  if (raw.startsWith('/')) {
+    if (apiBasePath && raw.startsWith('/uploads/')) {
+      return `${origin}${apiBasePath}${raw}`
+    }
+    return `${origin}${raw}`
+  }
   return `${origin}/${raw.replace(/^\/+/, '')}`
 }
