@@ -94,11 +94,21 @@ func applyMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 		if err != nil {
 			return fmt.Errorf("read migration %s: %w", path, err)
 		}
-		if strings.TrimSpace(string(body)) == "" {
+		sqlBody := string(body)
+		if strings.TrimSpace(sqlBody) == "" {
 			continue
 		}
-		if _, err := pool.Exec(ctx, string(body)); err != nil {
+		if _, err := pool.Exec(ctx, sqlBody); err != nil {
 			if isExtensionCreateRace(string(body), err) {
+				// Keep applying the rest of migration statements when CREATE EXTENSION
+				// races across parallel integration test processes.
+				rest := withoutCreateExtension(sqlBody)
+				if strings.TrimSpace(rest) == "" {
+					continue
+				}
+				if _, restErr := pool.Exec(ctx, rest); restErr == nil {
+					continue
+				}
 				continue
 			}
 			return fmt.Errorf("exec migration %s: %w", filepath.Base(path), err)
@@ -116,6 +126,19 @@ func isExtensionCreateRace(sql string, err error) bool {
 		return false
 	}
 	return pgErr.Code == "23505" && strings.EqualFold(pgErr.ConstraintName, "pg_extension_name_index")
+}
+
+func withoutCreateExtension(sql string) string {
+	lines := strings.Split(sql, "\n")
+	filtered := make([]string, 0, len(lines))
+	for _, line := range lines {
+		upper := strings.ToUpper(strings.TrimSpace(line))
+		if strings.HasPrefix(upper, "CREATE EXTENSION IF NOT EXISTS") {
+			continue
+		}
+		filtered = append(filtered, line)
+	}
+	return strings.Join(filtered, "\n")
 }
 
 func migrationFiles() ([]string, error) {
