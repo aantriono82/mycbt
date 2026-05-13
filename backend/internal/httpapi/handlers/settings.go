@@ -73,7 +73,18 @@ func (h *SettingsHandler) GetPublicSchoolIdentity(c *gin.Context) {
 	// 2. Fallback to global settings
 	data, err := h.settings.GetSchoolIdentity(c.Request.Context())
 	if err != nil {
-		c.JSON(500, gin.H{"error": gin.H{"code": "internal", "message": "internal error"}})
+		// Branding endpoint should stay resilient; return safe defaults instead of 500.
+		c.JSON(http.StatusOK, gin.H{
+			"data": gin.H{
+				"school_name":    "ATIGACBT",
+				"logo_url":       "",
+				"address":        "",
+				"phone":          "",
+				"email":          "",
+				"website":        "",
+				"principal_name": "",
+			},
+		})
 		return
 	}
 	c.JSON(200, gin.H{"data": data})
